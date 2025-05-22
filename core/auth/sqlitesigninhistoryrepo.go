@@ -14,12 +14,7 @@ type SQLiteSignInHistoryItemRepository struct {
 }
 
 // NewSQLiteSignInHistoryItemRepository creates a new SQLite-backed sign-in history repository
-func NewSQLiteSignInHistoryItemRepository(dbConnectionString string) (*SQLiteSignInHistoryItemRepository, error) {
-	db, err := sql.Open("sqlite3", dbConnectionString)
-	if err != nil {
-		return nil, err
-	}
-
+func NewSQLiteSignInHistoryItemRepository(db *sql.DB) (*SQLiteSignInHistoryItemRepository, error) {
 	repo := &SQLiteSignInHistoryItemRepository{
 		db: db,
 	}

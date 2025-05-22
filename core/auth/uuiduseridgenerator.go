@@ -16,5 +16,5 @@ func NewUuidUserIdGenerator() *UuidUserIdGenerator {
 // GenerateUserId implements the UserIdGenerator interface
 // It generates a UUID and returns it as a string
 func (g *UuidUserIdGenerator) GenerateUserId() string {
-	return uuid.New().String()
+	return uuid.NewString()
 }

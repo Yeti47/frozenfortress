@@ -33,12 +33,7 @@ const (
 )
 
 // Creates a new instance of SQLiteUserRepository
-func NewSQLiteUserRepository(dbConnectionString string) (*SQLiteUserRepository, error) { // Modified signature
-	db, err := sql.Open("sqlite3", dbConnectionString) // Added db opening
-	if err != nil {
-		return nil, err
-	}
-
+func NewSQLiteUserRepository(db *sql.DB) (*SQLiteUserRepository, error) { // Modified signature
 	repo := &SQLiteUserRepository{db: db}
 
 	if err := repo.initializeTable(); err != nil { // Added table initialization
