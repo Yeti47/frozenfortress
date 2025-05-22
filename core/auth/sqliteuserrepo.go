@@ -3,6 +3,7 @@ package auth
 import (
 	"database/sql"
 	"fmt"
+	"time" // Added time import
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -32,8 +33,40 @@ const (
 )
 
 // Creates a new instance of SQLiteUserRepository
-func NewSQLiteUserRepository(db *sql.DB) *SQLiteUserRepository {
-	return &SQLiteUserRepository{db: db}
+func NewSQLiteUserRepository(dbConnectionString string) (*SQLiteUserRepository, error) { // Modified signature
+	db, err := sql.Open("sqlite3", dbConnectionString) // Added db opening
+	if err != nil {
+		return nil, err
+	}
+
+	repo := &SQLiteUserRepository{db: db}
+
+	if err := repo.initializeTable(); err != nil { // Added table initialization
+		return nil, err
+	}
+
+	return repo, nil
+}
+
+// initializeTable creates the user table if it doesn't exist
+func (repo *SQLiteUserRepository) initializeTable() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS User (
+		Id TEXT PRIMARY KEY,
+		UserName TEXT NOT NULL UNIQUE,
+		PasswordHash TEXT NOT NULL,
+		PasswordSalt TEXT NOT NULL,
+		EncryptionKey TEXT NOT NULL,
+		EncryptionSalt TEXT NOT NULL,
+		IsActive INTEGER NOT NULL,
+		IsLocked INTEGER NOT NULL,
+		CreatedAt TIMESTAMP NOT NULL,
+		ModifiedAt TIMESTAMP NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_user_username ON User(UserName);
+	`
+	_, err := repo.db.Exec(query)
+	return err
 }
 
 // Retrieves a user by their ID
@@ -124,7 +157,7 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 	insertSql := fmt.Sprintf(`
 	INSERT INTO User (
 		%s
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, userFieldList)
 
 	statement, err := repo.db.Prepare(insertSql)
@@ -135,6 +168,10 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 
 	defer statement.Close()
 
+	// Format timestamps
+	createdAtStr := user.CreatedAt.Format("2006-01-02 15:04:05")
+	modifiedAtStr := user.ModifiedAt.Format("2006-01-02 15:04:05")
+
 	result, err := statement.Exec(
 		user.Id,
 		user.UserName,
@@ -144,8 +181,8 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 		user.EncryptionSalt,
 		user.IsActive,
 		user.IsLocked,
-		user.CreatedAt,
-		user.ModifiedAt,
+		createdAtStr,
+		modifiedAtStr,
 	)
 
 	if err != nil {
@@ -216,6 +253,10 @@ func (repo *SQLiteUserRepository) Update(user *User) (bool, error) {
 
 	defer statement.Close()
 
+	// Format timestamps
+	createdAtStr := user.CreatedAt.Format("2006-01-02 15:04:05")
+	modifiedAtStr := user.ModifiedAt.Format("2006-01-02 15:04:05")
+
 	result, err := statement.Exec(
 		user.UserName,
 		user.PasswordHash,
@@ -224,8 +265,8 @@ func (repo *SQLiteUserRepository) Update(user *User) (bool, error) {
 		user.EncryptionSalt,
 		user.IsActive,
 		user.IsLocked,
-		user.CreatedAt,
-		user.ModifiedAt,
+		createdAtStr,
+		modifiedAtStr,
 		user.Id,
 	)
 
@@ -245,6 +286,8 @@ func (repo *SQLiteUserRepository) Update(user *User) (bool, error) {
 // Scans a row into a User struct
 func scanUser(scanner rowScanner) (*User, error) {
 	user := &User{}
+	var createdAtStr string  // Temporary string for scanning
+	var modifiedAtStr string // Temporary string for scanning
 	err := scanner.Scan(
 		&user.Id,
 		&user.UserName,
@@ -254,8 +297,8 @@ func scanUser(scanner rowScanner) (*User, error) {
 		&user.EncryptionSalt,
 		&user.IsActive,
 		&user.IsLocked,
-		&user.CreatedAt,
-		&user.ModifiedAt,
+		&createdAtStr,
+		&modifiedAtStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -265,6 +308,19 @@ func scanUser(scanner rowScanner) (*User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading user from database: %w", err)
 	}
+
+	// Parse timestamps
+	createdAt, err := time.Parse("2006-01-02 15:04:05", createdAtStr)
+	if err != nil {
+		return nil, fmt.Errorf("parsing CreatedAt timestamp: %w", err)
+	}
+	user.CreatedAt = createdAt
+
+	modifiedAt, err := time.Parse("2006-01-02 15:04:05", modifiedAtStr)
+	if err != nil {
+		return nil, fmt.Errorf("parsing ModifiedAt timestamp: %w", err)
+	}
+	user.ModifiedAt = modifiedAt
 
 	return user, nil
 }
