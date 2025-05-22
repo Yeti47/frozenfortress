@@ -53,12 +53,10 @@ func LoadConfigFromEnvironment() signInConfig {
 }
 
 // SessionSignInManager implements SignInManager using gorilla sessions
-// and verifies user credentials using a UserManager and EncryptionService.
+// and verifies user credentials using a UserManager.
 type SessionSignInManager struct {
 	userManager             UserManager
-	userRepository          UserRepository // Still needed for password verification
 	signInHistoryRepository SignInHistoryItemRepository
-	encryptionService       encryption.EncryptionService
 	sessionStore            sessions.Store
 	config                  signInConfig
 }
@@ -66,17 +64,13 @@ type SessionSignInManager struct {
 // NewSessionSignInManager creates a new SessionSignInManager with all dependencies injected
 func NewSessionSignInManager(
 	userManager UserManager,
-	userRepository UserRepository,
 	signInHistoryRepo SignInHistoryItemRepository,
-	encService encryption.EncryptionService,
 	store sessions.Store,
 	config signInConfig) *SessionSignInManager {
 
 	return &SessionSignInManager{
 		userManager:             userManager,
-		userRepository:          userRepository,
 		signInHistoryRepository: signInHistoryRepo,
-		encryptionService:       encService,
 		sessionStore:            store,
 		config:                  config,
 	}
@@ -121,16 +115,8 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 		return SignInResponse{Success: false, Error: "Account is locked"}, nil
 	}
 
-	// Need to get the full user object to verify password
-	// Since UserManager doesn't expose password verification, we need to use the EncryptionService directly
-	user, err := m.userRepository.FindById(userDto.UserId)
-	if err != nil {
-		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "User lookup failed"}, err
-	}
-
-	// Verify password
-	valid, err := m.encryptionService.VerifyHash(request.Password, user.PasswordHash, user.PasswordSalt)
+	// Verify password using UserManager
+	valid, err := m.userManager.VerifyUserPassword(userDto.UserId, request.Password)
 	if err != nil {
 		_ = m.signInHistoryRepository.Add(historyItem)
 		return SignInResponse{Success: false, Error: "Password verification failed"}, err
@@ -143,11 +129,11 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 
 		// Check for too many failed attempts
 		failedAttempts, err := m.signInHistoryRepository.GetRecentFailedSignInsByUserName(
-			user.UserName, m.config.FailedAttemptsWindow)
+			userDto.UserName, m.config.FailedAttemptsWindow)
 
 		if err == nil && len(failedAttempts) >= m.config.MaxFailedAttempts {
 			// Lock the account using the UserManager
-			_, _ = m.userManager.LockUser(user.Id)
+			_, _ = m.userManager.LockUser(userDto.UserId)
 			return SignInResponse{Success: false, Error: "Account has been locked due to too many failed attempts"}, nil
 		}
 
@@ -161,7 +147,7 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 		return SignInResponse{Success: false, Error: "Session error"}, err
 	}
 
-	session.Values["userId"] = user.Id
+	session.Values["userId"] = userDto.UserId
 	err = session.Save(r, w)
 	if err != nil {
 		_ = m.signInHistoryRepository.Add(historyItem)

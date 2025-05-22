@@ -287,3 +287,17 @@ func (manager *DefaultUserManager) ChangePassword(request ChangePasswordRequest)
 	success, err := manager.userRepository.Update(user)
 	return success, err
 }
+
+// VerifyUserPassword checks if the given password is valid for the user with the given ID.
+func (manager *DefaultUserManager) VerifyUserPassword(userId string, password string) (bool, error) {
+	user, err := manager.userRepository.FindById(userId)
+	if err != nil {
+		return false, err
+	}
+
+	if user == nil {
+		return false, nil // User not found
+	}
+
+	return manager.encryptionService.VerifyHash(password, user.PasswordHash, user.PasswordSalt)
+}

@@ -31,6 +31,7 @@ type UserManager interface {
 	LockUser(id string) (bool, error)
 	UnlockUser(id string) (bool, error)
 	ChangePassword(request ChangePasswordRequest) (bool, error)
+	VerifyUserPassword(userId string, password string) (bool, error)
 }
 
 type UserIdGenerator interface {
