@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -44,6 +45,24 @@ func (s *DefaultEncryptionService) Hash(input string) (output string, salt strin
 	hashString := base64.StdEncoding.EncodeToString(hash)
 
 	return hashString, saltString, nil
+}
+
+// VerifyHash verifies if the input string matches the hash
+func (s *DefaultEncryptionService) VerifyHash(input string, hash string, salt string) (isValid bool, err error) {
+	saltBytes, err := base64.StdEncoding.DecodeString(salt)
+	if err != nil {
+		return false, fmt.Errorf("invalid salt: %w", err)
+	}
+
+	hashBytes, err := base64.StdEncoding.DecodeString(hash)
+	if err != nil {
+		return false, fmt.Errorf("invalid hash: %w", err)
+	}
+
+	// Generate hash using PBKDF2
+	generatedHash := pbkdf2.Key([]byte(input), saltBytes, iterationCount, keyLength, sha256.New)
+
+	return subtle.ConstantTimeCompare(generatedHash, hashBytes) == 1, nil
 }
 
 // Encrypt encrypts plaintext using the provided key
@@ -141,14 +160,14 @@ func (s *DefaultEncryptionService) GenerateSalt() (saltBytes []byte, salt string
 }
 
 // GenerateKeyFromPassword generates a key from a password using PBKDF2
-func (s *DefaultEncryptionService) GenerateKeyFromPassword(password string) (key string, err error) {
-	saltBytes, _, err := s.GenerateSalt()
+func (s *DefaultEncryptionService) GenerateKeyFromPassword(password string) (key string, salt string, err error) {
+	saltBytes, salt, err := s.GenerateSalt()
 
 	if err != nil {
-		return "", fmt.Errorf("failed to generate salt: %w", err)
+		return "", "", fmt.Errorf("failed to generate salt: %w", err)
 	}
 
 	keyBytes := pbkdf2.Key([]byte(password), saltBytes, iterationCount, keyLength, sha256.New)
 
-	return base64.StdEncoding.EncodeToString(keyBytes), nil
+	return base64.StdEncoding.EncodeToString(keyBytes), salt, nil
 }
