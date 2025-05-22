@@ -60,10 +60,10 @@ func (repo *InMemoryUserRepository) Update(user *User) (bool, error) {
 }
 
 // Deletes a user from the repository
-func (repo *InMemoryUserRepository) Remove(user *User) (bool, error) {
+func (repo *InMemoryUserRepository) Remove(id string) (bool, error) {
 
 	for i, u := range repo.users {
-		if u.Id == user.Id {
+		if u.Id == id {
 			repo.users = slices.Delete(repo.users, i, i+1)
 			return true, nil
 		}

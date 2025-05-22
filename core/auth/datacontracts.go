@@ -23,3 +23,18 @@ type UserDto struct {
 	CreatedAt  string
 	ModifiedAt string
 }
+
+type SignInRequest struct {
+	UserName string
+	Password string
+}
+
+type SignInResponse struct {
+	Success bool
+	User    *UserDto
+	Error   string // empty if no error
+}
+
+type SignOutRequest struct {
+	SessionId string
+}

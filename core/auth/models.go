@@ -16,3 +16,13 @@ type User struct {
 	CreatedAt      time.Time
 	ModifiedAt     time.Time
 }
+
+type SignInHistoryItem struct {
+	Id         int64
+	UserId     string
+	UserName   string
+	IPAddress  string
+	UserAgent  string
+	Successful bool
+	Timestamp  time.Time
+}

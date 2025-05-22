@@ -6,7 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -42,19 +42,19 @@ func (s *DefaultEncryptionService) Hash(input string) (output string, salt strin
 	// Generate hash using PBKDF2
 	hash := pbkdf2.Key([]byte(input), saltBytes, iterationCount, keyLength, sha256.New)
 
-	hashString := base64.StdEncoding.EncodeToString(hash)
+	hashString := hex.EncodeToString(hash)
 
 	return hashString, saltString, nil
 }
 
 // VerifyHash verifies if the input string matches the hash
 func (s *DefaultEncryptionService) VerifyHash(input string, hash string, salt string) (isValid bool, err error) {
-	saltBytes, err := base64.StdEncoding.DecodeString(salt)
+	saltBytes, err := hex.DecodeString(salt)
 	if err != nil {
 		return false, fmt.Errorf("invalid salt: %w", err)
 	}
 
-	hashBytes, err := base64.StdEncoding.DecodeString(hash)
+	hashBytes, err := hex.DecodeString(hash)
 	if err != nil {
 		return false, fmt.Errorf("invalid hash: %w", err)
 	}
@@ -67,7 +67,7 @@ func (s *DefaultEncryptionService) VerifyHash(input string, hash string, salt st
 
 // Encrypt encrypts plaintext using the provided key
 func (s *DefaultEncryptionService) Encrypt(plainText string, key string) (cipherText string, err error) {
-	keyBytes, err := base64.StdEncoding.DecodeString(key)
+	keyBytes, err := hex.DecodeString(key)
 	if err != nil || len(keyBytes) != keyLength {
 		return "", errors.New("invalid encryption key")
 	}
@@ -92,18 +92,18 @@ func (s *DefaultEncryptionService) Encrypt(plainText string, key string) (cipher
 	// Encrypt and seal
 	sealed := gcm.Seal(nonce, nonce, []byte(plainText), nil)
 
-	// Encode to base64 for storage
-	return base64.StdEncoding.EncodeToString(sealed), nil
+	// Encode to hex for storage
+	return hex.EncodeToString(sealed), nil
 }
 
 // Decrypt decrypts ciphertext using the provided key
 func (s *DefaultEncryptionService) Decrypt(cipherText string, key string) (plainText string, err error) {
-	keyBytes, err := base64.StdEncoding.DecodeString(key)
+	keyBytes, err := hex.DecodeString(key)
 	if err != nil || len(keyBytes) != keyLength {
 		return "", errors.New("invalid encryption key")
 	}
 
-	cipherBytes, err := base64.StdEncoding.DecodeString(cipherText)
+	cipherBytes, err := hex.DecodeString(cipherText)
 	if err != nil {
 		return "", fmt.Errorf("invalid cipher text: %w", err)
 	}
@@ -145,7 +145,7 @@ func (s *DefaultEncryptionService) GenerateKey() (key string, err error) {
 		return "", fmt.Errorf("failed to generate key: %w", err)
 	}
 
-	return base64.StdEncoding.EncodeToString(keyBytes), nil
+	return hex.EncodeToString(keyBytes), nil
 }
 
 // GenerateSalt generates a new random salt
@@ -156,7 +156,7 @@ func (s *DefaultEncryptionService) GenerateSalt() (saltBytes []byte, salt string
 		return nil, "", fmt.Errorf("failed to generate salt: %w", err)
 	}
 
-	return saltBytes, base64.StdEncoding.EncodeToString(saltBytes), nil
+	return saltBytes, hex.EncodeToString(saltBytes), nil
 }
 
 // GenerateKeyFromPassword generates a key from a password using PBKDF2
@@ -169,5 +169,5 @@ func (s *DefaultEncryptionService) GenerateKeyFromPassword(password string) (key
 
 	keyBytes := pbkdf2.Key([]byte(password), saltBytes, iterationCount, keyLength, sha256.New)
 
-	return base64.StdEncoding.EncodeToString(keyBytes), salt, nil
+	return hex.EncodeToString(keyBytes), salt, nil
 }

@@ -1,5 +1,9 @@
 package auth
 
+import (
+	"net/http"
+)
+
 type UserRepository interface {
 	FindById(id string) (*User, error)
 	FindByUserName(userName string) (*User, error)
@@ -7,6 +11,14 @@ type UserRepository interface {
 	Add(user *User) (bool, error)
 	Remove(id string) (bool, error)
 	Update(user *User) (bool, error)
+}
+
+type SignInHistoryItemRepository interface {
+	Add(historyItem *SignInHistoryItem) error
+	GetByUserId(userId string) ([]*SignInHistoryItem, error)
+	GetByUserName(userName string) ([]*SignInHistoryItem, error)
+	GetRecentFailedSignInsByUserName(userName string, minutesBack int) ([]*SignInHistoryItem, error)
+	GetRecentFailedSignInsByUserId(userId string, minutesBack int) ([]*SignInHistoryItem, error)
 }
 
 type UserManager interface {
@@ -23,4 +35,11 @@ type UserManager interface {
 
 type UserIdGenerator interface {
 	GenerateUserId() string
+}
+
+type SignInManager interface {
+	SignIn(w http.ResponseWriter, r *http.Request, request SignInRequest) (SignInResponse, error)
+	SignOut(w http.ResponseWriter, r *http.Request, request SignOutRequest) error
+	GetCurrentUser(r *http.Request) (*UserDto, error)
+	IsSignedIn(r *http.Request) (bool, error)
 }
