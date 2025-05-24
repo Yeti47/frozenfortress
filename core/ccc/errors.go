@@ -39,23 +39,23 @@ func (e *ApiError) Unwrap() error {
 
 // Constructor functions for common error scenarios
 
-// NewUserNotFoundError creates an error for when a user cannot be found
-func NewUserNotFoundError(identifier string) *ApiError {
+// NewResourceNotFoundError creates an error for when a resource cannot be found
+func NewResourceNotFoundError(identifier string, resourceType string) *ApiError {
 	return &ApiError{
 		StatusCode:       404,
 		Code:             ErrCodeNotFound,
-		UserMessage:      "User not found",
-		TechnicalMessage: fmt.Sprintf("user not found with identifier: %s", identifier),
+		UserMessage:      fmt.Sprintf("%s not found", resourceType),
+		TechnicalMessage: fmt.Sprintf("%s not found with identifier: %s", resourceType, identifier),
 	}
 }
 
-// NewUserAlreadyExistsError creates an error for when a user already exists
-func NewUserAlreadyExistsError(username string) *ApiError {
+// NewResourceAlreadyExistsError creates an error for when a resource already exists
+func NewResourceAlreadyExistsError(identifier string, resourceType string) *ApiError {
 	return &ApiError{
 		StatusCode:       409,
 		Code:             ErrCodeAlreadyExists,
-		UserMessage:      "User already exists",
-		TechnicalMessage: fmt.Sprintf("user already exists with username: %s", username),
+		UserMessage:      fmt.Sprintf("%s already exists", resourceType),
+		TechnicalMessage: fmt.Sprintf("%s already exists with identifier: %s", resourceType, identifier),
 	}
 }
 

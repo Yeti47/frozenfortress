@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/boj/redistore"
 	"github.com/gorilla/sessions"
@@ -82,9 +83,17 @@ func NewSessionSignInManager(
 // Also tracks login attempts and locks accounts after too many failed attempts.
 func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, request SignInRequest) (SignInResponse, error) {
 
+	// Validate input
+	if request.UserName == "" {
+		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewInvalidInputError("username", "cannot be empty")
+	}
+	if request.Password == "" {
+		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewInvalidInputError("password", "cannot be empty")
+	}
+
 	user, err := m.userRepository.FindByUserName(request.UserName)
 	if err != nil {
-		return SignInResponse{Success: false, Error: "User lookup failed"}, err
+		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewDatabaseError("find user by username", err)
 	}
 
 	// Prepare sign-in history object
@@ -106,7 +115,7 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 		// Even for non-existent users, we still log the attempt
 		historyItem.DenialReason = "Invalid credentials"
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Invalid credentials"}, nil
+		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewUnauthorizedError("invalid credentials")
 	}
 
 	// Set user ID now that we have it
@@ -116,14 +125,14 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 	if user.IsLocked {
 		historyItem.DenialReason = "Account is locked"
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Account is locked"}, nil
+		return SignInResponse{Success: false, Error: "Account is locked"}, ccc.NewForbiddenError("account is locked")
 	}
 
 	// Check if account is inactive
 	if !user.IsActive {
 		historyItem.DenialReason = "Account is inactive"
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Account is inactive"}, nil
+		return SignInResponse{Success: false, Error: "Account is inactive"}, ccc.NewForbiddenError("account is inactive")
 	}
 
 	// Verify password using SecurityService
@@ -131,7 +140,7 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 	if err != nil {
 		historyItem.DenialReason = "Password verification failed"
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Password verification failed"}, err
+		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewUnauthorizedError("invalid credentials")
 	}
 
 	// If password verification failed
@@ -148,41 +157,41 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 			if err == nil && len(failedAttempts) >= m.config.MaxFailedAttempts {
 				// Lock the account using the SecurityService
 				_, _ = m.securityService.LockUser(*user)
-				return SignInResponse{Success: false, Error: "Account has been locked due to too many failed attempts"}, nil
+				return SignInResponse{Success: false, Error: "Account has been locked due to too many failed attempts"}, ccc.NewForbiddenError("account locked due to too many failed attempts")
 			}
 		}
-		return SignInResponse{Success: false, Error: "Invalid credentials"}, nil
+		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewUnauthorizedError("invalid credentials")
 	}
 
 	// Authentication succeeded - create session
 	session, err := m.sessionStore.Get(r, sessionName)
 	if err != nil {
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Session error"}, err
+		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to get session", err)
 	}
 
 	mek, err := m.securityService.UncoverMek(*user, request.Password)
 	if err != nil {
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "MEK uncovering error"}, err
+		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to uncover MEK", err)
 	}
 	if mek == "" {
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "MEK uncovering failed"}, nil
+		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("MEK uncovering returned empty result", nil)
 	}
 
 	session.Values["userId"] = user.Id
 	err = session.Save(r, w)
 	if err != nil {
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Session save error"}, err
+		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to save session", err)
 	}
 
 	// Store the MEK in the session
 	err = m.mekStore.Store(w, r, mek)
 	if err != nil {
 		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "MEK store error"}, err
+		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to store MEK", err)
 	}
 
 	// Update history item to reflect successful login
@@ -206,21 +215,25 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 func (m *SessionSignInManager) SignOut(w http.ResponseWriter, r *http.Request) error {
 	session, err := m.sessionStore.Get(r, sessionName)
 	if err != nil {
-		return err
+		return ccc.NewInternalError("failed to get session for sign out", err)
 	}
 
 	// Make sure the MEK is deleted from the session (ignore error)
 	_ = m.mekStore.Delete(w, r)
 
 	session.Options.MaxAge = -1 // Mark session for deletion
-	return session.Save(r, w)
+	err = session.Save(r, w)
+	if err != nil {
+		return ccc.NewInternalError("failed to save session for sign out", err)
+	}
+	return nil
 }
 
 // GetCurrentUser retrieves the currently signed in user, if any
 func (m *SessionSignInManager) GetCurrentUser(r *http.Request) (UserDto, error) {
 	session, err := m.sessionStore.Get(r, sessionName)
 	if err != nil {
-		return UserDto{}, err
+		return UserDto{}, ccc.NewInternalError("failed to get session", err)
 	}
 
 	userId, ok := session.Values["userId"]
@@ -230,7 +243,7 @@ func (m *SessionSignInManager) GetCurrentUser(r *http.Request) (UserDto, error) 
 
 	user, err := m.userRepository.FindById(userId.(string))
 	if err != nil {
-		return UserDto{}, err
+		return UserDto{}, ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	// If user is no longer valid

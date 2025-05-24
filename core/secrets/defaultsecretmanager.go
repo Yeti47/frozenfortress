@@ -1,12 +1,12 @@
 package secrets
 
 import (
-	"errors"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 )
 
 type DefaultSecretManager struct {
@@ -27,32 +27,32 @@ func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretR
 
 	// Validate the request
 	if request.SecretName == "" {
-		return CreateSecretResponse{}, errors.New("secret name cannot be empty")
+		return CreateSecretResponse{}, ccc.NewInvalidInputError("secret name", "cannot be empty")
 	}
 	if request.SecretValue == "" {
-		return CreateSecretResponse{}, errors.New("secret value cannot be empty")
+		return CreateSecretResponse{}, ccc.NewInvalidInputError("secret value", "cannot be empty")
 	}
 
 	// Check if the user exists
 	user, err := m.userRepository.FindById(userId)
 
 	if err != nil {
-		return CreateSecretResponse{}, err
+		return CreateSecretResponse{}, ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	if user == nil {
-		return CreateSecretResponse{}, errors.New("user not found")
+		return CreateSecretResponse{}, ccc.NewResourceNotFoundError(userId, "User")
 	}
 
 	// Check if the secret already exists
 	existingSecret, err := m.findSecretByNameForUser(userId, request.SecretName, dataProtector)
 
 	if err != nil {
-		return CreateSecretResponse{}, err
+		return CreateSecretResponse{}, ccc.NewDatabaseError("find existing secret", err)
 	}
 
 	if existingSecret != nil {
-		return CreateSecretResponse{}, errors.New("secret with this name already exists")
+		return CreateSecretResponse{}, ccc.NewResourceAlreadyExistsError(request.SecretName, "Secret")
 	}
 
 	// Generate a new secret ID
@@ -61,11 +61,11 @@ func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretR
 	// Encrypt the secret name and value
 	encryptedName, err := dataProtector.Protect(request.SecretName)
 	if err != nil {
-		return CreateSecretResponse{}, err
+		return CreateSecretResponse{}, ccc.NewInternalError("failed to encrypt secret name", err)
 	}
 	encryptedValue, err := dataProtector.Protect(request.SecretValue)
 	if err != nil {
-		return CreateSecretResponse{}, err
+		return CreateSecretResponse{}, ccc.NewInternalError("failed to encrypt secret value", err)
 	}
 
 	// Create a new secret object
@@ -81,7 +81,7 @@ func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretR
 	// Add the secret to the repository
 	success, err := m.secretRepository.Add(secret)
 	if err != nil || !success {
-		return CreateSecretResponse{}, err
+		return CreateSecretResponse{}, ccc.NewDatabaseError("add secret", err)
 	}
 
 	return CreateSecretResponse{SecretId: secretId}, nil
@@ -93,21 +93,21 @@ func (m *DefaultSecretManager) GetSecret(userId string, secretId string, dataPro
 	// Retrieve the secret from the repository
 	secret, err := m.secretRepository.FindByIdForUser(userId, secretId)
 	if err != nil {
-		return nil, err
+		return nil, ccc.NewDatabaseError("find secret by ID", err)
 	}
 
 	if secret == nil {
-		return nil, errors.New("secret not found")
+		return nil, ccc.NewResourceNotFoundError(secretId, "Secret")
 	}
 
 	// Decrypt the secret name and value
 	decryptedName, err := dataProtector.Unprotect(secret.Name)
 	if err != nil {
-		return nil, err
+		return nil, ccc.NewInternalError("failed to decrypt secret name", err)
 	}
 	decryptedValue, err := dataProtector.Unprotect(secret.Value)
 	if err != nil {
-		return nil, err
+		return nil, ccc.NewInternalError("failed to decrypt secret value", err)
 	}
 
 	// Map the secret to a DTO
@@ -128,7 +128,7 @@ func (m *DefaultSecretManager) GetSecrets(userId string, request GetSecretsReque
 	// Get all secrets for the user from repository
 	allSecrets, err := m.secretRepository.FindByUserId(userId)
 	if err != nil {
-		return PaginatedSecretResponse{}, err
+		return PaginatedSecretResponse{}, ccc.NewDatabaseError("find secrets by user ID", err)
 	}
 
 	// Decrypt names and filter in memory
@@ -251,38 +251,38 @@ func (m *DefaultSecretManager) sortSecrets(secrets []*Secret, sortBy string, sor
 func (m *DefaultSecretManager) UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector DataProtector) (bool, error) {
 	// Validate the request
 	if request.SecretName == "" {
-		return false, errors.New("secret name cannot be empty")
+		return false, ccc.NewInvalidInputError("secret name", "cannot be empty")
 	}
 	if request.SecretValue == "" {
-		return false, errors.New("secret value cannot be empty")
+		return false, ccc.NewInvalidInputError("secret value", "cannot be empty")
 	}
 
 	// Get the existing secret
 	existingSecret, err := m.secretRepository.FindByIdForUser(userId, secretId)
 	if err != nil {
-		return false, err
+		return false, ccc.NewDatabaseError("find secret by ID", err)
 	}
 	if existingSecret == nil {
-		return false, errors.New("secret not found")
+		return false, ccc.NewResourceNotFoundError(secretId, "Secret")
 	}
 
 	// Check if another secret with the new name already exists (excluding current secret)
 	conflictingSecret, err := m.findSecretByNameForUser(userId, request.SecretName, dataProtector)
 	if err != nil {
-		return false, err
+		return false, ccc.NewDatabaseError("find conflicting secret", err)
 	}
 	if conflictingSecret != nil && conflictingSecret.Id != secretId {
-		return false, errors.New("secret with this name already exists")
+		return false, ccc.NewResourceAlreadyExistsError(request.SecretName, "Secret")
 	}
 
 	// Encrypt the new name and value
 	encryptedName, err := dataProtector.Protect(request.SecretName)
 	if err != nil {
-		return false, err
+		return false, ccc.NewInternalError("failed to encrypt secret name", err)
 	}
 	encryptedValue, err := dataProtector.Protect(request.SecretValue)
 	if err != nil {
-		return false, err
+		return false, ccc.NewInternalError("failed to encrypt secret value", err)
 	}
 
 	// Update the secret
@@ -298,7 +298,7 @@ func (m *DefaultSecretManager) findSecretByNameForUser(userId, secretName string
 	// Get all secrets for the user
 	allSecrets, err := m.secretRepository.FindByUserId(userId)
 	if err != nil {
-		return nil, err
+		return nil, ccc.NewDatabaseError("find secrets by user ID", err)
 	}
 
 	// Search through secrets by decrypting names

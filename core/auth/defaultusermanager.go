@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"regexp"
 	"time"
 
@@ -31,14 +30,14 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 
 	// Validate the request
 	if request.UserName == "" {
-		return CreateUserResponse{}, errors.New("username cannot be empty")
+		return CreateUserResponse{}, ccc.NewInvalidInputError("username", "cannot be empty")
 	}
 	if request.Password == "" {
-		return CreateUserResponse{}, errors.New("password cannot be empty")
+		return CreateUserResponse{}, ccc.NewInvalidInputError("password", "cannot be empty")
 	}
 
 	if !manager.IsValidUsername(request.UserName) {
-		return CreateUserResponse{}, errors.New("invalid username")
+		return CreateUserResponse{}, ccc.NewInvalidInputError("username", "invalid username")
 	}
 
 	isValidPw, err := manager.IsValidPassword(request.Password)
@@ -46,19 +45,19 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 		return CreateUserResponse{}, err
 	}
 	if !isValidPw {
-		return CreateUserResponse{}, errors.New("invalid password")
+		return CreateUserResponse{}, ccc.NewInvalidInputError("password", "invalid password")
 	}
 
 	userId := manager.userIdGenerator.GenerateUserId()
 
 	pwHash, pwSalt, err := manager.encryptionService.Hash(request.Password)
 	if err != nil {
-		return CreateUserResponse{}, err
+		return CreateUserResponse{}, ccc.NewInternalError("hash password", err)
 	}
 
 	mek, pdkSalt, err := manager.securityService.GenerateEncryptedMek(request.Password)
 	if err != nil {
-		return CreateUserResponse{}, err
+		return CreateUserResponse{}, ccc.NewInternalError("generate MEK", err)
 	}
 
 	user := &User{
@@ -76,7 +75,7 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 
 	success, err := manager.userRepository.Add(user)
 	if err != nil || !success {
-		return CreateUserResponse{}, err
+		return CreateUserResponse{}, ccc.NewDatabaseError("add user", err)
 	}
 
 	return CreateUserResponse{UserId: userId}, nil
@@ -93,7 +92,7 @@ func (manager *DefaultUserManager) GetUserById(userId string) (UserDto, error) {
 	}
 
 	if user == nil {
-		return UserDto{}, ccc.NewUserNotFoundError(userId)
+		return UserDto{}, ccc.NewResourceNotFoundError(userId, "User")
 	}
 
 	userDto := UserDto{
@@ -119,7 +118,7 @@ func (manager *DefaultUserManager) GetUserByUserName(userName string) (UserDto, 
 	}
 
 	if user == nil {
-		return UserDto{}, ccc.NewUserNotFoundError(userName)
+		return UserDto{}, ccc.NewResourceNotFoundError(userName, "User")
 	}
 
 	userDto := UserDto{
@@ -170,7 +169,7 @@ func (manager *DefaultUserManager) ActivateUser(id string) (bool, error) {
 	}
 
 	if user == nil {
-		return false, ccc.NewUserNotFoundError(id)
+		return false, ccc.NewResourceNotFoundError(id, "User")
 	}
 
 	user.IsActive = true
@@ -194,7 +193,7 @@ func (manager *DefaultUserManager) DeactivateUser(id string) (bool, error) {
 	}
 
 	if user == nil {
-		return false, ccc.NewUserNotFoundError(id)
+		return false, ccc.NewResourceNotFoundError(id, "User")
 	}
 
 	user.IsActive = false
@@ -218,7 +217,7 @@ func (manager *DefaultUserManager) LockUser(id string) (bool, error) {
 	}
 
 	if user == nil {
-		return false, ccc.NewUserNotFoundError(id)
+		return false, ccc.NewResourceNotFoundError(id, "User")
 	}
 
 	locked, err := manager.securityService.LockUser(*user)
@@ -241,7 +240,7 @@ func (manager *DefaultUserManager) UnlockUser(id string) (bool, error) {
 	}
 
 	if user == nil {
-		return false, ccc.NewUserNotFoundError(id)
+		return false, ccc.NewResourceNotFoundError(id, "User")
 	}
 
 	unlocked, err := manager.securityService.UnlockUser(*user)
@@ -256,25 +255,25 @@ func (manager *DefaultUserManager) UnlockUser(id string) (bool, error) {
 func (manager *DefaultUserManager) ChangePassword(request ChangePasswordRequest) (bool, error) {
 	user, err := manager.userRepository.FindById(request.UserId)
 	if err != nil {
-		return false, err
+		return false, ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	if user == nil {
-		return false, nil
+		return false, ccc.NewResourceNotFoundError(request.UserId, "User")
 	}
 
 	// Verify the old password
 	isValid, err := manager.securityService.VerifyUserPassword(*user, request.OldPassword)
 	if err != nil {
-		return false, err
+		return false, ccc.NewInternalError("verify user password", err)
 	}
 	if !isValid {
-		return false, nil // Old password is incorrect. Don't specify the reason to avoid abuse.
+		return false, ccc.NewUnauthorizedError("operation not authorized")
 	}
 
 	pwHash, pwSalt, err := manager.encryptionService.Hash(request.NewPassword)
 	if err != nil {
-		return false, err
+		return false, ccc.NewInternalError("hash password", err)
 	}
 
 	user.PasswordHash = pwHash
@@ -284,20 +283,20 @@ func (manager *DefaultUserManager) ChangePassword(request ChangePasswordRequest)
 	// Decrypt the current encryption key using the old password
 	plainMek, err := manager.securityService.UncoverMek(*user, request.OldPassword)
 	if err != nil {
-		return false, err
+		return false, ccc.NewInternalError("uncover MEK", err)
 	}
 
 	// Re-encrypt the encryption key with the new password-derived key
 	mek, pdkSalt, err := manager.securityService.EncryptMek(plainMek, request.NewPassword)
 	if err != nil {
-		return false, err
+		return false, ccc.NewInternalError("encrypt MEK", err)
 	}
 
 	user.Mek = mek
 	user.PdkSalt = pdkSalt
 
 	success, err := manager.userRepository.Update(user)
-	return success, err
+	return success, ccc.NewDatabaseError("update user", err)
 }
 
 // IsValidUsername checks if the username is valid
@@ -318,20 +317,20 @@ func (manager *DefaultUserManager) IsValidPassword(password string) (bool, error
 
 	// Check if the password is empty
 	if password == "" {
-		return false, errors.New("password cannot be empty")
+		return false, ccc.NewInvalidInputError("password", "cannot be empty")
 	}
 
 	const minPasswordLength = 16
 
 	if len(password) < minPasswordLength {
-		return false, errors.New("password must be at least " + fmt.Sprint(minPasswordLength) + " characters long")
+		return false, ccc.NewInvalidInputError("password", "must be at least "+fmt.Sprint(minPasswordLength)+" characters long")
 	}
 
 	// Check if the password matches the required pattern
 	re := regexp.MustCompile(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{` + fmt.Sprint(minPasswordLength) + `,}$`)
 
 	if !re.MatchString(password) {
-		return false, errors.New("password must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
+		return false, ccc.NewInvalidInputError("password", "must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
 	}
 
 	return true, nil
