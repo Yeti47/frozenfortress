@@ -16,8 +16,8 @@ The username must be unique and the password must meet security requirements.
 The new user will be created in an active, unlocked state.
 
 Examples:
-  frozen-fortress user create jonathan_smith MySecureP@ssw0rd
-  frozen-fortress user create mark_gordon "An0therSecureP@ssw0rd!"`,
+  frozen-fortress user create jonathan_smith My$ecureP@ssw0rd
+  frozen-fortress user create mark_gordon An0therSecureP@ssw0rd!`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		username := args[0]

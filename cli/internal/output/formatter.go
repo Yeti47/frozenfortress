@@ -97,7 +97,7 @@ func (f *Formatter) PrintUsers(users []auth.UserDto) {
 var defaultFormatter = NewFormatter(false)
 
 // PrintSuccess prints a success message using the default formatter
-func PrintSuccess(message string, details map[string]interface{}) {
+func PrintSuccess(message string, details map[string]any) {
 	defaultFormatter.PrintSuccess(message)
 	for key, value := range details {
 		fmt.Printf("  %s: %v\n", key, value)

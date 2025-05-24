@@ -10,6 +10,24 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 )
 
+const (
+	// specialCharsRegexFragment defines the regex pattern fragment for allowed special characters.
+	// Characters: @ $ ! % * ? & # _ - . , ; : + § / [ ] ( ) { } =
+	specialCharsRegexFragment = `@$!%*?&#_.,;:+§/\\[\\](){}=-`
+
+	// displaySpecialChars is a user-friendly string of allowed special characters for error messages.
+	displaySpecialChars = "@ $ ! % * ? & # _ - . , ; : + § / [ ] ( ) { } ="
+)
+
+var (
+	// Pre-compiled regexps for password validation efficiency.
+	hasLowerRegexp        = regexp.MustCompile(`[a-z]`)
+	hasUpperRegexp        = regexp.MustCompile(`[A-Z]`)
+	hasDigitRegexp        = regexp.MustCompile(`\\d`)
+	hasSpecialRegexp      = regexp.MustCompile(`[` + specialCharsRegexFragment + `]`)
+	allAllowedCharsRegexp = regexp.MustCompile(`^[A-Za-z0-9` + specialCharsRegexFragment + `]+$`)
+)
+
 type DefaultUserManager struct {
 	userRepository    UserRepository
 	userIdGenerator   UserIdGenerator
@@ -322,15 +340,35 @@ func (manager *DefaultUserManager) IsValidPassword(password string) (bool, error
 
 	const minPasswordLength = 16
 
+	// 1. Check length
 	if len(password) < minPasswordLength {
 		return false, ccc.NewInvalidInputError("password", "must be at least "+fmt.Sprint(minPasswordLength)+" characters long")
 	}
 
-	// Check if the password matches the required pattern
-	re := regexp.MustCompile(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{` + fmt.Sprint(minPasswordLength) + `,}$`)
+	// 2. Check inclusion of lower case letters
+	if !hasLowerRegexp.MatchString(password) {
+		return false, ccc.NewInvalidInputError("password", "must contain at least one lowercase letter")
+	}
 
-	if !re.MatchString(password) {
-		return false, ccc.NewInvalidInputError("password", "must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
+	// 3. Check inclusion of upper case letters
+	if !hasUpperRegexp.MatchString(password) {
+		return false, ccc.NewInvalidInputError("password", "must contain at least one uppercase letter")
+	}
+
+	// 4. Check inclusion of numbers
+	if !hasDigitRegexp.MatchString(password) {
+		return false, ccc.NewInvalidInputError("password", "must contain at least one number")
+	}
+
+	// 5. Check inclusion of allowed special characters
+	if !hasSpecialRegexp.MatchString(password) {
+		return false, ccc.NewInvalidInputError("password", "must contain at least one special character. Allowed special characters are: "+displaySpecialChars)
+	}
+
+	// 6. Check that all characters in the password are from the allowed set
+	// (alphanumeric or one of the defined special characters)
+	if !allAllowedCharsRegexp.MatchString(password) {
+		return false, ccc.NewInvalidInputError("password", "contains invalid characters. Only letters, numbers, and the following special characters are allowed: "+displaySpecialChars)
 	}
 
 	return true, nil
