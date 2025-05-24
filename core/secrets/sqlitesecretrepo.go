@@ -59,6 +59,23 @@ func (repo *SQLiteSecretRepository) initializeTable() error {
 	if err != nil {
 		return fmt.Errorf("executing schema creation: %w", err)
 	}
+
+	// Try to add foreign key constraint from Secret[dot]UserId to User[dot]Id
+	// If this fails, it's okay and we can proceed anyway
+	fkQuery := `
+	ALTER TABLE Secret ADD CONSTRAINT fk_secret_userid 
+	FOREIGN KEY (UserId) REFERENCES User(Id) ON DELETE CASCADE;
+	`
+	_, fkErr := repo.db.Exec(fkQuery)
+	if fkErr != nil {
+		// Log or ignore the error - foreign key constraint is optional
+		// The constraint might fail if:
+		// - User table doesn't exist yet
+		// - Constraint already exists
+		// - SQLite was compiled without foreign key support
+		// We continue anyway as this is not critical for basic functionality
+	}
+
 	return nil
 }
 

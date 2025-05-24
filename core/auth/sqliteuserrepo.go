@@ -195,28 +195,37 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 // Removes a user from the database
 func (repo *SQLiteUserRepository) Remove(id string) (bool, error) {
 
-	deleteSql := `
-	DELETE FROM User 
-	WHERE Id = ?
-	`
-
-	statement, err := repo.db.Prepare(deleteSql)
-
+	// Start a transaction to ensure both deletions succeed or both fail
+	tx, err := repo.db.Begin()
 	if err != nil {
-		return false, fmt.Errorf("preparing statement: %w", err)
+		return false, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback() // Will be ignored if tx.Commit() succeeds
+
+	// First, delete all secrets belonging to this user
+	// This ensures cleanup even if foreign key constraints aren't working
+	deleteSecretsSql := `DELETE FROM Secret WHERE UserId = ?`
+	_, err = tx.Exec(deleteSecretsSql, id)
+	if err != nil {
+		return false, fmt.Errorf("deleting user secrets: %w", err)
 	}
 
-	defer statement.Close()
-
-	result, err := statement.Exec(id)
-
+	// Then delete the user
+	deleteUserSql := `DELETE FROM User WHERE Id = ?`
+	result, err := tx.Exec(deleteUserSql, id)
 	if err != nil {
-		return false, fmt.Errorf("executing statement: %w", err)
+		return false, fmt.Errorf("deleting user: %w", err)
 	}
 
+	// Check if the user was actually deleted
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return false, fmt.Errorf("getting rows affected: %w", err)
+	}
+
+	// Commit the transaction
+	if err = tx.Commit(); err != nil {
+		return false, fmt.Errorf("committing transaction: %w", err)
 	}
 
 	return rowsAffected > 0, nil
