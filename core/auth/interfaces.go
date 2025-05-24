@@ -33,6 +33,7 @@ type UserManager interface {
 	ChangePassword(request ChangePasswordRequest) (bool, error)
 	IsValidUsername(userName string) bool
 	IsValidPassword(password string) (bool, error)
+	DeleteUser(id string) (bool, error)
 }
 
 type SecurityService interface {

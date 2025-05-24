@@ -335,3 +335,19 @@ func (manager *DefaultUserManager) IsValidPassword(password string) (bool, error
 
 	return true, nil
 }
+
+// DeleteUser deletes a user by their ID
+func (manager *DefaultUserManager) DeleteUser(id string) (bool, error) {
+
+	if id == "" {
+		return false, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
+
+	success, err := manager.userRepository.Remove(id)
+	if err != nil {
+		return false, ccc.NewDatabaseError("remove user", err)
+	}
+
+	// Idempotency: if the user was not found, we still return success; no error is raised
+	return success, nil
+}

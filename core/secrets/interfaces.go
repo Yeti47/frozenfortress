@@ -21,6 +21,7 @@ type SecretManager interface {
 	GetSecret(userId string, secretId string, dataProtector DataProtector) (*SecretDto, error)
 	GetSecrets(userId string, request GetSecretsRequest, dataProtector DataProtector) (PaginatedSecretResponse, error)
 	UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector DataProtector) (bool, error)
+	DeleteSecret(userId string, secretId string) (bool, error)
 }
 
 type DataProtector interface {

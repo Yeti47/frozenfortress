@@ -293,6 +293,20 @@ func (m *DefaultSecretManager) UpdateSecret(userId string, secretId string, requ
 	return m.secretRepository.Update(existingSecret)
 }
 
+// DeleteSecret deletes a secret by its ID
+func (m *DefaultSecretManager) DeleteSecret(userId string, secretId string) (bool, error) {
+
+	// Delete the secret from the repository
+	success, err := m.secretRepository.Remove(secretId)
+	if err != nil {
+		return false, ccc.NewDatabaseError("remove secret by ID", err)
+	}
+
+	// Secret deletion is idempotent. We indicate success, but never return an error if the secret doesn't exist.
+	// We simply return the success status.
+	return success, nil
+}
+
 // findSecretByNameForUser is a helper method to find a secret by decrypting names in memory
 func (m *DefaultSecretManager) findSecretByNameForUser(userId, secretName string, dataProtector DataProtector) (*Secret, error) {
 	// Get all secrets for the user
