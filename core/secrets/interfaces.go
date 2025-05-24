@@ -9,8 +9,7 @@ type SecretIdGenerator interface {
 type SecretRepository interface {
 	FindById(secretId string) (*Secret, error)
 	FindByUserId(userId string) ([]*Secret, error)
-	FindByName(userId, secretName string) (*Secret, error)
-	Filter(filter SecretFilter) (secrets []*Secret, totalCount int, err error)
+	FindByIdForUser(userId, secretId string) (*Secret, error)
 	Add(secret *Secret) (bool, error)
 	Remove(secretId string) (bool, error)
 	Update(secret *Secret) (bool, error)

@@ -13,12 +13,3 @@ type Secret struct {
 	CreatedAt  time.Time
 	ModifiedAt time.Time
 }
-
-type SecretFilter struct {
-	UserId   string
-	Name     string
-	PageSize int
-	Page     int
-	SortBy   string
-	SortAsc  bool
-}
