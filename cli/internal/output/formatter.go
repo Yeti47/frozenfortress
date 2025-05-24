@@ -127,3 +127,8 @@ func PrintInfo(message string) {
 func PrintUser(user *auth.UserDto) {
 	defaultFormatter.PrintUser(user)
 }
+
+// PrintUsers prints a list of users using the default formatter
+func PrintUsers(users []auth.UserDto) {
+	defaultFormatter.PrintUsers(users)
+}
