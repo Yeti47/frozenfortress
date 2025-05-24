@@ -16,7 +16,7 @@ type ChangePasswordRequest struct {
 }
 
 type UserDto struct {
-	UserId     string
+	Id         string
 	UserName   string
 	IsActive   bool
 	IsLocked   bool
@@ -31,10 +31,6 @@ type SignInRequest struct {
 
 type SignInResponse struct {
 	Success bool
-	User    *UserDto
+	User    UserDto
 	Error   string // empty if no error
-}
-
-type SignOutRequest struct {
-	SessionId string
 }

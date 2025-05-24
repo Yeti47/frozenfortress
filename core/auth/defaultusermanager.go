@@ -1,7 +1,11 @@
 package auth
 
 import (
+	"errors"
+	"regexp"
 	"time"
+
+	"fmt"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 )
@@ -10,58 +14,40 @@ type DefaultUserManager struct {
 	userRepository    UserRepository
 	userIdGenerator   UserIdGenerator
 	encryptionService encryption.EncryptionService
+	securityService   SecurityService
 }
 
-func NewDefaultUserManager(userRepository UserRepository, userIdGenerator UserIdGenerator, encryptionService encryption.EncryptionService) *DefaultUserManager {
+func NewDefaultUserManager(userRepository UserRepository, userIdGenerator UserIdGenerator, encryptionService encryption.EncryptionService, securityService SecurityService) *DefaultUserManager {
 	return &DefaultUserManager{
 		userRepository:    userRepository,
 		userIdGenerator:   userIdGenerator,
 		encryptionService: encryptionService,
+		securityService:   securityService,
 	}
-}
-
-// generateAndEncryptUserKey generates a new encryption key and encrypts it with a key derived from the given password.
-// Returns the encrypted key, the plain key, the encryption salt, and any error encountered.
-func (manager *DefaultUserManager) generateAndEncryptUserKey(password string) (encryptedEncryptionKey string, plainEncryptionKey string, encryptionSalt string, err error) {
-
-	plainEncryptionKey, err = manager.encryptionService.GenerateKey()
-	if err != nil {
-		return
-	}
-
-	var passwordDerivedKey string
-	passwordDerivedKey, encryptionSalt, err = manager.encryptionService.GenerateKeyFromPassword(password)
-	if err != nil {
-		return
-	}
-
-	encryptedEncryptionKey, err = manager.encryptionService.Encrypt(plainEncryptionKey, passwordDerivedKey)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-// encryptUserKeyWithPassword encrypts the given plain encryption key with a key derived from the given password.
-// Returns the encrypted key, the encryption salt, and any error encountered.
-func (manager *DefaultUserManager) encryptUserKeyWithPassword(plainEncryptionKey string, password string) (encryptedEncryptionKey string, encryptionSalt string, err error) {
-
-	var passwordDerivedKey string
-	passwordDerivedKey, encryptionSalt, err = manager.encryptionService.GenerateKeyFromPassword(password)
-	if err != nil {
-		return
-	}
-
-	encryptedEncryptionKey, err = manager.encryptionService.Encrypt(plainEncryptionKey, passwordDerivedKey)
-	if err != nil {
-		return
-	}
-
-	return
 }
 
 func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (CreateUserResponse, error) {
+
+	// Validate the request
+	if request.UserName == "" {
+		return CreateUserResponse{}, errors.New("username cannot be empty")
+	}
+	if request.Password == "" {
+		return CreateUserResponse{}, errors.New("password cannot be empty")
+	}
+
+	if !manager.IsValidUsername(request.UserName) {
+		return CreateUserResponse{}, errors.New("invalid username")
+	}
+
+	isValidPw, err := manager.IsValidPassword(request.Password)
+	if err != nil {
+		return CreateUserResponse{}, err
+	}
+	if !isValidPw {
+		return CreateUserResponse{}, errors.New("invalid password")
+	}
+
 	userId := manager.userIdGenerator.GenerateUserId()
 
 	pwHash, pwSalt, err := manager.encryptionService.Hash(request.Password)
@@ -69,7 +55,7 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 		return CreateUserResponse{}, err
 	}
 
-	encryptedEncryptionKey, _, encryptionSalt, err := manager.generateAndEncryptUserKey(request.Password)
+	encryptedEncryptionKey, encryptionSalt, err := manager.securityService.GenerateEncryptedMek(request.Password)
 	if err != nil {
 		return CreateUserResponse{}, err
 	}
@@ -108,7 +94,7 @@ func (manager *DefaultUserManager) GetUserById(userId string) (UserDto, error) {
 	}
 
 	return UserDto{
-		UserId:     user.Id,
+		Id:         user.Id,
 		UserName:   user.UserName,
 		IsActive:   user.IsActive,
 		IsLocked:   user.IsLocked,
@@ -130,7 +116,7 @@ func (manager *DefaultUserManager) GetUserByUserName(userName string) (UserDto, 
 	}
 
 	return UserDto{
-		UserId:     user.Id,
+		Id:         user.Id,
 		UserName:   user.UserName,
 		IsActive:   user.IsActive,
 		IsLocked:   user.IsLocked,
@@ -151,7 +137,7 @@ func (manager *DefaultUserManager) GetAllUsers() ([]UserDto, error) {
 
 	for i, user := range users {
 		userDtos[i] = UserDto{
-			UserId:     user.Id,
+			Id:         user.Id,
 			UserName:   user.UserName,
 			IsActive:   user.IsActive,
 			IsLocked:   user.IsLocked,
@@ -212,10 +198,9 @@ func (manager *DefaultUserManager) LockUser(id string) (bool, error) {
 		return false, nil
 	}
 
-	user.IsLocked = true
-	success, err := manager.userRepository.Update(user)
+	locked, err := manager.securityService.LockUser(*user)
 
-	return success, err
+	return locked, err
 }
 
 // UnlockUser unlocks a user by their ID
@@ -230,10 +215,9 @@ func (manager *DefaultUserManager) UnlockUser(id string) (bool, error) {
 		return false, nil
 	}
 
-	user.IsLocked = false
-	success, err := manager.userRepository.Update(user)
+	unlocked, err := manager.securityService.UnlockUser(*user)
 
-	return success, err
+	return unlocked, err
 }
 
 // ChangePassword changes the password for a user
@@ -248,7 +232,7 @@ func (manager *DefaultUserManager) ChangePassword(request ChangePasswordRequest)
 	}
 
 	// Verify the old password
-	isValid, err := manager.encryptionService.VerifyHash(request.OldPassword, user.PasswordHash, user.PasswordSalt)
+	isValid, err := manager.securityService.VerifyUserPassword(*user, request.OldPassword)
 	if err != nil {
 		return false, err
 	}
@@ -266,17 +250,13 @@ func (manager *DefaultUserManager) ChangePassword(request ChangePasswordRequest)
 	user.ModifiedAt = time.Now()
 
 	// Decrypt the current encryption key using the old password
-	oldPasswordDerivedKey, _, err := manager.encryptionService.GenerateKeyFromPassword(request.OldPassword)
-	if err != nil {
-		return false, err
-	}
-	plainEncryptionKey, err := manager.encryptionService.Decrypt(user.EncryptionKey, oldPasswordDerivedKey)
+	plainEncryptionKey, err := manager.securityService.UncoverMek(*user, request.OldPassword)
 	if err != nil {
 		return false, err
 	}
 
 	// Re-encrypt the encryption key with the new password-derived key
-	encryptedEncryptionKey, encryptionSalt, err := manager.encryptUserKeyWithPassword(plainEncryptionKey, request.NewPassword)
+	encryptedEncryptionKey, encryptionSalt, err := manager.securityService.EncryptMek(plainEncryptionKey, request.NewPassword)
 	if err != nil {
 		return false, err
 	}
@@ -288,16 +268,39 @@ func (manager *DefaultUserManager) ChangePassword(request ChangePasswordRequest)
 	return success, err
 }
 
-// VerifyUserPassword checks if the given password is valid for the user with the given ID.
-func (manager *DefaultUserManager) VerifyUserPassword(userId string, password string) (bool, error) {
-	user, err := manager.userRepository.FindById(userId)
-	if err != nil {
-		return false, err
+// IsValidUsername checks if the username is valid
+func (manager *DefaultUserManager) IsValidUsername(userName string) bool {
+
+	// Check if the username is empty
+	if userName == "" {
+		return false
 	}
 
-	if user == nil {
-		return false, nil // User not found
+	// Check if the username matches the required pattern
+	re := regexp.MustCompile(`^[a-zA-Z0-9_]{3,20}$`)
+	return re.MatchString(userName)
+}
+
+// IsValidPassword checks if the password is valid
+func (manager *DefaultUserManager) IsValidPassword(password string) (bool, error) {
+
+	// Check if the password is empty
+	if password == "" {
+		return false, errors.New("password cannot be empty")
 	}
 
-	return manager.encryptionService.VerifyHash(password, user.PasswordHash, user.PasswordSalt)
+	const minPasswordLength = 16
+
+	if len(password) < minPasswordLength {
+		return false, errors.New("password must be at least " + fmt.Sprint(minPasswordLength) + " characters long")
+	}
+
+	// Check if the password matches the required pattern
+	re := regexp.MustCompile(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{` + fmt.Sprint(minPasswordLength) + `,}$`)
+
+	if !re.MatchString(password) {
+		return false, errors.New("password must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
+	}
+
+	return true, nil
 }

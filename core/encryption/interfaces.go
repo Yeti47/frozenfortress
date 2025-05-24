@@ -10,6 +10,8 @@ type EncryptionService interface {
 	Encrypt(plainText string, key string) (cipherText string, err error)
 	Decrypt(cipherText string, key string) (plainText string, err error)
 	GenerateKey() (key string, err error)
-	GenerateKeyFromPassword(password string) (key string, salt string, err error)
+	GenerateKeyFromPassword(password string, salt string) (key string, err error)
 	GenerateSalt() (saltBytes []byte, salt string, err error)
+	ConvertKeyToString(key []byte) (keyString string, err error)
+	ConvertStringToKey(keyString string) (key []byte, err error)
 }

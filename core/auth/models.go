@@ -18,11 +18,12 @@ type User struct {
 }
 
 type SignInHistoryItem struct {
-	Id         int64
-	UserId     string
-	UserName   string
-	IPAddress  string
-	UserAgent  string
-	Successful bool
-	Timestamp  time.Time
+	Id           int64
+	UserId       string
+	UserName     string
+	IPAddress    string
+	UserAgent    string
+	Successful   bool
+	Timestamp    time.Time
+	DenialReason string
 }

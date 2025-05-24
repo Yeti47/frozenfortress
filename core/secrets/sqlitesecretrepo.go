@@ -145,7 +145,7 @@ func (repo *SQLiteSecretRepository) FindByName(userId, secretName string) (*Secr
 }
 
 // Add adds a new secret to the database.
-func (repo *SQLiteSecretRepository) Add(secret Secret) (bool, error) {
+func (repo *SQLiteSecretRepository) Add(secret *Secret) (bool, error) {
 	query := fmt.Sprintf("INSERT INTO Secret (%s) VALUES (?, ?, ?, ?, ?, ?)", secretFieldList)
 
 	stmt, err := repo.db.Prepare(query)
@@ -245,7 +245,7 @@ func (repo *SQLiteSecretRepository) Filter(filter SecretFilter) (secrets []*Secr
 		whereClauses = append(whereClauses, "UserId = ?")
 		args = append(args, filter.UserId)
 	}
-	if filter.Name != "" { // Assuming Name can be filtered directly
+	if filter.Name != "" {
 		whereClauses = append(whereClauses, "Name LIKE ?") // Use LIKE for partial matches on name
 		args = append(args, "%"+filter.Name+"%")
 	}

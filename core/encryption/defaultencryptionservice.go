@@ -160,14 +160,36 @@ func (s *DefaultEncryptionService) GenerateSalt() (saltBytes []byte, salt string
 }
 
 // GenerateKeyFromPassword generates a key from a password using PBKDF2
-func (s *DefaultEncryptionService) GenerateKeyFromPassword(password string) (key string, salt string, err error) {
-	saltBytes, salt, err := s.GenerateSalt()
-
+func (s *DefaultEncryptionService) GenerateKeyFromPassword(password string, salt string) (key string, err error) {
+	saltBytes, err := hex.DecodeString(salt)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate salt: %w", err)
+		return "", fmt.Errorf("invalid salt: %w", err)
 	}
 
 	keyBytes := pbkdf2.Key([]byte(password), saltBytes, iterationCount, keyLength, sha256.New)
 
-	return hex.EncodeToString(keyBytes), salt, nil
+	return hex.EncodeToString(keyBytes), nil
+}
+
+// ConvertKeyToString converts a byte array key to a hex string
+func (s *DefaultEncryptionService) ConvertKeyToString(key []byte) (keyString string, err error) {
+	if len(key) != keyLength {
+		return "", errors.New("invalid key length")
+	}
+
+	return hex.EncodeToString(key), nil
+}
+
+// ConvertStringToKey converts a hex string key to a byte array
+func (s *DefaultEncryptionService) ConvertStringToKey(keyString string) (key []byte, err error) {
+	key, err = hex.DecodeString(keyString)
+	if err != nil {
+		return nil, fmt.Errorf("invalid key string: %w", err)
+	}
+
+	if len(key) != keyLength {
+		return nil, errors.New("invalid key length")
+	}
+
+	return key, nil
 }

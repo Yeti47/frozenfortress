@@ -31,7 +31,23 @@ type UserManager interface {
 	LockUser(id string) (bool, error)
 	UnlockUser(id string) (bool, error)
 	ChangePassword(request ChangePasswordRequest) (bool, error)
-	VerifyUserPassword(userId string, password string) (bool, error)
+	IsValidUsername(userName string) bool
+	IsValidPassword(password string) (bool, error)
+}
+
+type SecurityService interface {
+	// LockUser locks the user account. User is passed by value to avoid side effects.
+	LockUser(user User) (bool, error)
+	// UnlockUser unlocks the user account. User is passed by value to avoid side effects.
+	UnlockUser(user User) (bool, error)
+	// VerifyUserPassword verifies the user's password.
+	VerifyUserPassword(user User, password string) (bool, error)
+	// UncoverMek reads the user's MEK (Master Encryption Key) from the database.
+	UncoverMek(user User, password string) (string, error)
+	// EncryptMek encrypts the user's MEK (Master Encryption Key) using the provided password.
+	EncryptMek(plainMek string, password string) (encryptedMek string, salt string, err error)
+	// GenerateEncryptedMek generates an encrypted MEK using the user's password.
+	GenerateEncryptedMek(password string) (encryptedMek string, salt string, err error)
 }
 
 type UserIdGenerator interface {
@@ -40,7 +56,13 @@ type UserIdGenerator interface {
 
 type SignInManager interface {
 	SignIn(w http.ResponseWriter, r *http.Request, request SignInRequest) (SignInResponse, error)
-	SignOut(w http.ResponseWriter, r *http.Request, request SignOutRequest) error
-	GetCurrentUser(r *http.Request) (*UserDto, error)
+	SignOut(w http.ResponseWriter, r *http.Request) error
+	GetCurrentUser(r *http.Request) (UserDto, error)
 	IsSignedIn(r *http.Request) (bool, error)
+}
+
+type MekStore interface {
+	Store(w http.ResponseWriter, r *http.Request, mek string) error
+	Retrieve(r *http.Request) (string, error)
+	Delete(w http.ResponseWriter, r *http.Request) error
 }

@@ -11,7 +11,20 @@ type SecretRepository interface {
 	FindByUserId(userId string) ([]*Secret, error)
 	FindByName(userId, secretName string) (*Secret, error)
 	Filter(filter SecretFilter) (secrets []*Secret, totalCount int, err error)
-	Add(secret Secret) (bool, error)
+	Add(secret *Secret) (bool, error)
 	Remove(secretId string) (bool, error)
 	Update(secret *Secret) (bool, error)
+}
+
+// SecretManager interface for managing secrets
+type SecretManager interface {
+	CreateSecret(userId string, request UpsertSecretRequest, dataProtector DataProtector) (CreateSecretResponse, error)
+	GetSecret(userId string, secretId string, dataProtector DataProtector) (*SecretDto, error)
+	GetSecrets(userId string, request GetSecretsRequest, dataProtector DataProtector) (PaginatedSecretResponse, error)
+	UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector DataProtector) (bool, error)
+}
+
+type DataProtector interface {
+	Protect(data string) (protectedData string, err error)
+	Unprotect(protectedData string) (data string, err error)
 }

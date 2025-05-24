@@ -32,11 +32,12 @@ func (r *SQLiteSignInHistoryItemRepository) initializeTable() error {
 	CREATE TABLE IF NOT EXISTS sign_in_history (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id TEXT NOT NULL,
-		user_name TEXT NOT NULL,
+		user_name TEXT,
 		ip_address TEXT,
 		user_agent TEXT,
 		successful INTEGER NOT NULL,
-		timestamp TIMESTAMP NOT NULL
+		timestamp TIMESTAMP NOT NULL,
+		denial_reason TEXT
 	);
 	CREATE INDEX IF NOT EXISTS idx_sign_in_history_user_id ON sign_in_history(user_id);
 	CREATE INDEX IF NOT EXISTS idx_sign_in_history_user_name ON sign_in_history(user_name);
@@ -51,8 +52,8 @@ func (r *SQLiteSignInHistoryItemRepository) initializeTable() error {
 func (r *SQLiteSignInHistoryItemRepository) Add(historyItem *SignInHistoryItem) error {
 	query := `
 	INSERT INTO sign_in_history (
-		user_id, user_name, ip_address, user_agent, successful, timestamp
-	) VALUES (?, ?, ?, ?, ?, ?)
+		user_id, user_name, ip_address, user_agent, successful, timestamp, denial_reason
+	) VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 
 	successful := 0
@@ -71,6 +72,7 @@ func (r *SQLiteSignInHistoryItemRepository) Add(historyItem *SignInHistoryItem) 
 		historyItem.UserAgent,
 		successful,
 		timestampStr,
+		historyItem.DenialReason,
 	)
 
 	if err != nil {
@@ -90,7 +92,7 @@ func (r *SQLiteSignInHistoryItemRepository) Add(historyItem *SignInHistoryItem) 
 // GetByUserId retrieves all sign-in history for a specific user ID
 func (r *SQLiteSignInHistoryItemRepository) GetByUserId(userId string) ([]*SignInHistoryItem, error) {
 	query := `
-	SELECT id, user_id, user_name, ip_address, user_agent, successful, timestamp
+	SELECT id, user_id, user_name, ip_address, user_agent, successful, timestamp, denial_reason
 	FROM sign_in_history 
 	WHERE user_id = ?
 	ORDER BY timestamp DESC
@@ -108,7 +110,7 @@ func (r *SQLiteSignInHistoryItemRepository) GetByUserId(userId string) ([]*SignI
 // GetByUserName retrieves all sign-in history for a specific username
 func (r *SQLiteSignInHistoryItemRepository) GetByUserName(userName string) ([]*SignInHistoryItem, error) {
 	query := `
-	SELECT id, user_id, user_name, ip_address, user_agent, successful, timestamp
+	SELECT id, user_id, user_name, ip_address, user_agent, successful, timestamp, denial_reason
 	FROM sign_in_history 
 	WHERE user_name = ?
 	ORDER BY timestamp DESC
@@ -126,7 +128,7 @@ func (r *SQLiteSignInHistoryItemRepository) GetByUserName(userName string) ([]*S
 // GetRecentFailedSignInsByUserName retrieves recent failed sign-in attempts for a username
 func (r *SQLiteSignInHistoryItemRepository) GetRecentFailedSignInsByUserName(userName string, minutesBack int) ([]*SignInHistoryItem, error) {
 	query := `
-	SELECT id, user_id, user_name, ip_address, user_agent, successful, timestamp
+	SELECT id, user_id, user_name, ip_address, user_agent, successful, timestamp, denial_reason
 	FROM sign_in_history 
 	WHERE user_name = ? 
 	AND successful = 0 
@@ -147,7 +149,7 @@ func (r *SQLiteSignInHistoryItemRepository) GetRecentFailedSignInsByUserName(use
 // GetRecentFailedSignInsByUserId retrieves recent failed sign-in attempts for a user ID
 func (r *SQLiteSignInHistoryItemRepository) GetRecentFailedSignInsByUserId(userId string, minutesBack int) ([]*SignInHistoryItem, error) {
 	query := `
-	SELECT id, user_id, user_name, ip_address, user_agent, successful, timestamp
+	SELECT id, user_id, user_name, ip_address, user_agent, successful, timestamp, denial_reason
 	FROM sign_in_history 
 	WHERE user_id = ? 
 	AND successful = 0 
@@ -182,6 +184,7 @@ func (r *SQLiteSignInHistoryItemRepository) scanRows(rows *sql.Rows) ([]*SignInH
 			&item.UserAgent,
 			&successful,
 			&timestampStr,
+			&item.DenialReason,
 		)
 
 		if err != nil {
