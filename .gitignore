@@ -28,3 +28,14 @@ go.work.sum
 .vscode/
 .idea/
 
+# FrozenFortress CLI application binary
+cli/cli
+cli/ffcli
+cli/bin/*
+cli/bin/
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+

@@ -7,6 +7,7 @@ import (
 
 	"fmt"
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 )
 
@@ -82,47 +83,55 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 }
 
 func (manager *DefaultUserManager) GetUserById(userId string) (UserDto, error) {
+	if userId == "" {
+		return UserDto{}, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
 
 	user, err := manager.userRepository.FindById(userId)
-
 	if err != nil {
-		return UserDto{}, err
+		return UserDto{}, ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	if user == nil {
-		return UserDto{}, nil
+		return UserDto{}, ccc.NewUserNotFoundError(userId)
 	}
 
-	return UserDto{
+	userDto := UserDto{
 		Id:         user.Id,
 		UserName:   user.UserName,
 		IsActive:   user.IsActive,
 		IsLocked:   user.IsLocked,
 		CreatedAt:  user.CreatedAt.Format(time.RFC3339),
 		ModifiedAt: user.ModifiedAt.Format(time.RFC3339),
-	}, nil
+	}
+
+	return userDto, nil
 }
 
 func (manager *DefaultUserManager) GetUserByUserName(userName string) (UserDto, error) {
+	if userName == "" {
+		return UserDto{}, ccc.NewInvalidInputError("username", "cannot be empty")
+	}
 
 	user, err := manager.userRepository.FindByUserName(userName)
-
 	if err != nil {
-		return UserDto{}, err
+		return UserDto{}, ccc.NewDatabaseError("find user by username", err)
 	}
 
 	if user == nil {
-		return UserDto{}, nil
+		return UserDto{}, ccc.NewUserNotFoundError(userName)
 	}
 
-	return UserDto{
+	userDto := UserDto{
 		Id:         user.Id,
 		UserName:   user.UserName,
 		IsActive:   user.IsActive,
 		IsLocked:   user.IsLocked,
 		CreatedAt:  user.CreatedAt.Format(time.RFC3339),
 		ModifiedAt: user.ModifiedAt.Format(time.RFC3339),
-	}, nil
+	}
+
+	return userDto, nil
 }
 
 func (manager *DefaultUserManager) GetAllUsers() ([]UserDto, error) {
@@ -151,73 +160,96 @@ func (manager *DefaultUserManager) GetAllUsers() ([]UserDto, error) {
 
 // ActivateUser activates a user by their ID
 func (manager *DefaultUserManager) ActivateUser(id string) (bool, error) {
-	user, err := manager.userRepository.FindById(id)
+	if id == "" {
+		return false, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
 
+	user, err := manager.userRepository.FindById(id)
 	if err != nil {
-		return false, err
+		return false, ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	if user == nil {
-		return false, nil
+		return false, ccc.NewUserNotFoundError(id)
 	}
 
 	user.IsActive = true
 	success, err := manager.userRepository.Update(user)
+	if err != nil {
+		return false, ccc.NewDatabaseError("update user", err)
+	}
 
-	return success, err
+	return success, nil
 }
 
 // DeactivateUser deactivates a user by their ID
 func (manager *DefaultUserManager) DeactivateUser(id string) (bool, error) {
+	if id == "" {
+		return false, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
 
 	user, err := manager.userRepository.FindById(id)
-
 	if err != nil {
-		return false, err
+		return false, ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	if user == nil {
-		return false, nil
+		return false, ccc.NewUserNotFoundError(id)
 	}
 
 	user.IsActive = false
 	success, err := manager.userRepository.Update(user)
+	if err != nil {
+		return false, ccc.NewDatabaseError("update user", err)
+	}
 
-	return success, err
+	return success, nil
 }
 
 // LockUser locks a user by their ID
 func (manager *DefaultUserManager) LockUser(id string) (bool, error) {
-	user, err := manager.userRepository.FindById(id)
+	if id == "" {
+		return false, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
 
+	user, err := manager.userRepository.FindById(id)
 	if err != nil {
-		return false, err
+		return false, ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	if user == nil {
-		return false, nil
+		return false, ccc.NewUserNotFoundError(id)
 	}
 
 	locked, err := manager.securityService.LockUser(*user)
+	if err != nil {
+		return false, ccc.NewDatabaseError("lock user", err)
+	}
 
-	return locked, err
+	return locked, nil
 }
 
 // UnlockUser unlocks a user by their ID
 func (manager *DefaultUserManager) UnlockUser(id string) (bool, error) {
-	user, err := manager.userRepository.FindById(id)
+	if id == "" {
+		return false, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
 
+	user, err := manager.userRepository.FindById(id)
 	if err != nil {
-		return false, err
+		return false, ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	if user == nil {
-		return false, nil
+		return false, ccc.NewUserNotFoundError(id)
 	}
 
 	unlocked, err := manager.securityService.UnlockUser(*user)
+	if err != nil {
+		return false, ccc.NewDatabaseError("unlock user", err)
+	}
 
-	return unlocked, err
+	return unlocked, nil
 }
 
 // ChangePassword changes the password for a user

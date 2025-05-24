@@ -23,9 +23,9 @@ type SignInHistoryItemRepository interface {
 
 type UserManager interface {
 	CreateUser(request CreateUserRequest) (CreateUserResponse, error)
-	GetUserById(id string) (*UserDto, error)
-	GetUserByUserName(userName string) (*UserDto, error)
-	GetAllUsers() ([]*UserDto, error)
+	GetUserById(id string) (UserDto, error)
+	GetUserByUserName(userName string) (UserDto, error)
+	GetAllUsers() ([]UserDto, error)
 	ActivateUser(id string) (bool, error)
 	DeactivateUser(id string) (bool, error)
 	LockUser(id string) (bool, error)
