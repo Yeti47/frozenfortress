@@ -67,13 +67,13 @@ func (s *DefaultSecurityService) UncoverMek(user User, password string) (string,
 	}
 
 	// Restore the PDK (Password-Derived Key) via the given password and stored salt
-	pdk, err := s.encryptionService.GenerateKeyFromPassword(password, user.EncryptionSalt)
+	pdk, err := s.encryptionService.GenerateKeyFromPassword(password, user.PdkSalt)
 	if err != nil {
 		return "", err
 	}
 
 	// Decrypt the MEK (Master Encryption Key) using the PDK
-	mek, err := s.encryptionService.Decrypt(user.EncryptionKey, pdk)
+	mek, err := s.encryptionService.Decrypt(user.Mek, pdk)
 	if err != nil {
 		return "", err
 	}

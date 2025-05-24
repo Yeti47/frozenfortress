@@ -55,22 +55,22 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 		return CreateUserResponse{}, err
 	}
 
-	encryptedEncryptionKey, encryptionSalt, err := manager.securityService.GenerateEncryptedMek(request.Password)
+	mek, pdkSalt, err := manager.securityService.GenerateEncryptedMek(request.Password)
 	if err != nil {
 		return CreateUserResponse{}, err
 	}
 
 	user := &User{
-		Id:             userId,
-		UserName:       request.UserName,
-		PasswordHash:   pwHash,
-		PasswordSalt:   pwSalt,
-		EncryptionKey:  encryptedEncryptionKey,
-		EncryptionSalt: encryptionSalt,
-		IsActive:       false, // Set to false for new users, can be activated by admin
-		IsLocked:       false,
-		CreatedAt:      time.Now(),
-		ModifiedAt:     time.Now(),
+		Id:           userId,
+		UserName:     request.UserName,
+		PasswordHash: pwHash,
+		PasswordSalt: pwSalt,
+		Mek:          mek,
+		PdkSalt:      pdkSalt,
+		IsActive:     false, // Set to false for new users, can be activated by admin
+		IsLocked:     false,
+		CreatedAt:    time.Now(),
+		ModifiedAt:   time.Now(),
 	}
 
 	success, err := manager.userRepository.Add(user)
@@ -250,19 +250,19 @@ func (manager *DefaultUserManager) ChangePassword(request ChangePasswordRequest)
 	user.ModifiedAt = time.Now()
 
 	// Decrypt the current encryption key using the old password
-	plainEncryptionKey, err := manager.securityService.UncoverMek(*user, request.OldPassword)
+	plainMek, err := manager.securityService.UncoverMek(*user, request.OldPassword)
 	if err != nil {
 		return false, err
 	}
 
 	// Re-encrypt the encryption key with the new password-derived key
-	encryptedEncryptionKey, encryptionSalt, err := manager.securityService.EncryptMek(plainEncryptionKey, request.NewPassword)
+	mek, pdkSalt, err := manager.securityService.EncryptMek(plainMek, request.NewPassword)
 	if err != nil {
 		return false, err
 	}
 
-	user.EncryptionKey = encryptedEncryptionKey
-	user.EncryptionSalt = encryptionSalt
+	user.Mek = mek
+	user.PdkSalt = pdkSalt
 
 	success, err := manager.userRepository.Update(user)
 	return success, err
