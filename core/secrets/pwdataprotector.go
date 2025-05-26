@@ -8,7 +8,6 @@ import (
 )
 
 // PasswordDataProtector is a struct that provides methods to encrypt and decrypt data using the a user's password.
-
 type PasswordDataProtector struct {
 	encryptionService encryption.EncryptionService
 	securityService   auth.SecurityService
