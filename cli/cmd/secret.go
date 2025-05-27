@@ -167,8 +167,8 @@ var secretCmd = &cobra.Command{
 // secretAddCmd represents the command to add a new secret
 var secretAddCmd = &cobra.Command{
 	Use:   "add <user_identifier> <secret_name> <secret_value>",
-	Short: "Add a new secret for a user",
-	Long:  `Adds a new secret for the specified user. You need to provide the user's identifier (username or ID), the secret name, and the secret value as arguments.`,
+	Short: "Add a new secret for a user. Requires user authentication.",
+	Long:  `Adds a new secret for the specified user. You need to provide the user's identifier (username or ID), the secret name, and the secret value as arguments. This command requires user authentication.`,
 	Args:  cobra.ExactArgs(3), // Expect exactly 3 arguments
 	RunE: func(cmd *cobra.Command, args []string) error {
 		userIdentifier := args[0]
@@ -199,8 +199,8 @@ var secretAddCmd = &cobra.Command{
 // secretEditCmd represents the command to edit an existing secret
 var secretEditCmd = &cobra.Command{
 	Use:   "edit <user_identifier> <secret_name> <new_secret_value>",
-	Short: "Edit an existing secret's value",
-	Long:  `Updates the value of an existing secret for the specified user. The secret is identified by its current name.`,
+	Short: "Edit an existing secret's value. Requires user authentication.",
+	Long:  `Updates the value of an existing secret for the specified user. The secret is identified by its current name. This command requires user authentication.`,
 	Args:  cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		userIdentifier := args[0]
@@ -244,8 +244,8 @@ var secretEditCmd = &cobra.Command{
 // secretRenameCmd represents the command to rename an existing secret
 var secretRenameCmd = &cobra.Command{
 	Use:   "rename <user_identifier> <old_secret_name> <new_secret_name>",
-	Short: "Rename an existing secret",
-	Long:  `Renames an existing secret for the specified user. The secret is identified by its current name.`,
+	Short: "Rename an existing secret. Requires user authentication.",
+	Long:  `Renames an existing secret for the specified user. The secret is identified by its current name. This command requires user authentication.`,
 	Args:  cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		userIdentifier := args[0]
@@ -287,8 +287,8 @@ var secretRenameCmd = &cobra.Command{
 // secretListCmd represents the command to list a user's secrets
 var secretListCmd = &cobra.Command{
 	Use:   "list <user_identifier>",
-	Short: "List a user's secrets (names only)",
-	Long:  `Lists the names of all secrets belonging to the specified user.`,
+	Short: "List a user's secrets (names only). Requires user authentication.",
+	Long:  `Lists the names of all secrets belonging to the specified user. This command requires user authentication.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		userIdentifier := args[0]
@@ -328,8 +328,8 @@ var secretListCmd = &cobra.Command{
 // secretGetCmd represents the command to get a specific secret's value
 var secretGetCmd = &cobra.Command{
 	Use:   "get <user_identifier> <secret_name>",
-	Short: "Get a specific secret's value",
-	Long:  `Retrieves and displays the name and value of a specific secret for the specified user.`,
+	Short: "Get a specific secret's value. Requires user authentication.",
+	Long:  `Retrieves and displays the name and value of a specific secret for the specified user. This command requires user authentication.`,
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		userIdentifier := args[0]
@@ -358,8 +358,8 @@ var secretGetCmd = &cobra.Command{
 // secretDeleteCmd represents the command to delete a secret
 var secretDeleteCmd = &cobra.Command{
 	Use:   "delete <user_identifier> <secret_name>",
-	Short: "Delete a specific secret",
-	Long:  `Deletes a specific secret for the specified user. The secret is identified by its name.`,
+	Short: "Delete a specific secret. Requires user authentication.",
+	Long:  `Deletes a specific secret for the specified user. The secret is identified by its name. This command requires user authentication.`,
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		userIdentifier := args[0]
