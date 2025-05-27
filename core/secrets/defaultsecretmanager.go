@@ -45,12 +45,12 @@ func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretR
 	}
 
 	// Check if the secret already exists
-	existingSecret, err := m.findSecretByNameForUser(userId, request.SecretName, dataProtector)
-
-	if err != nil {
-		return CreateSecretResponse{}, ccc.NewDatabaseError("find existing secret", err)
+	existingSecret, err := m.GetSecretByName(userId, request.SecretName, dataProtector)
+	if err != nil && !ccc.IsNotFound(err) {
+		// If the error is anything other than "Resource Not Found", it's an actual error.
+		return CreateSecretResponse{}, ccc.NewDatabaseError("find existing secret by name", err)
 	}
-
+	// If it is ResourceNotFoundError, it means the secret doesn't exist, which is good.
 	if existingSecret != nil {
 		return CreateSecretResponse{}, ccc.NewResourceAlreadyExistsError(request.SecretName, "Secret")
 	}
@@ -115,6 +115,43 @@ func (m *DefaultSecretManager) GetSecret(userId string, secretId string, dataPro
 		Id:         secret.Id,
 		UserId:     secret.UserId,
 		Name:       decryptedName,
+		Value:      decryptedValue,
+		CreatedAt:  secret.CreatedAt.Format("2006-01-02 15:04:05"),
+		ModifiedAt: secret.ModifiedAt.Format("2006-01-02 15:04:05"),
+	}
+
+	return secretDto, nil
+}
+
+// GetSecretByName retrieves a secret by its name for a specific user and decrypts it.
+func (m *DefaultSecretManager) GetSecretByName(userId string, secretName string, dataProtector DataProtector) (*SecretDto, error) {
+	// Encrypt the secret name to search for it in the repository
+	encryptedName, err := dataProtector.Protect(secretName)
+	if err != nil {
+		return nil, ccc.NewInternalError("failed to encrypt secret name for lookup", err)
+	}
+
+	// Retrieve the secret from the repository using the encrypted name
+	secret, err := m.secretRepository.FindByNameForUser(userId, encryptedName)
+	if err != nil {
+		return nil, ccc.NewDatabaseError("find secret by name", err)
+	}
+
+	if secret == nil {
+		return nil, ccc.NewResourceNotFoundError(secretName, "Secret")
+	}
+
+	// Decrypt the secret value
+	decryptedValue, err := dataProtector.Unprotect(secret.Value)
+	if err != nil {
+		return nil, ccc.NewInternalError("failed to decrypt secret value", err)
+	}
+
+	// Map the secret to a DTO
+	secretDto := &SecretDto{
+		Id:         secret.Id,
+		UserId:     secret.UserId,
+		Name:       secretName, // Use the original, unencrypted name for the DTO
 		Value:      decryptedValue,
 		CreatedAt:  secret.CreatedAt.Format("2006-01-02 15:04:05"),
 		ModifiedAt: secret.ModifiedAt.Format("2006-01-02 15:04:05"),
@@ -266,13 +303,23 @@ func (m *DefaultSecretManager) UpdateSecret(userId string, secretId string, requ
 		return false, ccc.NewResourceNotFoundError(secretId, "Secret")
 	}
 
-	// Check if another secret with the new name already exists (excluding current secret)
-	conflictingSecret, err := m.findSecretByNameForUser(userId, request.SecretName, dataProtector)
+	// Decrypt the existing secret's name to check if it's being changed.
+	decryptedCurrentName, err := dataProtector.Unprotect(existingSecret.Name)
 	if err != nil {
-		return false, ccc.NewDatabaseError("find conflicting secret", err)
+		return false, ccc.NewInternalError("failed to decrypt current secret name", err)
 	}
-	if conflictingSecret != nil && conflictingSecret.Id != secretId {
-		return false, ccc.NewResourceAlreadyExistsError(request.SecretName, "Secret")
+
+	// If the name is being changed, check if the new name conflicts with another existing secret.
+	if decryptedCurrentName != request.SecretName {
+		conflictingSecret, err := m.GetSecretByName(userId, request.SecretName, dataProtector)
+		if err != nil && !ccc.IsNotFound(err) {
+			// If the error is anything other than "Resource Not Found", it's an actual error.
+			return false, ccc.NewDatabaseError("find conflicting secret by name", err)
+		}
+		// If it is ResourceNotFoundError, it means no conflicting secret exists, which is good.
+		if conflictingSecret != nil && conflictingSecret.Id != secretId { // Ensure it's not the same secret
+			return false, ccc.NewResourceAlreadyExistsError(request.SecretName, "Secret")
+		}
 	}
 
 	// Encrypt the new name and value
@@ -284,13 +331,19 @@ func (m *DefaultSecretManager) UpdateSecret(userId string, secretId string, requ
 	if err != nil {
 		return false, ccc.NewInternalError("failed to encrypt secret value", err)
 	}
-
-	// Update the secret
+	// Update the existing secret with new values
 	existingSecret.Name = encryptedName
 	existingSecret.Value = encryptedValue
 	existingSecret.ModifiedAt = time.Now()
-
-	return m.secretRepository.Update(existingSecret)
+	// Update the secret in the repository
+	success, err := m.secretRepository.Update(existingSecret)
+	if err != nil {
+		return false, ccc.NewDatabaseError("update secret", err)
+	}
+	if !success {
+		return false, ccc.NewInternalError("update secret reported no success but no error", nil)
+	}
+	return true, nil
 }
 
 // DeleteSecret deletes a secret by its ID
@@ -305,27 +358,4 @@ func (m *DefaultSecretManager) DeleteSecret(userId string, secretId string) (boo
 	// Secret deletion is idempotent. We indicate success, but never return an error if the secret doesn't exist.
 	// We simply return the success status.
 	return success, nil
-}
-
-// findSecretByNameForUser is a helper method to find a secret by decrypting names in memory
-func (m *DefaultSecretManager) findSecretByNameForUser(userId, secretName string, dataProtector DataProtector) (*Secret, error) {
-	// Get all secrets for the user
-	allSecrets, err := m.secretRepository.FindByUserId(userId)
-	if err != nil {
-		return nil, ccc.NewDatabaseError("find secrets by user ID", err)
-	}
-
-	// Search through secrets by decrypting names
-	for _, secret := range allSecrets {
-		decryptedName, err := dataProtector.Unprotect(secret.Name)
-		if err != nil {
-			// Skip secrets we can't decrypt
-			continue
-		}
-		if decryptedName == secretName {
-			return secret, nil
-		}
-	}
-
-	return nil, nil // Not found
 }

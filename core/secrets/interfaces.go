@@ -10,6 +10,7 @@ type SecretRepository interface {
 	FindById(secretId string) (*Secret, error)
 	FindByUserId(userId string) ([]*Secret, error)
 	FindByIdForUser(userId, secretId string) (*Secret, error)
+	FindByNameForUser(userId, name string) (*Secret, error)
 	Add(secret *Secret) (bool, error)
 	Remove(secretId string) (bool, error)
 	Update(secret *Secret) (bool, error)
@@ -19,6 +20,7 @@ type SecretRepository interface {
 type SecretManager interface {
 	CreateSecret(userId string, request UpsertSecretRequest, dataProtector DataProtector) (CreateSecretResponse, error)
 	GetSecret(userId string, secretId string, dataProtector DataProtector) (*SecretDto, error)
+	GetSecretByName(userId string, secretName string, dataProtector DataProtector) (*SecretDto, error)
 	GetSecrets(userId string, request GetSecretsRequest, dataProtector DataProtector) (PaginatedSecretResponse, error)
 	UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector DataProtector) (bool, error)
 	DeleteSecret(userId string, secretId string) (bool, error)

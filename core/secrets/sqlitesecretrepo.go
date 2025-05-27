@@ -153,6 +153,14 @@ func (repo *SQLiteSecretRepository) FindByIdForUser(userId, secretId string) (*S
 	return scanSecret(row)
 }
 
+// FindByNameForUser retrieves a secret by user ID and its name.
+// The 'name' parameter is expected to be the stored (potentially encrypted) name.
+func (repo *SQLiteSecretRepository) FindByNameForUser(userId, name string) (*Secret, error) {
+	query := fmt.Sprintf("SELECT %s FROM Secret WHERE UserId = ? AND Name = ?", secretFieldList)
+	row := repo.db.QueryRow(query, userId, name)
+	return scanSecret(row)
+}
+
 // Add adds a new secret to the database.
 func (repo *SQLiteSecretRepository) Add(secret *Secret) (bool, error) {
 	query := fmt.Sprintf("INSERT INTO Secret (%s) VALUES (?, ?, ?, ?, ?, ?)", secretFieldList)

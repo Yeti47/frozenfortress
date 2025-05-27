@@ -389,3 +389,22 @@ func (manager *DefaultUserManager) DeleteUser(id string) (bool, error) {
 	// Idempotency: if the user was not found, we still return success; no error is raised
 	return success, nil
 }
+
+// VerifyPassword checks if the provided password matches the user's password
+func (manager *DefaultUserManager) VerifyPassword(userId string, password string) (bool, error) {
+	user, err := manager.userRepository.FindById(userId)
+	if err != nil {
+		return false, ccc.NewDatabaseError("find user by ID", err)
+	}
+
+	if user == nil {
+		return false, ccc.NewResourceNotFoundError(userId, "User")
+	}
+
+	success, err := manager.securityService.VerifyUserPassword(*user, password)
+	if err != nil {
+		return false, ccc.NewInternalError("verify user password", err)
+	}
+
+	return success, nil
+}

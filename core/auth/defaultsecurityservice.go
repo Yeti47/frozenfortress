@@ -5,13 +5,13 @@ import (
 )
 
 type DefaultSecurityService struct {
-	UserRepository    UserRepository
+	userRepository    UserRepository
 	encryptionService encryption.EncryptionService
 }
 
 func NewDefaultSecurityService(userRepository UserRepository, encryptionService encryption.EncryptionService) *DefaultSecurityService {
 	return &DefaultSecurityService{
-		UserRepository:    userRepository,
+		userRepository:    userRepository,
 		encryptionService: encryptionService,
 	}
 }
@@ -24,7 +24,7 @@ func (s *DefaultSecurityService) LockUser(user User) (bool, error) {
 	// TODO: Add logic to log the lock action
 
 	// Update the user in the repository
-	updated, err := s.UserRepository.Update(&user)
+	updated, err := s.userRepository.Update(&user)
 	if err != nil {
 		return false, err
 	}
@@ -40,7 +40,7 @@ func (s *DefaultSecurityService) UnlockUser(user User) (bool, error) {
 	// TODO: Add logic to log the unlock action
 
 	// Update the user in the repository
-	updated, err := s.UserRepository.Update(&user)
+	updated, err := s.userRepository.Update(&user)
 	if err != nil {
 		return false, err
 	}

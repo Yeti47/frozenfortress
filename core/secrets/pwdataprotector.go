@@ -17,9 +17,9 @@ type PasswordDataProtector struct {
 	user              *auth.User // Cached user to avoid multiple lookups
 }
 
-// CreatePasswordDataProtector creates a new PasswordDataProtector instance.
+// NewPasswordDataProtector creates a new PasswordDataProtector instance.
 // It is intended to be used for encrypting and decrypting data with a user's password.
-func CreatePasswordDataProtector(encryptionService encryption.EncryptionService, securityService auth.SecurityService, userRepo auth.UserRepository, userId, password string) *PasswordDataProtector {
+func NewPasswordDataProtector(encryptionService encryption.EncryptionService, securityService auth.SecurityService, userRepo auth.UserRepository, userId, password string) *PasswordDataProtector {
 	return &PasswordDataProtector{
 		encryptionService: encryptionService,
 		securityService:   securityService,

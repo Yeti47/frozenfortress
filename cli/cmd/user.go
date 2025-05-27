@@ -11,41 +11,95 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// encryptionService returns a singleton instance of the EncryptionService
+var encryptionService = func() func() encryption.EncryptionService {
+	var instance encryption.EncryptionService
+	var once sync.Once
+
+	return func() encryption.EncryptionService {
+		once.Do(func() {
+			instance = encryption.NewDefaultEncryptionService()
+		})
+		return instance
+	}
+}()
+
+// userRepository returns a singleton instance of the UserRepository
+var userRepository = func() func() (auth.UserRepository, error) {
+	var instance auth.UserRepository
+	var once sync.Once
+	var initErr error
+
+	return func() (auth.UserRepository, error) {
+		once.Do(func() {
+			var db *sql.DB
+
+			db, initErr = database()
+			if initErr != nil {
+				return
+			}
+			instance, initErr = auth.NewSQLiteUserRepository(db)
+		})
+		return instance, initErr
+	}
+}()
+
+// securityService returns a singleton instance of the SecurityService
+var securityService = func() func() (auth.SecurityService, error) {
+	var instance auth.SecurityService
+	var once sync.Once
+	var initErr error
+
+	return func() (auth.SecurityService, error) {
+		once.Do(func() {
+			repoInstance, err := userRepository()
+			if err != nil {
+				initErr = err
+				return
+			}
+
+			encServiceInstance := encryptionService()
+
+			instance = auth.NewDefaultSecurityService(repoInstance, encServiceInstance)
+		})
+		return instance, initErr
+	}
+}()
+
 // userManager returns a singleton instance of the UserManager
 var userManager = func() func() (auth.UserManager, error) {
 	var instance auth.UserManager
 	var once sync.Once
 
 	return func() (auth.UserManager, error) {
-		var err error
+		var initErr error
 		once.Do(func() {
-			var db *sql.DB
-			db, err = database()
+
+			repoInstance, err := userRepository()
 			if err != nil {
+				initErr = err
 				return
 			}
 
-			// Create dependencies
-			encryptionService := encryption.NewDefaultEncryptionService()
+			encServiceInstance := encryptionService()
 
-			userRepository, repoErr := auth.NewSQLiteUserRepository(db)
-			if repoErr != nil {
-				err = repoErr
+			secServiceInstance, err := securityService()
+			if err != nil {
+				initErr = err
 				return
 			}
 
 			userIdGenerator := auth.NewUuidUserIdGenerator()
-			securityService := auth.NewDefaultSecurityService(userRepository, encryptionService)
 
-			// Create user manager
+			// Create user manager using singleton dependencies
 			instance = auth.NewDefaultUserManager(
-				userRepository,
+				repoInstance,
 				userIdGenerator,
-				encryptionService,
-				securityService,
+				encServiceInstance,
+				secServiceInstance,
 			)
 		})
-		return instance, err
+		return instance, initErr
 	}
 }()
 
@@ -99,3 +153,6 @@ func resolveUserIdentifier(identifier string) (auth.UserDto, error) {
 func init() {
 	rootCmd.AddCommand(userCmd)
 }
+
+// createDataProtector creates a DataProtector instance for the given user and password
+// This function has been moved to secret.go
