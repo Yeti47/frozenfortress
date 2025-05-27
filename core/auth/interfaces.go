@@ -56,6 +56,10 @@ type UserIdGenerator interface {
 	GenerateUserId() string
 }
 
+type SignInHandler interface {
+	HandleSignIn(request SignInRequest, context SignInContext) (SignInResult, error)
+}
+
 type SignInManager interface {
 	SignIn(w http.ResponseWriter, r *http.Request, request SignInRequest) (SignInResponse, error)
 	SignOut(w http.ResponseWriter, r *http.Request) error

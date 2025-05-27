@@ -50,163 +50,80 @@ func LoadConfigFromEnvironment() signInConfig {
 }
 
 // SessionSignInManager implements SignInManager using gorilla sessions
-// and verifies user credentials using a UserManager.
+// and delegates core sign-in logic to a SignInHandler.
 type SessionSignInManager struct {
-	userRepository          UserRepository
-	signInHistoryRepository SignInHistoryItemRepository
-	sessionStore            sessions.Store
-	securityService         SecurityService
-	mekStore                MekStore
-	config                  signInConfig
+	userRepository UserRepository
+	signInHandler  SignInHandler
+	sessionStore   sessions.Store
+	mekStore       MekStore
 }
 
 // NewSessionSignInManager creates a new SessionSignInManager with all dependencies injected
 func NewSessionSignInManager(
 	userRepo UserRepository,
-	signInHistoryRepo SignInHistoryItemRepository,
+	signInHandler SignInHandler,
 	store sessions.Store,
-	securityService SecurityService,
-	mekStore MekStore,
-	config signInConfig) *SessionSignInManager {
+	mekStore MekStore) *SessionSignInManager {
 
 	return &SessionSignInManager{
-		userRepository:          userRepo,
-		signInHistoryRepository: signInHistoryRepo,
-		sessionStore:            store,
-		securityService:         securityService,
-		mekStore:                mekStore,
-		config:                  config,
+		userRepository: userRepo,
+		signInHandler:  signInHandler,
+		sessionStore:   store,
+		mekStore:       mekStore,
 	}
 }
 
-// SignIn verifies the user's credentials and creates a session if successful.
-// Also tracks login attempts and locks accounts after too many failed attempts.
+// SignIn verifies the user's credentials using SignInHandler and creates a session if successful.
 func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, request SignInRequest) (SignInResponse, error) {
-
-	// Validate input
-	if request.UserName == "" {
-		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewInvalidInputError("username", "cannot be empty")
-	}
-	if request.Password == "" {
-		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewInvalidInputError("password", "cannot be empty")
+	// Create SignInContext with web client information
+	context := SignInContext{
+		ClientType: ClientTypeWeb,
 	}
 
-	user, err := m.userRepository.FindByUserName(request.UserName)
-	if err != nil {
-		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewDatabaseError("find user by username", err)
-	}
-
-	// Prepare sign-in history object
-	historyItem := &SignInHistoryItem{
-		UserName:   request.UserName,
-		Timestamp:  time.Now(),
-		Successful: false, // Default to failed, will update if successful
-		// ID will be assigned by repository on insert
-	}
-
-	// Get IP and user agent if available
+	// Extract IP address and user agent from request if available
 	if r != nil {
-		historyItem.IPAddress = r.RemoteAddr
-		historyItem.UserAgent = r.UserAgent()
+		context.IPAddress = r.RemoteAddr
+		context.UserAgent = r.UserAgent()
 	}
 
-	// Check if user exists
-	if user == nil || user.Id == "" {
-		// Even for non-existent users, we still log the attempt
-		historyItem.DenialReason = "Invalid credentials"
-		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewUnauthorizedError("invalid credentials")
-	}
-
-	// Set user ID now that we have it
-	historyItem.UserId = user.Id
-
-	// Check if account is locked
-	if user.IsLocked {
-		historyItem.DenialReason = "Account is locked"
-		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Account is locked"}, ccc.NewForbiddenError("account is locked")
-	}
-
-	// Check if account is inactive
-	if !user.IsActive {
-		historyItem.DenialReason = "Account is inactive"
-		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Account is inactive"}, ccc.NewForbiddenError("account is inactive")
-	}
-
-	// Verify password using SecurityService
-	valid, err := m.securityService.VerifyUserPassword(*user, request.Password)
+	// Use SignInHandler to perform core authentication logic
+	result, err := m.signInHandler.HandleSignIn(request, context)
 	if err != nil {
-		historyItem.DenialReason = "Password verification failed"
-		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewUnauthorizedError("invalid credentials")
+		return SignInResponse{Success: false, Error: result.ErrorMessage}, err
 	}
 
-	// If password verification failed
-	if !valid {
-		// Log the failed attempt
-		historyItem.DenialReason = "Invalid credentials"
-		_ = m.signInHistoryRepository.Add(historyItem)
-
-		// Check for too many failed attempts, but only if the account is active
-		if user.IsActive {
-			failedAttempts, err := m.signInHistoryRepository.GetRecentFailedSignInsByUserName(
-				user.UserName, m.config.FailedAttemptsWindow)
-
-			if err == nil && len(failedAttempts) >= m.config.MaxFailedAttempts {
-				// Lock the account using the SecurityService
-				_, _ = m.securityService.LockUser(*user)
-				return SignInResponse{Success: false, Error: "Account has been locked due to too many failed attempts"}, ccc.NewForbiddenError("account locked due to too many failed attempts")
-			}
-		}
-		return SignInResponse{Success: false, Error: "Invalid credentials"}, ccc.NewUnauthorizedError("invalid credentials")
+	// If authentication failed, return the result
+	if !result.Success {
+		return SignInResponse{Success: false, Error: result.ErrorMessage}, result.ErrorCode
 	}
 
 	// Authentication succeeded - create session
 	session, err := m.sessionStore.Get(r, sessionName)
 	if err != nil {
-		_ = m.signInHistoryRepository.Add(historyItem)
 		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to get session", err)
 	}
 
-	mek, err := m.securityService.UncoverMek(*user, request.Password)
-	if err != nil {
-		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to uncover MEK", err)
-	}
-	if mek == "" {
-		_ = m.signInHistoryRepository.Add(historyItem)
-		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("MEK uncovering returned empty result", nil)
-	}
-
-	session.Values["userId"] = user.Id
+	session.Values["userId"] = result.User.Id
 	err = session.Save(r, w)
 	if err != nil {
-		_ = m.signInHistoryRepository.Add(historyItem)
 		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to save session", err)
 	}
 
 	// Store the MEK in the session
-	err = m.mekStore.Store(w, r, mek)
+	err = m.mekStore.Store(w, r, result.Mek)
 	if err != nil {
-		_ = m.signInHistoryRepository.Add(historyItem)
 		return SignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to store MEK", err)
 	}
-
-	// Update history item to reflect successful login
-	historyItem.Successful = true
-	_ = m.signInHistoryRepository.Add(historyItem)
 
 	return SignInResponse{
 		Success: true,
 		User: UserDto{
-			Id:         user.Id,
-			UserName:   user.UserName,
-			IsActive:   user.IsActive,
-			IsLocked:   user.IsLocked,
-			CreatedAt:  user.CreatedAt.Format(time.RFC3339),
-			ModifiedAt: user.ModifiedAt.Format(time.RFC3339),
+			Id:         result.User.Id,
+			UserName:   result.User.UserName,
+			IsActive:   result.User.IsActive,
+			IsLocked:   result.User.IsLocked,
+			CreatedAt:  result.User.CreatedAt.Format(time.RFC3339),
+			ModifiedAt: result.User.ModifiedAt.Format(time.RFC3339),
 		},
 	}, nil
 }

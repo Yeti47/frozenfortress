@@ -34,3 +34,27 @@ type SignInResponse struct {
 	User    UserDto
 	Error   string // empty if no error
 }
+
+type SignInResult struct {
+	Success      bool
+	User         *User  // nil if sign-in failed
+	Mek          string // empty if sign-in failed
+	ErrorMessage string
+	ErrorCode    error // underlying error for logging/debugging
+}
+
+type SignInContext struct {
+	ClientType ClientType
+	IPAddress  string // IP address of the client making the request (if applicable)
+	UserAgent  string // User-Agent string of the client making the request (if applicable)
+}
+
+// ClientType represents the type of client making a sign-in request
+type ClientType string
+
+const (
+	ClientTypeUnknown ClientType = ""
+	ClientTypeWeb     ClientType = "WEB"
+	ClientTypeCLI     ClientType = "CLI"
+	ClientTypeOther   ClientType = "OTHER"
+)

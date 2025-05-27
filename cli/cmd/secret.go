@@ -48,6 +48,51 @@ var secretIdGenerator = func() func() secrets.SecretIdGenerator {
 	}
 }()
 
+// signInHandler returns a singleton instance of the SignInHandler
+var signInHandler = func() func() (auth.SignInHandler, error) {
+	var instance auth.SignInHandler
+	var once sync.Once
+	var initErr error
+
+	return func() (auth.SignInHandler, error) {
+		once.Do(func() {
+			userRepo, err := userRepository()
+			if err != nil {
+				initErr = err
+				return
+			}
+
+			db, err := database()
+			if err != nil {
+				initErr = err
+				return
+			}
+
+			signInHistoryRepo, err := auth.NewSQLiteSignInHistoryItemRepository(db)
+			if err != nil {
+				initErr = err
+				return
+			}
+
+			secService, err := securityService()
+			if err != nil {
+				initErr = err
+				return
+			}
+
+			config := auth.LoadConfigFromEnvironment()
+
+			instance = auth.NewDefaultSignInHandler(
+				userRepo,
+				signInHistoryRepo,
+				secService,
+				config,
+			)
+		})
+		return instance, initErr
+	}
+}()
+
 // secretManager returns a singleton instance of the SecretManager
 var secretManager = func() func() (secrets.SecretManager, error) {
 	var instance secrets.SecretManager
@@ -104,19 +149,36 @@ func promptForPassword() (string, error) {
 	return password, nil
 }
 
-// authenticateUser verifies the user's password.
-func authenticateUser(userId string, password string) error {
-	um, err := userManager()
+// authenticateUser verifies the user's credentials using the SignInHandler with proper security measures.
+func authenticateUser(userDto auth.UserDto, password string) error {
+	handler, err := signInHandler()
 	if err != nil {
-		return fmt.Errorf("failed to get user manager: %w", err)
+		return fmt.Errorf("failed to get sign-in handler: %w", err)
 	}
-	validPassword, err := um.VerifyPassword(userId, password)
+
+	// Create SignInRequest
+	request := auth.SignInRequest{
+		UserName: userDto.UserName,
+		Password: password,
+	}
+
+	// Create SignInContext for CLI client
+	context := auth.SignInContext{
+		ClientType: auth.ClientTypeCLI,
+		IPAddress:  "", // Empty for CLI clients
+		UserAgent:  "", // Empty for CLI clients
+	}
+
+	// Perform authentication
+	result, err := handler.HandleSignIn(request, context)
 	if err != nil {
-		return fmt.Errorf("failed to verify password: %w", err)
+		return fmt.Errorf("authentication failed: %w", err)
 	}
-	if !validPassword {
-		return fmt.Errorf("authentication failed")
+
+	if !result.Success {
+		return fmt.Errorf("authentication failed: %s", result.ErrorMessage)
 	}
+
 	return nil
 }
 
@@ -135,7 +197,7 @@ func prepareSecretOperation(userIdentifier string) (auth.UserDto, secrets.DataPr
 	}
 
 	// 3. Authenticate user
-	if err := authenticateUser(userDto.Id, password); err != nil {
+	if err := authenticateUser(userDto, password); err != nil {
 		return auth.UserDto{}, nil, nil, err // Error already formatted
 	}
 

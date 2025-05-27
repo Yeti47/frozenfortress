@@ -23,6 +23,7 @@ type SignInHistoryItem struct {
 	UserName     string
 	IPAddress    string
 	UserAgent    string
+	ClientType   string
 	Successful   bool
 	Timestamp    time.Time
 	DenialReason string
