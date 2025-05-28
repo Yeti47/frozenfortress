@@ -115,7 +115,7 @@ var secretManager = func() func() (secrets.SecretManager, error) {
 				return
 			}
 
-			instance = secrets.NewDefaultSecretManager(repo, idGen, userRepo)
+			instance = secrets.NewDefaultSecretManager(repo, idGen, userRepo, logger)
 		})
 		return instance, initErr
 	}

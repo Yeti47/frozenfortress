@@ -3,6 +3,7 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 
@@ -11,6 +12,11 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/spf13/cobra"
 )
+
+// Package-level logger
+var logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	Level: slog.LevelInfo,
+}))
 
 // appConfig returns a singleton instance of the application configuration
 var appConfig = func() func() (*config.Config, error) {
