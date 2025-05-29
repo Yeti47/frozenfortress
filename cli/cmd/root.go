@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/cli/internal"
-	"github.com/Yeti47/frozenfortress/frozenfortress/cli/internal/config"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/spf13/cobra"
 )
@@ -18,21 +17,19 @@ var logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 	Level: slog.LevelInfo,
 }))
 
+// verbose holds the value of the --verbose flag
+var verbose bool
+
 // appConfig returns a singleton instance of the application configuration
-var appConfig = func() func() (*config.Config, error) {
-	var instance *config.Config
+var appConfig = func() func() (ccc.AppConfig, error) {
+	var instance ccc.AppConfig
 	var once sync.Once
 
-	return func() (*config.Config, error) {
-		var err error
+	return func() (ccc.AppConfig, error) {
 		once.Do(func() {
-			instance, err = config.LoadFromFile("")
-			if err != nil {
-				return
-			}
-			err = instance.Validate()
+			instance = ccc.LoadConfigFromEnv()
 		})
-		return instance, err
+		return instance, nil
 	}
 }()
 
@@ -44,12 +41,12 @@ var database = func() func() (*sql.DB, error) {
 	return func() (*sql.DB, error) {
 		var err error
 		once.Do(func() {
-			var cfg *config.Config
+			var cfg ccc.AppConfig
 			cfg, err = appConfig()
 			if err != nil {
 				return
 			}
-			instance, err = config.SetupDatabase(cfg)
+			instance, err = ccc.SetupDatabase(cfg)
 		})
 		return instance, err
 	}
@@ -60,9 +57,15 @@ var cleanupResources = func() func() error {
 	return func() error {
 		db, err := database()
 		if err != nil {
-			return nil // If we can't get the database, there's nothing to clean up
+			// If we can't get the database, there's nothing to clean up
+			// or the database was already closed by a previous cleanupResources call
+			return nil
 		}
-		return db.Close()
+		// Check if the database connection is still valid before trying to close it
+		if errPing := db.Ping(); errPing == nil {
+			return db.Close()
+		}
+		return nil // Connection already closed or invalid
 	}
 }()
 
@@ -82,8 +85,8 @@ and does not require authentication as it assumes privileged access.`,
 			return fmt.Errorf("failed to load configuration: %w", err)
 		}
 
-		if cfg.Verbose {
-			fmt.Printf("Using configuration: %s\n", cfg.String())
+		if verbose {
+			fmt.Printf("Using configuration: %s\\n", cfg.String())
 		}
 
 		// Initialize database (this will be cached via singleton)
@@ -108,7 +111,7 @@ func Execute() {
 		// Check if it's an ApiError and exit with appropriate code
 		if apiErr, ok := ccc.IsApiError(err); ok {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", apiErr.UserMessage)
-			if cfg, cfgErr := appConfig(); cfgErr == nil && cfg.Verbose {
+			if verbose {
 				fmt.Fprintf(os.Stderr, "Technical details: %s\n", apiErr.TechnicalMessage)
 			}
 			os.Exit(int(internal.ExitCodeFromApiError(apiErr)))
@@ -117,4 +120,8 @@ func Execute() {
 			os.Exit(int(internal.ExitInternalError))
 		}
 	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "enable verbose output")
 }

@@ -2,52 +2,15 @@ package auth
 
 import (
 	"net/http"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
-	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/boj/redistore"
 	"github.com/gorilla/sessions"
 )
 
-// signInConfig holds configuration values for the sign-in process
-type signInConfig struct {
-	MaxFailedAttempts    int // Maximum number of failed login attempts before locking account
-	FailedAttemptsWindow int // Time window in minutes for counting failed attempts
-}
-
-// Default configuration values if environment variables aren't set
-var defaultConfig = signInConfig{
-	MaxFailedAttempts:    3,
-	FailedAttemptsWindow: 30,
-}
-
 const sessionName = "frozenfortress_session"
 const mekSessionKey = "ffmek"
-
-// LoadConfigFromEnvironment loads configuration values from environment variables
-// with FROZEN_FORTRESS prefix. If variables are missing or invalid, default values are used.
-func LoadConfigFromEnvironment() signInConfig {
-	config := defaultConfig
-
-	// Try to load MaxFailedAttempts
-	if envValue := os.Getenv("FROZEN_FORTRESS_MAX_FAILED_ATTEMPTS"); envValue != "" {
-		if value, err := strconv.Atoi(envValue); err == nil && value > 0 {
-			config.MaxFailedAttempts = value
-		}
-	}
-
-	// Try to load FailedAttemptsWindow
-	if envValue := os.Getenv("FROZEN_FORTRESS_FAILED_ATTEMPTS_WINDOW"); envValue != "" {
-		if value, err := strconv.Atoi(envValue); err == nil && value > 0 {
-			config.FailedAttemptsWindow = value
-		}
-	}
-
-	return config
-}
 
 // SessionSignInManager implements SignInManager using gorilla sessions
 // and delegates core sign-in logic to a SignInHandler.
@@ -188,89 +151,39 @@ func (m *SessionSignInManager) IsSignedIn(r *http.Request) (bool, error) {
 }
 
 // CreateRedisStore creates a new Redis store for session management.
-// It reads Redis connection details and signing/encryption keys from environment variables.
-// Environment variables for Redis:
-// - FROZEN_FORTRESS_REDIS_ADDRESS: Address of the Redis server (e.g., "localhost:6379")
-// - FROZEN_FORTESS_RESIS_USER: Username for the Redis server (empty if none)
-// - FROZEN_FORTRESS_REDIS_PASSWORD: Password for the Redis server (empty if none)
-// - FROZEN_FORTRESS_REDIS_REDIS_SIZE: Maximum number of idle connections in the pool (e.g., 10)
-// - FROZEN_FORTRESS_REDIS_NETWORK: Network type, "tcp" or "unix" (e.g., "tcp")
-// Environment variables for keys (reused from cookie store):
-// - FROZEN_FORTRESS_SIGNING_KEY: Key for session authentication
-// - FROZEN_FORTRESS_ENCRYPTION_KEY: Key for session encryption
-func CreateRedisStore(encryptionService encryption.EncryptionService) (sessions.Store, error) {
-	// Redis connection details from environment variables
-	redisAddress := os.Getenv("FROZEN_FORTRESS_REDIS_ADDRESS")
-	if redisAddress == "" {
-		redisAddress = "localhost:6379" // Default address
-	}
+// It uses the provided AppConfig for Redis connection details and the
+// SessionKeyProvider to obtain signing and encryption keys.
+//
+// Configuration fields from AppConfig used:
+// - RedisAddress: Address of the Redis server (e.g., "localhost:6379")
+// - RedisUser: Username for the Redis server (empty if none)
+// - RedisPassword: Password for the Redis server (empty if none)
+// - RedisSize: Maximum number of idle connections in the pool (e.g., 10)
+// - RedisNetwork: Network type, "tcp" or "unix" (e.g., "tcp")
+//
+// The SessionKeyProvider is responsible for the logic of obtaining,
+// generating, and persisting the session keys.
+func CreateRedisStore(config ccc.AppConfig, keyProvider SessionKeyProvider) (sessions.Store, error) {
 
-	redisUser := os.Getenv("FROZEN_FORTRESS_REDIS_USER")
-
-	redisPassword := os.Getenv("FROZEN_FORTRESS_REDIS_PASSWORD") // Default is empty string
-
-	redisSizeString := os.Getenv("FROZEN_FORTRESS_REDIS_SIZE")
-	redisSize, err := strconv.Atoi(redisSizeString)
-	if err != nil || redisSize <= 0 {
-		redisSize = 10 // Default size
-	}
-
-	redisNetwork := os.Getenv("FROZEN_FORTRESS_REDIS_NETWORK")
-	if redisNetwork == "" {
-		redisNetwork = "tcp" // Default network type
-	}
-
-	// Get or create signing key from environment
-	signingKey, err := getOrCreateKey(encryptionService, "FROZEN_FORTRESS_SIGNING_KEY")
+	signingKeyBytes, err := keyProvider.GetSigningKey()
 	if err != nil {
 		return nil, err
 	}
 
-	// Get or create encryption key from environment
-	encryptionKey, err := getOrCreateKey(encryptionService, "FROZEN_FORTRESS_ENCRYPTION_KEY")
+	encryptionKeyBytes, err := keyProvider.GetEncryptionKey()
 	if err != nil {
 		return nil, err
 	}
 
-	signingKeyBytes, err := encryptionService.ConvertStringToKey(signingKey)
+	store, err := redistore.NewRediStore(config.RedisSize, config.RedisNetwork, config.RedisAddress, config.RedisUser, config.RedisPassword, signingKeyBytes, encryptionKeyBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	encryptionKeyBytes, err := encryptionService.ConvertStringToKey(encryptionKey)
-	if err != nil {
-		return nil, err
-	}
+	store.SetMaxAge(30 * 24 * 60 * 60) // 30 days
+	store.SetMaxLength(4096)           // 4KB
 
-	// Create Redis store
-	store, err := redistore.NewRediStore(redisSize, redisNetwork, redisAddress, redisUser, redisPassword, signingKeyBytes, encryptionKeyBytes)
-	if err != nil {
-		return nil, err
-	}
 	return store, nil
-}
-
-// getOrCreateKey reads a key from an environment variable or creates a new one if it doesn't exist
-func getOrCreateKey(encryptionService encryption.EncryptionService, envVarName string) (string, error) {
-	// Check if the environment variable exists
-	key := os.Getenv(envVarName)
-	if key != "" {
-		return key, nil
-	}
-
-	// Generate a new secure key
-	key, err := encryptionService.GenerateKey()
-	if err != nil {
-		return "", err
-	}
-
-	// Set the environment variable for future use
-	err = os.Setenv(envVarName, key)
-	if err != nil {
-		return "", err
-	}
-
-	return key, nil
 }
 
 type SessionMekStore struct {

@@ -9,7 +9,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth" // Ensured import
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/secrets"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -80,7 +81,7 @@ var signInHandler = func() func() (auth.SignInHandler, error) {
 				return
 			}
 
-			config := auth.LoadConfigFromEnvironment()
+			config := ccc.LoadConfigFromEnv()
 
 			instance = auth.NewDefaultSignInHandler(
 				userRepo,

@@ -12,7 +12,7 @@ type DefaultSignInHandler struct {
 	userRepository          UserRepository
 	signInHistoryRepository SignInHistoryItemRepository
 	securityService         SecurityService
-	config                  signInConfig
+	config                  ccc.AppConfig
 }
 
 // NewDefaultSignInHandler creates a new DefaultSignInHandler with all dependencies injected
@@ -20,7 +20,7 @@ func NewDefaultSignInHandler(
 	userRepo UserRepository,
 	signInHistoryRepo SignInHistoryItemRepository,
 	securityService SecurityService,
-	config signInConfig) *DefaultSignInHandler {
+	config ccc.AppConfig) *DefaultSignInHandler {
 
 	return &DefaultSignInHandler{
 		userRepository:          userRepo,
@@ -119,9 +119,9 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 		// Check for too many failed attempts, but only if the account is active
 		if user.IsActive {
 			failedAttempts, err := h.signInHistoryRepository.GetRecentFailedSignInsByUserName(
-				user.UserName, h.config.FailedAttemptsWindow)
+				user.UserName, h.config.SignInAttemptWindow)
 
-			if err == nil && len(failedAttempts) >= h.config.MaxFailedAttempts {
+			if err == nil && len(failedAttempts) >= h.config.MaxSignInAttempts {
 				// Lock the account using the SecurityService
 				_, _ = h.securityService.LockUser(*user)
 				return SignInResult{

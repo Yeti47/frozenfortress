@@ -72,3 +72,9 @@ type MekStore interface {
 	Retrieve(r *http.Request) (string, error)
 	Delete(w http.ResponseWriter, r *http.Request) error
 }
+
+// SessionKeyProvider is responsible for providing session signing and encryption keys.
+type SessionKeyProvider interface {
+	GetSigningKey() ([]byte, error)
+	GetEncryptionKey() ([]byte, error)
+}

@@ -21,8 +21,14 @@
 go.work
 go.work.sum
 
-# env file
+# Generated session keys directory
+keys/
+*.key
+
+# Environment files
 .env
+.env.local
+.env.production
 
 # IDE-specific files
 .vscode/
