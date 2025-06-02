@@ -88,6 +88,7 @@ var signInHandler = func() func() (auth.SignInHandler, error) {
 				signInHistoryRepo,
 				secService,
 				config,
+				logger,
 			)
 		})
 		return instance, initErr

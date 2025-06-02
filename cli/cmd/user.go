@@ -60,7 +60,7 @@ var securityService = func() func() (auth.SecurityService, error) {
 
 			encServiceInstance := encryptionService()
 
-			instance = auth.NewDefaultSecurityService(repoInstance, encServiceInstance)
+			instance = auth.NewDefaultSecurityService(repoInstance, encServiceInstance, logger)
 		})
 		return instance, initErr
 	}
@@ -97,6 +97,7 @@ var userManager = func() func() (auth.UserManager, error) {
 				userIdGenerator,
 				encServiceInstance,
 				secServiceInstance,
+				logger,
 			)
 		})
 		return instance, initErr
