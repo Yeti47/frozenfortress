@@ -34,6 +34,9 @@ keys/
 .vscode/
 .idea/
 
+# Compiled binaries directory
+bin/
+
 # FrozenFortress CLI application binary
 cli/cli
 cli/ffcli

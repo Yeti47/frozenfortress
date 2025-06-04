@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"encoding/json" // Added import
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -26,6 +28,9 @@ type AppConfig struct {
 	SigningKey    string // Session signing key
 	EncryptionKey string // Session encryption key
 	KeyDir        string // Directory to store persistent key files
+
+	WebUiPort int    // Port for the Web UI server
+	LogLevel  string // Log level (Debug, Info, Warn, Error)
 }
 
 // String returns a JSON representation of the AppConfig.
@@ -49,6 +54,8 @@ var DefaultConfig = AppConfig{
 	SigningKey:          "",
 	EncryptionKey:       "",
 	KeyDir:              "",
+	WebUiPort:           8080,   // Default Web UI port
+	LogLevel:            "Info", // Default log level
 }
 
 // LoadConfigFromEnv loads the application configuration from environment variables.
@@ -66,6 +73,8 @@ func LoadConfigFromEnv() AppConfig {
 		SigningKey:          "",
 		EncryptionKey:       "",
 		KeyDir:              "",
+		WebUiPort:           8080,
+		LogLevel:            "info", // Default log level
 	}
 
 	// Database configuration
@@ -113,6 +122,18 @@ func LoadConfigFromEnv() AppConfig {
 	}
 	if keyDir := os.Getenv("FF_KEY_DIR"); keyDir != "" {
 		config.KeyDir = keyDir
+	}
+
+	// Web UI configuration
+	if webUIPort := os.Getenv("FF_WEB_UI_PORT"); webUIPort != "" {
+		if port, err := strconv.Atoi(webUIPort); err == nil {
+			config.WebUiPort = port
+		}
+	}
+
+	// Log level configuration
+	if logLevel := os.Getenv("FF_LOG_LEVEL"); logLevel != "" {
+		config.LogLevel = logLevel
 	}
 
 	return config
@@ -187,4 +208,26 @@ func SetupDatabase(config AppConfig) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func CreateLogger(config AppConfig) Logger {
+
+	var level slog.Level
+	switch strings.ToLower(config.LogLevel) {
+	case "debug":
+		level = slog.LevelDebug
+	case "info":
+		level = slog.LevelInfo
+	case "warn", "warning":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		// Default to Info if unknown level
+		level = slog.LevelInfo
+	}
+
+	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+	}))
 }

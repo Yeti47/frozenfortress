@@ -3,7 +3,6 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"os"
 	"sync"
 
@@ -13,9 +12,7 @@ import (
 )
 
 // Package-level logger
-var logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-	Level: slog.LevelInfo,
-}))
+var logger ccc.Logger = ccc.NopLogger
 
 // verbose holds the value of the --verbose flag
 var verbose bool
@@ -94,6 +91,9 @@ and does not require authentication as it assumes privileged access.`,
 		if err != nil {
 			return fmt.Errorf("failed to connect to database: %w", err)
 		}
+
+		// Initialize logger
+		logger = ccc.CreateLogger(cfg)
 
 		return nil
 	},

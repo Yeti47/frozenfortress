@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #8dbfd9;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .app-title {
+            font-family: 'Cinzel', serif;
+            font-size: 32px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .welcome-message {
+            color: #34495e;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+
+        .login-link {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .login-link:hover {
+            background: linear-gradient(135deg, #2980b9, #21618c);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(52, 152, 219, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="app-title">Frozen Fortress</h1>
+        {{if .Username}}
+        <p class="welcome-message">Welcome back, <strong>{{.Username}}</strong>! You have successfully logged in.</p>
+        <div style="margin-top: 20px;">
+            <a href="/logout" class="login-link" style="background: linear-gradient(135deg, #e74c3c, #c0392b); margin-right: 10px;">Logout</a>
+            <a href="/login" class="login-link">Login Page</a>
+        </div>
+        {{else}}
+        <p class="welcome-message">Welcome to Frozen Fortress!</p>
+        <a href="/login" class="login-link">Go to Login</a>
+        {{end}}
+    </div>
+</body>
+</html>
