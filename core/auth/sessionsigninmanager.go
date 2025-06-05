@@ -63,14 +63,17 @@ func (m *SessionSignInManager) SignIn(w http.ResponseWriter, r *http.Request, re
 	m.logger.Debug("Delegating to sign-in handler for authentication", "username", request.UserName)
 	result, err := m.signInHandler.HandleSignIn(request, context)
 	if err != nil {
-		m.logger.Error("Sign-in handler returned error", "username", request.UserName, "error", err)
-		return SignInResponse{Success: false, Error: result.ErrorMessage}, err
+		// SignInHandler only returns errors for genuine internal/system issues
+		m.logger.Error("Sign-in handler returned internal error", "username", request.UserName, "error", err)
+		return SignInResponse{Success: false, Error: "Internal error"}, err
 	}
 
-	// If authentication failed, return the result
+	// If authentication failed, return the result without an error
+	// Authentication failures (invalid credentials, locked accounts, etc.) are not errors
+	// but simply unsuccessful responses
 	if !result.Success {
 		m.logger.Debug("Authentication failed via sign-in handler", "username", request.UserName, "error", result.ErrorMessage)
-		return SignInResponse{Success: false, Error: result.ErrorMessage}, result.ErrorCode
+		return SignInResponse{Success: false, Error: result.ErrorMessage}, nil
 	}
 
 	m.logger.Info("Authentication successful, creating web session", "username", request.UserName, "user_id", result.User.Id)

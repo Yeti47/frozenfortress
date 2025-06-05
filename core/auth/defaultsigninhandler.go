@@ -48,14 +48,14 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 		return SignInResult{
 			Success:      false,
 			ErrorMessage: "Invalid credentials",
-		}, ccc.NewInvalidInputError("username", "cannot be empty")
+		}, nil
 	}
 	if request.Password == "" {
 		h.logger.Warn("Sign-in failed: empty password", "username", request.UserName, "ip_address", context.IPAddress)
 		return SignInResult{
 			Success:      false,
 			ErrorMessage: "Invalid credentials",
-		}, ccc.NewInvalidInputError("password", "cannot be empty")
+		}, nil
 	}
 
 	user, err := h.userRepository.FindByUserName(request.UserName)
@@ -86,7 +86,7 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 		return SignInResult{
 			Success:      false,
 			ErrorMessage: "Invalid credentials",
-		}, ccc.NewUnauthorizedError("invalid credentials")
+		}, nil
 	}
 
 	h.logger.Debug("User found for sign-in", "username", request.UserName, "user_id", user.Id, "ip_address", context.IPAddress)
@@ -102,7 +102,7 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 		return SignInResult{
 			Success:      false,
 			ErrorMessage: "Account is locked",
-		}, ccc.NewForbiddenError("account is locked")
+		}, nil
 	}
 
 	// Check if account is inactive
@@ -113,7 +113,7 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 		return SignInResult{
 			Success:      false,
 			ErrorMessage: "Account is inactive",
-		}, ccc.NewForbiddenError("account is inactive")
+		}, nil
 	}
 
 	// Verify password using SecurityService
@@ -125,8 +125,8 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 		_ = h.signInHistoryRepository.Add(historyItem)
 		return SignInResult{
 			Success:      false,
-			ErrorMessage: "Invalid credentials",
-		}, ccc.NewUnauthorizedError("invalid credentials")
+			ErrorMessage: "Internal error",
+		}, err
 	}
 
 	// If password verification failed
@@ -166,14 +166,14 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 					return SignInResult{
 						Success:      false,
 						ErrorMessage: "Account has been locked due to too many failed attempts",
-					}, ccc.NewForbiddenError("account locked due to too many failed attempts")
+					}, nil
 				}
 			}
 		}
 		return SignInResult{
 			Success:      false,
 			ErrorMessage: "Invalid credentials",
-		}, ccc.NewUnauthorizedError("invalid credentials")
+		}, nil
 	}
 
 	// Authentication succeeded - get MEK

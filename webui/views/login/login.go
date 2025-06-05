@@ -1,8 +1,6 @@
 package login
 
 import (
-	"strings"
-
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/gin-gonic/gin"
 )
@@ -30,9 +28,9 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 		response, err := signInManager.SignIn(c.Writer, c.Request, request)
 
 		if err != nil {
-			// Handle error - render login page with error message
+			// SignInManager only returns errors for internal system issues
 			c.HTML(500, "login.html", gin.H{
-				"ErrorMessage": "Authentication failed. Please try again.",
+				"ErrorMessage": "Internal error occurred. Please try again later.",
 				"Username":     username, // Pre-fill username field
 			})
 			return
@@ -45,13 +43,7 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 				errorMessage = "Invalid username or password"
 			}
 
-			// Determine status code based on error type
-			statusCode := 401 // Default to Unauthorized
-			if strings.ToLower(response.Error) == "internal error" {
-				statusCode = 500
-			}
-
-			c.HTML(statusCode, "login.html", gin.H{
+			c.HTML(401, "login.html", gin.H{
 				"ErrorMessage": errorMessage,
 				"Username":     username, // Pre-fill username field
 			})
