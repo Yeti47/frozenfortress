@@ -40,7 +40,6 @@ type SignInResult struct {
 	User         *User  // nil if sign-in failed
 	Mek          string // empty if sign-in failed
 	ErrorMessage string
-	ErrorCode    error // underlying error for logging/debugging
 }
 
 type SignInContext struct {
