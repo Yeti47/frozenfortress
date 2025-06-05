@@ -3,8 +3,8 @@ package secrets
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
@@ -100,11 +100,11 @@ func scanSecret(scanner rowScanner) (*Secret, error) {
 		return nil, fmt.Errorf("scanning secret row: %w", err)
 	}
 
-	secret.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAtStr)
+	secret.CreatedAt, err = ccc.ParseSQLiteTimestamp(createdAtStr)
 	if err != nil {
 		return nil, fmt.Errorf("parsing CreatedAt for secret %s: %w", secret.Id, err)
 	}
-	secret.ModifiedAt, err = time.Parse("2006-01-02 15:04:05", modifiedAtStr)
+	secret.ModifiedAt, err = ccc.ParseSQLiteTimestamp(modifiedAtStr)
 	if err != nil {
 		return nil, fmt.Errorf("parsing ModifiedAt for secret %s: %w", secret.Id, err)
 	}
@@ -171,8 +171,8 @@ func (repo *SQLiteSecretRepository) Add(secret *Secret) (bool, error) {
 	}
 	defer stmt.Close()
 
-	createdAtStr := secret.CreatedAt.Format("2006-01-02 15:04:05")
-	modifiedAtStr := secret.ModifiedAt.Format("2006-01-02 15:04:05")
+	createdAtStr := ccc.FormatSQLiteTimestamp(secret.CreatedAt)
+	modifiedAtStr := ccc.FormatSQLiteTimestamp(secret.ModifiedAt)
 
 	result, err := stmt.Exec(
 		secret.Id,
@@ -231,8 +231,8 @@ func (repo *SQLiteSecretRepository) Update(secret *Secret) (bool, error) {
 	}
 	defer stmt.Close()
 
-	createdAtStr := secret.CreatedAt.Format("2006-01-02 15:04:05")
-	modifiedAtStr := secret.ModifiedAt.Format("2006-01-02 15:04:05")
+	createdAtStr := ccc.FormatSQLiteTimestamp(secret.CreatedAt)
+	modifiedAtStr := ccc.FormatSQLiteTimestamp(secret.ModifiedAt)
 
 	result, err := stmt.Exec(
 		secret.UserId,

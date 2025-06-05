@@ -3,8 +3,8 @@ package auth
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -63,7 +63,7 @@ func (r *SQLiteSignInHistoryItemRepository) Add(historyItem *SignInHistoryItem) 
 	}
 
 	// Format timestamp in SQLite format
-	timestampStr := historyItem.Timestamp.Format("2006-01-02 15:04:05")
+	timestampStr := ccc.FormatSQLiteTimestamp(historyItem.Timestamp)
 
 	result, err := r.db.Exec(
 		query,
@@ -195,7 +195,7 @@ func (r *SQLiteSignInHistoryItemRepository) scanRows(rows *sql.Rows) ([]*SignInH
 		}
 
 		// Parse the timestamp
-		timestamp, err := time.Parse("2006-01-02 15:04:05", timestampStr)
+		timestamp, err := ccc.ParseSQLiteTimestamp(timestampStr)
 		if err != nil {
 			return nil, err
 		}

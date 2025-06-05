@@ -13,7 +13,7 @@ var createCmd = &cobra.Command{
 	Long: `Create a new user account with the specified username and password.
 
 The username must be unique and the password must meet security requirements.
-The new user will be created in an active, unlocked state.
+The new user will be created in an inactive state until activated by an administrator.
 
 Examples:
   frozen-fortress user create jonathan_smith My$ecureP@ssw0rd
@@ -26,7 +26,6 @@ Examples:
 		// Get user manager
 		userMgr, err := userManager()
 		if err != nil {
-			output.PrintError("Failed to get user manager", err)
 			return err
 		}
 
@@ -38,7 +37,6 @@ Examples:
 
 		response, err := userMgr.CreateUser(request)
 		if err != nil {
-			output.PrintError("Failed to create user", err)
 			return err
 		}
 

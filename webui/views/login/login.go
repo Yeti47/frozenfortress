@@ -10,9 +10,6 @@ import (
 // RegisterRoutes registers the login routes with the provided Gin router.
 func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 
-	// Load login HTML template
-	router.LoadHTMLFiles("login/login.html")
-
 	// GET /login - Show login page
 	router.GET("/login", func(c *gin.Context) {
 		c.HTML(200, "login.html", gin.H{})

@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
-	"github.com/Yeti47/frozenfortress/frozenfortress/webui/login"
+	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/login"
 	"github.com/gin-gonic/gin"
 )
+
+const AppVersion = "1.0.0"
 
 func main() {
 
@@ -29,10 +31,8 @@ func main() {
 // registerRoutes registers all the routes for the web UI.
 func registerRoutes(router *gin.Engine, svc services) {
 
-	// Load HTML templates
-	router.LoadHTMLFiles(
-		"index.html",
-	)
+	// Load HTML templates contained in the "views" directory
+	router.LoadHTMLGlob("views/**/*.html")
 
 	// Serve static files for images
 	router.Static("/img", "./img")
@@ -49,6 +49,7 @@ func registerRoutes(router *gin.Engine, svc services) {
 		c.HTML(200, "index.html", gin.H{
 			"Title":    "Frozen Fortress - Home",
 			"Username": user.UserName,
+			"Version":  AppVersion,
 		})
 	})
 

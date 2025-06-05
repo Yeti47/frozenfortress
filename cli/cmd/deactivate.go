@@ -22,27 +22,22 @@ Examples:
 		// Resolve user identifier to get user info
 		user, err := resolveUserIdentifier(identifier)
 		if err != nil {
-			output.PrintError("Failed to find user", err)
 			return err
 		}
 
 		// Deactivate the user
 		userMgr, err := userManager()
 		if err != nil {
-			output.PrintError("Failed to get user manager", err)
 			return err
 		}
 
 		success, err := userMgr.DeactivateUser(user.Id)
 		if err != nil {
-			output.PrintError("Failed to deactivate user", err)
 			return err
 		}
 
 		if !success {
-			err := ccc.NewOperationFailedError("deactivate user", "operation returned false")
-			output.PrintError("Failed to deactivate user", err)
-			return err
+			return ccc.NewOperationFailedError("deactivate user", "operation returned false")
 		}
 
 		// Print success message

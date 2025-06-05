@@ -191,13 +191,9 @@ func SetupDatabase(config AppConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	// Enable foreign keys and other SQLite optimizations
+	// Enable foreign keys
 	pragmas := []string{
 		"PRAGMA foreign_keys = ON",
-		"PRAGMA journal_mode = WAL",
-		"PRAGMA synchronous = NORMAL",
-		"PRAGMA cache_size = -64000", // 64MB cache
-		"PRAGMA temp_store = MEMORY",
 	}
 
 	for _, pragma := range pragmas {

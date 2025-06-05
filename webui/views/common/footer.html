@@ -1,0 +1,52 @@
+{{define "footer"}}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="copyright">
+                © 2025 Frozen Fortress. All rights reserved.
+            </div>
+            <div class="version">
+                Version {{.Version}}
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            menu.classList.toggle('show');
+        }
+
+        function signOut() {
+            if (confirm('Are you sure you want to sign out?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        function performSearch(event) {
+            event.preventDefault();
+            const searchTerm = event.target.searchTerm.value.trim();
+            if (searchTerm) {
+                window.location.href = `/?searchTerm=${encodeURIComponent(searchTerm)}`;
+            }
+        }
+
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('user-menu');
+            const button = document.querySelector('.user-menu-button');
+            
+            if (!menu.contains(event.target) && !button.contains(event.target)) {
+                menu.classList.remove('show');
+            }
+        });
+
+        // Handle header navigation
+        document.querySelector('.header-left').style.textDecoration = 'none';
+    </script>
+</body>
+</html>
+{{end}}

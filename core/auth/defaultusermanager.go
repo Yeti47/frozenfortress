@@ -13,7 +13,7 @@ import (
 const (
 	// specialCharsRegexFragment defines the regex pattern fragment for allowed special characters.
 	// Characters: @ $ ! % * ? & # _ - . , ; : + § / [ ] ( ) { } =
-	specialCharsRegexFragment = `@$!%*?&#_.,;:+§/\\[\\](){}=-`
+	specialCharsRegexFragment = `@$!%*?&#_.,;:+§/\[\(){}=-`
 
 	// displaySpecialChars is a user-friendly string of allowed special characters for error messages.
 	displaySpecialChars = "@ $ ! % * ? & # _ - . , ; : + § / [ ] ( ) { } ="
@@ -23,7 +23,7 @@ var (
 	// Pre-compiled regexps for password validation efficiency.
 	hasLowerRegexp        = regexp.MustCompile(`[a-z]`)
 	hasUpperRegexp        = regexp.MustCompile(`[A-Z]`)
-	hasDigitRegexp        = regexp.MustCompile(`\\d`)
+	hasDigitRegexp        = regexp.MustCompile(`[0-9]`)
 	hasSpecialRegexp      = regexp.MustCompile(`[` + specialCharsRegexFragment + `]`)
 	allAllowedCharsRegexp = regexp.MustCompile(`^[A-Za-z0-9` + specialCharsRegexFragment + `]+$`)
 )

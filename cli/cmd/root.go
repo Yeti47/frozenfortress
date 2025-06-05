@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/cli/internal"
+	"github.com/Yeti47/frozenfortress/frozenfortress/cli/internal/output"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/spf13/cobra"
 )
@@ -75,6 +76,7 @@ in the FrozenFortress password manager system.
 
 This tool is designed for server administrators with direct access to the database
 and does not require authentication as it assumes privileged access.`,
+	SilenceErrors: true, // Suppress error output to handle it in Execute
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Initialize configuration (this will be cached via singleton)
 		cfg, err := appConfig()
@@ -110,13 +112,13 @@ func Execute() {
 	if err != nil {
 		// Check if it's an ApiError and exit with appropriate code
 		if apiErr, ok := ccc.IsApiError(err); ok {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", apiErr.UserMessage)
+			output.PrintError(apiErr.UserMessage, nil)
 			if verbose {
-				fmt.Fprintf(os.Stderr, "Technical details: %s\n", apiErr.TechnicalMessage)
+				output.PrintError("Technical details: "+apiErr.TechnicalMessage, nil)
 			}
 			os.Exit(int(internal.ExitCodeFromApiError(apiErr)))
 		} else {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			output.PrintError(err.Error(), nil)
 			os.Exit(int(internal.ExitInternalError))
 		}
 	}

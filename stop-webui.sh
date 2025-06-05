@@ -10,10 +10,28 @@ find_webui_processes() {
     # Look for different patterns, but exclude this script
     local all_pids=""
     
-    # Check for bin/webui processes
+    # Check for bin/webui processes (run from project root)
     local bin_pids=$(pgrep -f "bin/webui" 2>/dev/null || true)
     if [ -n "$bin_pids" ]; then
         all_pids="$all_pids $bin_pids"
+    fi
+    
+    # Check for bin/webui-debug processes (debug build from project root)
+    local bin_debug_pids=$(pgrep -f "bin/webui-debug" 2>/dev/null || true)
+    if [ -n "$bin_debug_pids" ]; then
+        all_pids="$all_pids $bin_debug_pids"
+    fi
+    
+    # Check for ./webui processes (run from bin directory)
+    local local_pids=$(pgrep -f "./webui" 2>/dev/null || true)
+    if [ -n "$local_pids" ]; then
+        all_pids="$all_pids $local_pids"
+    fi
+    
+    # Check for ./webui-debug processes (debug build from bin directory)
+    local local_debug_pids=$(pgrep -f "./webui-debug" 2>/dev/null || true)
+    if [ -n "$local_debug_pids" ]; then
+        all_pids="$all_pids $local_debug_pids"
     fi
     
     # Check for go-build webui processes (temporary builds)  

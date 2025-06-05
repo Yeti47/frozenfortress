@@ -3,8 +3,8 @@ package auth
 import (
 	"database/sql"
 	"fmt"
-	"time" // Added time import
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -164,8 +164,8 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 	defer statement.Close()
 
 	// Format timestamps
-	createdAtStr := user.CreatedAt.Format("2006-01-02 15:04:05")
-	modifiedAtStr := user.ModifiedAt.Format("2006-01-02 15:04:05")
+	createdAtStr := ccc.FormatSQLiteTimestamp(user.CreatedAt)
+	modifiedAtStr := ccc.FormatSQLiteTimestamp(user.ModifiedAt)
 
 	result, err := statement.Exec(
 		user.Id,
@@ -258,8 +258,8 @@ func (repo *SQLiteUserRepository) Update(user *User) (bool, error) {
 	defer statement.Close()
 
 	// Format timestamps
-	createdAtStr := user.CreatedAt.Format("2006-01-02 15:04:05")
-	modifiedAtStr := user.ModifiedAt.Format("2006-01-02 15:04:05")
+	createdAtStr := ccc.FormatSQLiteTimestamp(user.CreatedAt)
+	modifiedAtStr := ccc.FormatSQLiteTimestamp(user.ModifiedAt)
 
 	result, err := statement.Exec(
 		user.UserName,
@@ -313,14 +313,14 @@ func scanUser(scanner rowScanner) (*User, error) {
 		return nil, fmt.Errorf("reading user from database: %w", err)
 	}
 
-	// Parse timestamps
-	createdAt, err := time.Parse("2006-01-02 15:04:05", createdAtStr)
+	// Parse timestamps - try multiple formats to handle different SQLite driver behaviors
+	createdAt, err := ccc.ParseSQLiteTimestamp(createdAtStr)
 	if err != nil {
 		return nil, fmt.Errorf("parsing CreatedAt timestamp: %w", err)
 	}
 	user.CreatedAt = createdAt
 
-	modifiedAt, err := time.Parse("2006-01-02 15:04:05", modifiedAtStr)
+	modifiedAt, err := ccc.ParseSQLiteTimestamp(modifiedAtStr)
 	if err != nil {
 		return nil, fmt.Errorf("parsing ModifiedAt timestamp: %w", err)
 	}

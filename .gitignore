@@ -48,3 +48,5 @@ cli/bin/
 *.db-shm
 *.db-wal
 
+# Debug binary files
+__debug_bin*

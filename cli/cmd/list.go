@@ -25,14 +25,12 @@ Examples:
 		// Get user manager
 		userMgr, err := userManager()
 		if err != nil {
-			output.PrintError("Failed to get user manager", err)
 			return err
 		}
 
 		// Get all users
 		users, err := userMgr.GetAllUsers()
 		if err != nil {
-			output.PrintError("Failed to retrieve users", err)
 			return err
 		}
 
