@@ -2,6 +2,7 @@ package login
 
 import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
+	"github.com/Yeti47/frozenfortress/frozenfortress/webui/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,12 +28,7 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 		// Call SignInManager to handle authentication
 		response, err := signInManager.SignIn(c.Writer, c.Request, request)
 
-		if err != nil {
-			// SignInManager only returns errors for internal system issues
-			c.HTML(500, "login.html", gin.H{
-				"ErrorMessage": "Internal error occurred. Please try again later.",
-				"Username":     username, // Pre-fill username field
-			})
+		if middleware.HandleError(c, err) {
 			return
 		}
 
@@ -58,10 +54,15 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 	router.GET("/logout", func(c *gin.Context) {
 		// Call SignInManager to handle sign out
 		err := signInManager.SignOut(c.Writer, c.Request)
-		if err != nil {
-			// Log error but still redirect to login
-			// In a production app, you might want to show an error message
+		if middleware.HandleError(c, err) {
+			return
 		}
+
+		// Set security headers to prevent caching and clear history
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate, private")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
+		c.Header("Clear-Site-Data", "\"cache\", \"cookies\", \"storage\", \"executionContexts\"")
 
 		// Render login page with a success message
 		c.HTML(200, "login.html", gin.H{

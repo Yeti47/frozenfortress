@@ -235,6 +235,47 @@
             errorDiv.classList.remove('show');
             successDiv.classList.remove('show');
         });
+
+        // Clear navigation history if this is a logout success page
+        document.addEventListener('DOMContentLoaded', function() {
+            const successMessage = document.getElementById('success-message');
+            if (successMessage && successMessage.classList.contains('show')) {
+                clearNavigationHistoryOnLogout();
+            }
+        });
+
+        function clearNavigationHistoryOnLogout() {
+            try {
+                // For security: clear browser history after logout
+                if ('history' in window && 'replaceState' in window.history) {
+                    // Replace the current history entry to prevent going back to authenticated pages
+                    window.history.replaceState(null, '', '/login');
+                    
+                    // Clear session storage and local storage
+                    if (typeof(Storage) !== "undefined") {
+                        sessionStorage.clear();
+                        localStorage.clear();
+                    }
+                    
+                    // Clear any cached data
+                    if ('caches' in window) {
+                        caches.keys().then(function(names) {
+                            for (let name of names) {
+                                caches.delete(name);
+                            }
+                        });
+                    }
+                    
+                    // Prevent navigation using browser back/forward buttons to authenticated content
+                    window.addEventListener('popstate', function(event) {
+                        // Force redirect to login if user tries to navigate back
+                        window.location.replace('/login');
+                    });
+                }
+            } catch (e) {
+                console.log('History clearing not fully supported in this browser');
+            }
+        }
     </script>
 </body>
 </html>

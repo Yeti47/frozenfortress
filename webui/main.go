@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/webui/middleware"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/login"
 	"github.com/gin-gonic/gin"
 )
@@ -38,7 +39,7 @@ func registerRoutes(router *gin.Engine, svc services) {
 	router.Static("/img", "./img")
 
 	// Home page route - protected by authentication
-	router.GET("/", AuthMiddleware(svc.SignInManager), func(c *gin.Context) {
+	router.GET("/", middleware.AuthMiddleware(svc.SignInManager), func(c *gin.Context) {
 		// Get current user for display
 		user, err := svc.SignInManager.GetCurrentUser(c.Request)
 		if err != nil {

@@ -22,7 +22,36 @@
 
         function signOut() {
             if (confirm('Are you sure you want to sign out?')) {
+                // Clear navigation history for security
+                clearNavigationHistory();
                 window.location.href = '/logout';
+            }
+        }
+
+        function clearNavigationHistory() {
+            try {
+                // Clear browser history by replacing current state and going back to login
+                if ('history' in window && 'replaceState' in window.history) {
+                    // Replace all history entries with the login page
+                    window.history.replaceState(null, '', '/login');
+                    
+                    // Clear session storage and local storage for additional security
+                    if (typeof(Storage) !== "undefined") {
+                        sessionStorage.clear();
+                        localStorage.clear();
+                    }
+                    
+                    // Clear any cached data if possible
+                    if ('caches' in window) {
+                        caches.keys().then(function(names) {
+                            for (let name of names) {
+                                caches.delete(name);
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.log('History clearing not fully supported in this browser');
             }
         }
 
