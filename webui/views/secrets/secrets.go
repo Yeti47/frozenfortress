@@ -26,6 +26,11 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, secret
 	router.POST("/edit-secret", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
 		handleEditSecretSubmit(c, signInManager, secretManager, mekStore, encryptionService, logger)
 	})
+
+	// Delete secret route - protected by authentication
+	router.DELETE("/delete-secret/:id", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
+		handleDeleteSecret(c, signInManager, secretManager, logger)
+	})
 }
 
 // handleSecretsPage handles the secrets management page with pagination, filtering, and sorting
@@ -49,6 +54,8 @@ func handleSecretsPage(c *gin.Context, signInManager auth.SignInManager, secretM
 		successMessage = "Secret created successfully!"
 	} else if c.Query("updated") == "1" {
 		successMessage = "Secret updated successfully!"
+	} else if c.Query("deleted") == "1" {
+		successMessage = "Secret deleted successfully!"
 	}
 
 	// Parse page number
@@ -239,4 +246,38 @@ func renderEditSecretWithError(c *gin.Context, user auth.UserDto, secretId, secr
 	}
 
 	c.HTML(400, "edit-secret.html", templateData)
+}
+
+// handleDeleteSecret handles DELETE requests to delete a secret
+func handleDeleteSecret(c *gin.Context, signInManager auth.SignInManager, secretManager secrets.SecretManager, logger ccc.Logger) {
+	// Get current user
+	user, err := signInManager.GetCurrentUser(c.Request)
+	if err != nil {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Get secret ID from URL parameter
+	secretId := c.Param("id")
+	if secretId == "" {
+		c.JSON(400, gin.H{"error": "Secret ID is required"})
+		return
+	}
+
+	// Delete the secret
+	success, err := secretManager.DeleteSecret(user.Id, secretId)
+	if err != nil {
+		logger.Error("Failed to delete secret", "user_id", user.Id, "secret_id", secretId, "error", err)
+		c.JSON(500, gin.H{"error": "Failed to delete secret. Please try again."})
+		return
+	}
+
+	if !success {
+		logger.Warn("Secret deletion returned false", "user_id", user.Id, "secret_id", secretId)
+		c.JSON(404, gin.H{"error": "Secret not found"})
+		return
+	}
+
+	logger.Info("Secret deleted successfully", "user_id", user.Id, "secret_id", secretId)
+	c.JSON(200, gin.H{"success": true, "message": "Secret deleted successfully"})
 }

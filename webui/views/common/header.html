@@ -126,6 +126,33 @@
             color: #7f8c8d;
         }
 
+        .search-clear-button {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            color: #95a5a6;
+            font-size: 18px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            margin-right: 5px;
+        }
+
+        .search-clear-button:hover {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            transform: scale(1.1);
+        }
+
+        .search-clear-button.show {
+            display: flex;
+        }
+
         .search-button {
             background: #3498db;
             border: none;
@@ -460,7 +487,10 @@
             <div class="header-center">
                 <div class="search-container">
                     <form class="search-form" onsubmit="performSearch(event)">
-                        <input type="text" class="search-input" placeholder="Search secrets..." name="searchTerm">
+                        <input type="text" class="search-input" placeholder="Search secrets..." name="searchTerm" id="searchInput" oninput="toggleClearButton()">
+                        <button type="button" class="search-clear-button" id="searchClearButton" onclick="clearSearch()">
+                            <span class="material-icons">close</span>
+                        </button>
                         <button type="submit" class="search-button">
                             <span class="material-icons">search</span>
                         </button>

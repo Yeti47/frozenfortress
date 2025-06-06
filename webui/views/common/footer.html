@@ -70,6 +70,7 @@
             // Remove success message parameters when searching
             urlParams.delete('created');
             urlParams.delete('updated');
+            urlParams.delete('deleted');
             
             // Stay on current page if we're on secrets page, otherwise go to root
             if (window.location.pathname === '/' || window.location.pathname === '/secrets') {
@@ -78,6 +79,50 @@
                 window.location.href = `/?${urlParams.toString()}`;
             }
         }
+
+        function clearSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const clearButton = document.getElementById('searchClearButton');
+            
+            // Clear the input
+            searchInput.value = '';
+            
+            // Hide the clear button
+            clearButton.classList.remove('show');
+            
+            // Remove search term from URL and redirect
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.delete('searchTerm');
+            urlParams.set('page', '1'); // Reset to first page
+            
+            // Remove success message parameters
+            urlParams.delete('created');
+            urlParams.delete('updated');
+            urlParams.delete('deleted');
+            
+            // Stay on current page if we're on secrets page, otherwise go to root
+            if (window.location.pathname === '/' || window.location.pathname === '/secrets') {
+                window.location.search = urlParams.toString();
+            } else {
+                window.location.href = `/?${urlParams.toString()}`;
+            }
+        }
+
+        function toggleClearButton() {
+            const searchInput = document.getElementById('searchInput');
+            const clearButton = document.getElementById('searchClearButton');
+            
+            if (searchInput.value.trim()) {
+                clearButton.classList.add('show');
+            } else {
+                clearButton.classList.remove('show');
+            }
+        }
+
+        // Initialize clear button visibility on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleClearButton();
+        });
 
         // Close user menu when clicking outside
         document.addEventListener('click', function(event) {
