@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
-	"github.com/Yeti47/frozenfortress/frozenfortress/webui/middleware"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/login"
+	secretsview "github.com/Yeti47/frozenfortress/frozenfortress/webui/views/secrets"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,27 +33,36 @@ func main() {
 // registerRoutes registers all the routes for the web UI.
 func registerRoutes(router *gin.Engine, svc services) {
 
-	// Load HTML templates contained in the "views" directory
-	router.LoadHTMLGlob("views/**/*.html")
+	// Create template functions for pagination and utility
+	funcMap := template.FuncMap{
+		"add": func(a, b int) int {
+			return a + b
+		},
+		"sub": func(a, b int) int {
+			return a - b
+		},
+		"min": func(a, b int) int {
+			if a < b {
+				return a
+			}
+			return b
+		},
+		"max": func(a, b int) int {
+			if a > b {
+				return a
+			}
+			return b
+		},
+	}
+
+	// Load HTML templates with functions
+	tmpl := template.Must(template.New("").Funcs(funcMap).ParseGlob("views/**/*.html"))
+	router.SetHTMLTemplate(tmpl)
 
 	// Serve static files for images
 	router.Static("/img", "./img")
 
-	// Home page route - protected by authentication
-	router.GET("/", middleware.AuthMiddleware(svc.SignInManager), func(c *gin.Context) {
-		// Get current user for display
-		user, err := svc.SignInManager.GetCurrentUser(c.Request)
-		if err != nil {
-			c.Redirect(302, "/login")
-			return
-		}
-
-		c.HTML(200, "index.html", gin.H{
-			"Title":    "Frozen Fortress - Home",
-			"Username": user.UserName,
-			"Version":  AppVersion,
-		})
-	})
-
+	// Register routes from modules
+	secretsview.RegisterRoutes(router, svc.SignInManager, svc.SecretManager, svc.MekStore, svc.EncryptionService, svc.Logger)
 	login.RegisterRoutes(router, svc.SignInManager)
 }

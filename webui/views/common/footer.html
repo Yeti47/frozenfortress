@@ -6,7 +6,7 @@
     <footer class="footer">
         <div class="footer-content">
             <div class="copyright">
-                © 2025 Frozen Fortress. All rights reserved.
+                © 2025 Yetibyte
             </div>
             <div class="version">
                 Version {{.Version}}
@@ -58,8 +58,24 @@
         function performSearch(event) {
             event.preventDefault();
             const searchTerm = event.target.searchTerm.value.trim();
+            const urlParams = new URLSearchParams(window.location.search);
+            
             if (searchTerm) {
-                window.location.href = `/?searchTerm=${encodeURIComponent(searchTerm)}`;
+                urlParams.set('searchTerm', searchTerm);
+            } else {
+                urlParams.delete('searchTerm');
+            }
+            urlParams.set('page', '1'); // Reset to first page when searching
+            
+            // Remove success message parameters when searching
+            urlParams.delete('created');
+            urlParams.delete('updated');
+            
+            // Stay on current page if we're on secrets page, otherwise go to root
+            if (window.location.pathname === '/' || window.location.pathname === '/secrets') {
+                window.location.search = urlParams.toString();
+            } else {
+                window.location.href = `/?${urlParams.toString()}`;
             }
         }
 
