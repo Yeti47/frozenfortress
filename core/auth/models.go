@@ -4,6 +4,14 @@ import (
 	"time"
 )
 
+// SignInMethod represents the method used for sign-in
+type SignInMethod string
+
+const (
+	SignInMethodPassword SignInMethod = "PASSWORD"
+	SignInMethodRecovery SignInMethod = "RECOVERY"
+)
+
 type User struct {
 	Id                string
 	UserName          string
@@ -17,7 +25,6 @@ type User struct {
 	RecoveryCodeSalt  string
 	RecoveryMek       string // MEK encrypted with recovery code for recovery purposes
 	RecoveryGenerated time.Time
-	RecoveryUsed      *time.Time
 	CreatedAt         time.Time
 	ModifiedAt        time.Time
 }
@@ -29,6 +36,7 @@ type SignInHistoryItem struct {
 	IPAddress    string
 	UserAgent    string
 	ClientType   string
+	SignInMethod SignInMethod // SignInMethodPassword or SignInMethodRecovery
 	Successful   bool
 	Timestamp    time.Time
 	DenialReason string

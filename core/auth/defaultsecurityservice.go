@@ -229,12 +229,6 @@ func (s *DefaultSecurityService) VerifyRecoveryCode(user User, recoveryCode stri
 		return false, nil
 	}
 
-	// Check if recovery code has been used
-	if user.RecoveryUsed != nil {
-		s.logger.Warn("Recovery code has already been used", "user_id", user.Id, "username", user.UserName, "used_at", user.RecoveryUsed)
-		return false, nil
-	}
-
 	// Verify the recovery code
 	isValid, err := s.encryptionService.VerifyHash(recoveryCode, user.RecoveryCodeHash, user.RecoveryCodeSalt)
 	if err != nil {

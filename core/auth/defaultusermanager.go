@@ -143,7 +143,6 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 		RecoveryCodeHash:  recoveryHash,
 		RecoveryCodeSalt:  recoverySalt,
 		RecoveryGenerated: time.Now(),
-		RecoveryUsed:      nil,
 		CreatedAt:         time.Now(),
 		ModifiedAt:        time.Now(),
 	}
@@ -627,7 +626,6 @@ func (manager *DefaultUserManager) GenerateRecoveryCode(request GenerateRecovery
 	user.RecoveryCodeHash = hash
 	user.RecoveryCodeSalt = salt
 	user.RecoveryGenerated = time.Now()
-	user.RecoveryUsed = nil // Reset usage timestamp
 	user.ModifiedAt = time.Now()
 
 	success, err := manager.userRepository.Update(user)
@@ -646,82 +644,4 @@ func (manager *DefaultUserManager) GenerateRecoveryCode(request GenerateRecovery
 		RecoveryCode: recoveryCode,
 		Generated:    user.RecoveryGenerated.Format(time.RFC3339),
 	}, nil
-}
-
-// GetRecoveryCodeStatus returns the recovery code status for a user.
-func (manager *DefaultUserManager) GetRecoveryCodeStatus(userId string) (RecoveryCodeStatus, error) {
-	manager.logger.Debug("Getting recovery code status", "user_id", userId)
-
-	if userId == "" {
-		manager.logger.Warn("Recovery code status check failed: empty user ID")
-		return RecoveryCodeStatus{}, ccc.NewInvalidInputError("user ID", "cannot be empty")
-	}
-
-	// Find the user
-	user, err := manager.userRepository.FindById(userId)
-	if err != nil {
-		manager.logger.Error("Failed to find user for recovery code status", "user_id", userId, "error", err)
-		return RecoveryCodeStatus{}, ccc.NewDatabaseError("find user by ID", err)
-	}
-
-	if user == nil {
-		manager.logger.Warn("User not found for recovery code status", "user_id", userId)
-		return RecoveryCodeStatus{}, ccc.NewResourceNotFoundError(userId, "User")
-	}
-
-	// Build the status response
-	status := RecoveryCodeStatus{
-		HasRecoveryCode: user.RecoveryCodeHash != "",
-		Generated:       user.RecoveryGenerated.Format(time.RFC3339),
-	}
-
-	if user.RecoveryUsed != nil {
-		usedTimestamp := user.RecoveryUsed.Format(time.RFC3339)
-		status.Used = &usedTimestamp
-	}
-
-	manager.logger.Debug("Recovery code status retrieved", "user_id", userId, "has_code", status.HasRecoveryCode)
-	return status, nil
-}
-
-// VerifyRecoveryCode verifies a recovery code for a user.
-func (manager *DefaultUserManager) VerifyRecoveryCode(userId string, recoveryCode string) (bool, error) {
-	manager.logger.Debug("Verifying recovery code", "user_id", userId)
-
-	if userId == "" {
-		manager.logger.Warn("Recovery code verification failed: empty user ID")
-		return false, ccc.NewInvalidInputError("user ID", "cannot be empty")
-	}
-
-	if recoveryCode == "" {
-		manager.logger.Warn("Recovery code verification failed: empty recovery code", "user_id", userId)
-		return false, ccc.NewInvalidInputError("recovery code", "cannot be empty")
-	}
-
-	// Find the user
-	user, err := manager.userRepository.FindById(userId)
-	if err != nil {
-		manager.logger.Error("Failed to find user for recovery code verification", "user_id", userId, "error", err)
-		return false, ccc.NewDatabaseError("find user by ID", err)
-	}
-
-	if user == nil {
-		manager.logger.Warn("User not found for recovery code verification", "user_id", userId)
-		return false, ccc.NewResourceNotFoundError(userId, "User")
-	}
-
-	// Verify the recovery code using the security service
-	isValid, err := manager.securityService.VerifyRecoveryCode(*user, recoveryCode)
-	if err != nil {
-		manager.logger.Error("Security service failed to verify recovery code", "user_id", userId, "username", user.UserName, "error", err)
-		return false, ccc.NewInternalError("verify recovery code", err)
-	}
-
-	if isValid {
-		manager.logger.Debug("Recovery code verification successful", "user_id", userId, "username", user.UserName)
-	} else {
-		manager.logger.Warn("Recovery code verification failed", "user_id", userId, "username", user.UserName)
-	}
-
-	return isValid, nil
 }

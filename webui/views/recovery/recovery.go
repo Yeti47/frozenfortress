@@ -90,7 +90,11 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 			return
 		}
 
-		// Recovery successful - redirect to home page
-		c.Redirect(http.StatusSeeOther, "/")
+		// Recovery successful - display the new recovery code
+		c.HTML(http.StatusOK, "recovery.html", gin.H{
+			"SuccessMessage":  "Password recovery successful! Please save your new recovery code immediately.",
+			"NewRecoveryCode": response.NewRecoveryCode,
+			"Username":        response.User.UserName,
+		})
 	})
 }

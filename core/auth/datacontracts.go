@@ -75,20 +75,16 @@ type RecoverySignInRequest struct {
 }
 
 type RecoverySignInResponse struct {
-	Success bool
-	User    UserDto
-	Error   string
+	Success         bool
+	User            UserDto
+	NewRecoveryCode string // The new recovery code generated after successful recovery
+	Error           string
 }
 
 type RecoverySignInResult struct {
-	Success      bool
-	User         *User
-	Mek          string
-	ErrorMessage string
-}
-
-type RecoveryCodeStatus struct {
-	HasRecoveryCode bool
-	Generated       string  // timestamp when generated
-	Used            *string // timestamp when used, nil if unused
+	Success         bool
+	User            *User
+	Mek             string
+	NewRecoveryCode string // The new recovery code generated after successful recovery
+	ErrorMessage    string
 }

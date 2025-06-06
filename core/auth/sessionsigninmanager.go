@@ -233,13 +233,13 @@ func (m *SessionSignInManager) RecoverySignIn(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		// SignInHandler only returns errors for genuine internal/system issues
 		m.logger.Error("Recovery sign-in handler returned internal error", "username", request.UserName, "error", err)
-		return RecoverySignInResponse{Success: false, Error: "Internal error"}, err
+		return RecoverySignInResponse{Success: false, NewRecoveryCode: "", Error: "Internal error"}, err
 	}
 
 	// If recovery authentication failed, return the result without an error
 	if !result.Success {
 		m.logger.Debug("Recovery authentication failed via sign-in handler", "username", request.UserName, "error", result.ErrorMessage)
-		return RecoverySignInResponse{Success: false, Error: result.ErrorMessage}, nil
+		return RecoverySignInResponse{Success: false, NewRecoveryCode: "", Error: result.ErrorMessage}, nil
 	}
 
 	m.logger.Info("Recovery authentication successful, creating web session", "username", request.UserName, "user_id", result.User.Id)
@@ -248,14 +248,14 @@ func (m *SessionSignInManager) RecoverySignIn(w http.ResponseWriter, r *http.Req
 	session, err := m.sessionStore.Get(r, sessionName)
 	if err != nil {
 		m.logger.Error("Failed to get session from store", "username", request.UserName, "user_id", result.User.Id, "error", err)
-		return RecoverySignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to get session", err)
+		return RecoverySignInResponse{Success: false, NewRecoveryCode: "", Error: "Internal error"}, ccc.NewInternalError("failed to get session", err)
 	}
 
 	session.Values["userId"] = result.User.Id
 	err = session.Save(r, w)
 	if err != nil {
 		m.logger.Error("Failed to save session", "username", request.UserName, "user_id", result.User.Id, "error", err)
-		return RecoverySignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to save session", err)
+		return RecoverySignInResponse{Success: false, NewRecoveryCode: "", Error: "Internal error"}, ccc.NewInternalError("failed to save session", err)
 	}
 
 	m.logger.Debug("Session created and saved successfully", "username", request.UserName, "user_id", result.User.Id)
@@ -264,7 +264,7 @@ func (m *SessionSignInManager) RecoverySignIn(w http.ResponseWriter, r *http.Req
 	err = m.mekStore.Store(w, r, result.Mek)
 	if err != nil {
 		m.logger.Error("Failed to store MEK in session", "username", request.UserName, "user_id", result.User.Id, "error", err)
-		return RecoverySignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to store MEK", err)
+		return RecoverySignInResponse{Success: false, NewRecoveryCode: "", Error: "Internal error"}, ccc.NewInternalError("failed to store MEK", err)
 	}
 
 	m.logger.Info("Web recovery sign-in completed successfully", "username", request.UserName, "user_id", result.User.Id)
@@ -279,6 +279,7 @@ func (m *SessionSignInManager) RecoverySignIn(w http.ResponseWriter, r *http.Req
 			CreatedAt:  result.User.CreatedAt.Format(time.RFC3339),
 			ModifiedAt: result.User.ModifiedAt.Format(time.RFC3339),
 		},
+		NewRecoveryCode: result.NewRecoveryCode,
 	}, nil
 }
 

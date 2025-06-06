@@ -36,8 +36,6 @@ type UserManager interface {
 	DeleteUser(id string) (bool, error)
 	VerifyPassword(userId string, password string) (bool, error)
 	GenerateRecoveryCode(request GenerateRecoveryCodeRequest) (GenerateRecoveryCodeResponse, error)
-	GetRecoveryCodeStatus(userId string) (RecoveryCodeStatus, error)
-	VerifyRecoveryCode(userId string, recoveryCode string) (bool, error)
 }
 
 type SecurityService interface {

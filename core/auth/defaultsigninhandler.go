@@ -42,13 +42,14 @@ func NewDefaultSignInHandler(
 }
 
 // Helper function to create sign-in history item
-func (h *DefaultSignInHandler) createHistoryItem(userName, userId string, context SignInContext) *SignInHistoryItem {
+func (h *DefaultSignInHandler) createHistoryItem(userName, userId string, context SignInContext, signInMethod SignInMethod) *SignInHistoryItem {
 	return &SignInHistoryItem{
 		UserId:       userId,
 		UserName:     userName,
 		IPAddress:    context.IPAddress,
 		UserAgent:    context.UserAgent,
 		ClientType:   string(context.ClientType),
+		SignInMethod: signInMethod,
 		Successful:   false,
 		Timestamp:    time.Now(),
 		DenialReason: "",
@@ -56,8 +57,8 @@ func (h *DefaultSignInHandler) createHistoryItem(userName, userId string, contex
 }
 
 // Helper function to find and validate user existence for both sign-in types
-func (h *DefaultSignInHandler) findAndValidateUser(userName string, context SignInContext, invalidCredentialsMessage string) (*User, *SignInHistoryItem, error) {
-	historyItem := h.createHistoryItem(userName, "", context)
+func (h *DefaultSignInHandler) findAndValidateUser(userName string, context SignInContext, signInMethod SignInMethod) (*User, *SignInHistoryItem, error) {
+	historyItem := h.createHistoryItem(userName, "", context, signInMethod)
 
 	user, err := h.userRepository.FindByUserName(userName)
 	if err != nil {
@@ -139,9 +140,9 @@ func (h *DefaultSignInHandler) handleFailedAttempt(user *User, historyItem *Sign
 }
 
 // Helper function to log successful attempt
-func (h *DefaultSignInHandler) logSuccessfulAttempt(historyItem *SignInHistoryItem, successMessage string) {
+func (h *DefaultSignInHandler) logSuccessfulAttempt(historyItem *SignInHistoryItem) {
 	historyItem.Successful = true
-	historyItem.DenialReason = successMessage
+	historyItem.DenialReason = "" // Clear denial reason on success
 	_ = h.signInHistoryRepository.Add(historyItem)
 }
 
@@ -167,7 +168,7 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 	}
 
 	// Find and validate user
-	user, historyItem, err := h.findAndValidateUser(request.UserName, context, "Invalid credentials")
+	user, historyItem, err := h.findAndValidateUser(request.UserName, context, SignInMethodPassword)
 	if err != nil {
 		return SignInResult{
 			Success:      false,
@@ -243,7 +244,7 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 	h.logger.Debug("MEK uncovered successfully", "username", request.UserName, "user_id", user.Id)
 
 	// Log successful sign-in
-	h.logSuccessfulAttempt(historyItem, "Sign-in successful")
+	h.logSuccessfulAttempt(historyItem)
 
 	h.logger.Info("Sign-in successful", "username", request.UserName, "user_id", user.Id, "ip_address", context.IPAddress, "client_type", context.ClientType)
 
@@ -262,39 +263,44 @@ func (h *DefaultSignInHandler) HandleRecoverySignIn(request RecoverySignInReques
 	if request.UserName == "" {
 		h.logger.Warn("Recovery sign-in failed: empty username", "ip_address", context.IPAddress)
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "Invalid username or recovery code",
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Invalid username or recovery code",
 		}, nil
 	}
 
 	if request.RecoveryCode == "" {
 		h.logger.Warn("Recovery sign-in failed: empty recovery code", "username", request.UserName, "ip_address", context.IPAddress)
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "Invalid username or recovery code",
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Invalid username or recovery code",
 		}, nil
 	}
 
 	if request.NewPassword == "" {
 		h.logger.Warn("Recovery sign-in failed: empty new password", "username", request.UserName, "ip_address", context.IPAddress)
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "New password cannot be empty",
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "New password cannot be empty",
 		}, nil
 	}
 
 	// Find and validate user
-	user, historyItem, err := h.findAndValidateUser(request.UserName, context, "Invalid username or recovery code")
+	user, historyItem, err := h.findAndValidateUser(request.UserName, context, SignInMethodRecovery)
 	if err != nil {
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "Internal error",
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Internal error",
 		}, err
 	}
 	if user == nil {
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "Invalid username or recovery code",
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Invalid username or recovery code",
 		}, nil
 	}
 
@@ -302,8 +308,9 @@ func (h *DefaultSignInHandler) HandleRecoverySignIn(request RecoverySignInReques
 	valid, errorMessage := h.validateUserStatus(user, historyItem, context)
 	if !valid {
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: errorMessage,
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    errorMessage,
 		}, nil
 	}
 
@@ -315,14 +322,16 @@ func (h *DefaultSignInHandler) HandleRecoverySignIn(request RecoverySignInReques
 		accountLocked, errorMsg := h.handleFailedAttempt(user, historyItem, "Invalid recovery code", context, "recovery")
 		if accountLocked {
 			return RecoverySignInResult{
-				Success:      false,
-				ErrorMessage: errorMsg,
+				Success:         false,
+				NewRecoveryCode: "",
+				ErrorMessage:    errorMsg,
 			}, nil
 		}
 
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "Invalid username or recovery code",
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Invalid username or recovery code",
 		}, nil
 	}
 
@@ -333,18 +342,68 @@ func (h *DefaultSignInHandler) HandleRecoverySignIn(request RecoverySignInReques
 		historyItem.DenialReason = "Internal error"
 		_ = h.signInHistoryRepository.Add(historyItem)
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "Internal error",
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Internal error",
 		}, ccc.NewInternalError("failed to hash new password", err)
 	}
 
-	// Update user with new password and MEK, mark recovery code as used
+	// Get the plain MEK so we can encrypt it with the new recovery code
+	plainMek, err := h.securityService.UncoverMek(User{
+		Id:           user.Id,
+		UserName:     user.UserName,
+		PasswordHash: newPasswordHash,
+		PasswordSalt: newPasswordSalt,
+		Mek:          newMek,
+		PdkSalt:      newPdkSalt,
+	}, request.NewPassword)
+	if err != nil {
+		h.logger.Error("Failed to uncover plain MEK for new recovery code generation", "username", request.UserName, "user_id", user.Id, "error", err)
+		historyItem.DenialReason = "Internal error"
+		_ = h.signInHistoryRepository.Add(historyItem)
+		return RecoverySignInResult{
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Internal error",
+		}, ccc.NewInternalError("failed to uncover plain MEK", err)
+	}
+
+	// Generate a new recovery code for continued security
+	newRecoveryCode, newRecoveryHash, newRecoverySalt, err := h.securityService.GenerateRecoveryCode()
+	if err != nil {
+		h.logger.Error("Failed to generate new recovery code during recovery", "username", request.UserName, "user_id", user.Id, "error", err)
+		historyItem.DenialReason = "Internal error"
+		_ = h.signInHistoryRepository.Add(historyItem)
+		return RecoverySignInResult{
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Internal error",
+		}, ccc.NewInternalError("failed to generate new recovery code", err)
+	}
+
+	// Encrypt the new MEK with the new recovery code for future recovery
+	newRecoveryMek, err := h.securityService.EncryptMekWithRecoveryCode(plainMek, newRecoveryCode, newRecoverySalt)
+	if err != nil {
+		h.logger.Error("Failed to encrypt MEK with new recovery code", "username", request.UserName, "user_id", user.Id, "error", err)
+		historyItem.DenialReason = "Internal error"
+		_ = h.signInHistoryRepository.Add(historyItem)
+		return RecoverySignInResult{
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Internal error",
+		}, ccc.NewInternalError("failed to encrypt MEK with new recovery code", err)
+	}
+
+	// Update user with new password, MEK, and new recovery code
 	user.PasswordHash = newPasswordHash
 	user.PasswordSalt = newPasswordSalt
 	user.Mek = newMek
 	user.PdkSalt = newPdkSalt
+	user.RecoveryCodeHash = newRecoveryHash
+	user.RecoveryCodeSalt = newRecoverySalt
+	user.RecoveryMek = newRecoveryMek
 	now := time.Now()
-	user.RecoveryUsed = &now
+	user.RecoveryGenerated = now
 	user.ModifiedAt = now
 
 	// Save updated user
@@ -354,31 +413,21 @@ func (h *DefaultSignInHandler) HandleRecoverySignIn(request RecoverySignInReques
 		historyItem.DenialReason = "Internal error"
 		_ = h.signInHistoryRepository.Add(historyItem)
 		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "Internal error",
+			Success:         false,
+			NewRecoveryCode: "",
+			ErrorMessage:    "Internal error",
 		}, ccc.NewDatabaseError("update user", err)
 	}
 
-	// Generate new MEK for the result (it should be the plaintext MEK, not encrypted)
-	plainMek, err := h.securityService.UncoverMek(*user, request.NewPassword)
-	if err != nil {
-		h.logger.Error("Failed to uncover MEK after recovery", "username", request.UserName, "user_id", user.Id, "error", err)
-		historyItem.DenialReason = "Internal error"
-		_ = h.signInHistoryRepository.Add(historyItem)
-		return RecoverySignInResult{
-			Success:      false,
-			ErrorMessage: "Internal error",
-		}, ccc.NewInternalError("failed to uncover MEK after recovery", err)
-	}
-
 	// Log successful recovery
-	h.logSuccessfulAttempt(historyItem, "Recovery successful")
+	h.logSuccessfulAttempt(historyItem)
 
 	h.logger.Info("Recovery sign-in successful", "username", request.UserName, "user_id", user.Id, "ip_address", context.IPAddress, "client_type", context.ClientType)
 
 	return RecoverySignInResult{
-		Success: true,
-		User:    user,
-		Mek:     plainMek,
+		Success:         true,
+		User:            user,
+		Mek:             plainMek,
+		NewRecoveryCode: newRecoveryCode,
 	}, nil
 }

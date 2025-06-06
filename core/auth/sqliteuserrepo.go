@@ -32,7 +32,6 @@ const (
     RecoveryCodeSalt,
     RecoveryMek,
     RecoveryGenerated,
-    RecoveryUsed,
     CreatedAt,
     ModifiedAt`
 )
@@ -64,7 +63,6 @@ func (repo *SQLiteUserRepository) initializeTable() error {
 		RecoveryCodeSalt TEXT,
 		RecoveryMek TEXT,
 		RecoveryGenerated TIMESTAMP,
-		RecoveryUsed TIMESTAMP,
 		CreatedAt TIMESTAMP NOT NULL,
 		ModifiedAt TIMESTAMP NOT NULL
 	);
@@ -73,21 +71,6 @@ func (repo *SQLiteUserRepository) initializeTable() error {
 	_, err := repo.db.Exec(query)
 	if err != nil {
 		return err
-	}
-
-	// Add the recovery fields to existing tables if they don't exist
-	// This handles database migration for existing installations
-	recoveryFields := []string{
-		"ALTER TABLE User ADD COLUMN RecoveryCodeHash TEXT",
-		"ALTER TABLE User ADD COLUMN RecoveryCodeSalt TEXT",
-		"ALTER TABLE User ADD COLUMN RecoveryMek TEXT",
-		"ALTER TABLE User ADD COLUMN RecoveryGenerated TIMESTAMP",
-		"ALTER TABLE User ADD COLUMN RecoveryUsed TIMESTAMP",
-	}
-
-	for _, sql := range recoveryFields {
-		// Ignore errors - columns may already exist
-		repo.db.Exec(sql)
 	}
 
 	return nil
@@ -181,7 +164,7 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 	insertSql := fmt.Sprintf(`
 	INSERT INTO User (
 		%s
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, userFieldList)
 
 	statement, err := repo.db.Prepare(insertSql)
@@ -198,17 +181,9 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 
 	// Format recovery timestamps - handle nil values
 	var recoveryGeneratedStr string
-	var recoveryUsedStr sql.NullString
 
 	if !user.RecoveryGenerated.IsZero() {
 		recoveryGeneratedStr = ccc.FormatSQLiteTimestamp(user.RecoveryGenerated)
-	}
-
-	if user.RecoveryUsed != nil {
-		recoveryUsedStr = sql.NullString{
-			String: ccc.FormatSQLiteTimestamp(*user.RecoveryUsed),
-			Valid:  true,
-		}
 	}
 
 	result, err := statement.Exec(
@@ -224,7 +199,6 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 		user.RecoveryCodeSalt,
 		user.RecoveryMek,
 		recoveryGeneratedStr,
-		recoveryUsedStr,
 		createdAtStr,
 		modifiedAtStr,
 	)
@@ -297,7 +271,6 @@ func (repo *SQLiteUserRepository) Update(user *User) (bool, error) {
 		RecoveryCodeSalt = ?,
 		RecoveryMek = ?,
 		RecoveryGenerated = ?,
-		RecoveryUsed = ?,
 		CreatedAt = ?, 
 		ModifiedAt = ?
 	WHERE Id = ?
@@ -317,17 +290,9 @@ func (repo *SQLiteUserRepository) Update(user *User) (bool, error) {
 
 	// Format recovery timestamps - handle nil values
 	var recoveryGeneratedStr string
-	var recoveryUsedStr sql.NullString
 
 	if !user.RecoveryGenerated.IsZero() {
 		recoveryGeneratedStr = ccc.FormatSQLiteTimestamp(user.RecoveryGenerated)
-	}
-
-	if user.RecoveryUsed != nil {
-		recoveryUsedStr = sql.NullString{
-			String: ccc.FormatSQLiteTimestamp(*user.RecoveryUsed),
-			Valid:  true,
-		}
 	}
 
 	result, err := statement.Exec(
@@ -342,7 +307,6 @@ func (repo *SQLiteUserRepository) Update(user *User) (bool, error) {
 		user.RecoveryCodeSalt,
 		user.RecoveryMek,
 		recoveryGeneratedStr,
-		recoveryUsedStr,
 		createdAtStr,
 		modifiedAtStr,
 		user.Id,
@@ -367,7 +331,6 @@ func scanUser(scanner rowScanner) (*User, error) {
 	var createdAtStr string                 // Temporary string for scanning
 	var modifiedAtStr string                // Temporary string for scanning
 	var recoveryGeneratedStr sql.NullString // Temporary string for scanning recovery timestamp
-	var recoveryUsedStr sql.NullString      // Temporary string for scanning recovery used timestamp
 
 	err := scanner.Scan(
 		&user.Id,
@@ -382,7 +345,6 @@ func scanUser(scanner rowScanner) (*User, error) {
 		&user.RecoveryCodeSalt,
 		&user.RecoveryMek,
 		&recoveryGeneratedStr,
-		&recoveryUsedStr,
 		&createdAtStr,
 		&modifiedAtStr,
 	)
@@ -415,14 +377,6 @@ func scanUser(scanner rowScanner) (*User, error) {
 			return nil, fmt.Errorf("parsing RecoveryGenerated timestamp: %w", err)
 		}
 		user.RecoveryGenerated = recoveryGenerated
-	}
-
-	if recoveryUsedStr.Valid && recoveryUsedStr.String != "" {
-		recoveryUsed, err := ccc.ParseSQLiteTimestamp(recoveryUsedStr.String)
-		if err != nil {
-			return nil, fmt.Errorf("parsing RecoveryUsed timestamp: %w", err)
-		}
-		user.RecoveryUsed = &recoveryUsed
 	}
 
 	return user, nil

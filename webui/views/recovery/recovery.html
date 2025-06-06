@@ -29,7 +29,7 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
             padding: 40px;
             width: 100%;
-            max-width: 420px;
+            max-width: 520px;
             text-align: center;
             backdrop-filter: blur(10px);
         }
@@ -135,6 +135,125 @@
             border-radius: 8px;
             margin-bottom: 20px;
             font-size: 14px;
+        }
+        
+        .success-message {
+            background-color: #d5f4e6;
+            border: 1px solid #80cbc4;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            text-align: left;
+        }
+        
+        .recovery-code-section {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 2px solid #28a745;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+        }
+        
+        .recovery-code-title {
+            color: #28a745;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .recovery-code-warning {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .recovery-code-display {
+            background: #ffffff;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #28a745;
+            word-break: break-all;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .recovery-code-instructions {
+            color: #495057;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-top: 15px;
+        }
+        
+        .recovery-code-instructions strong {
+            color: #dc3545;
+        }
+        
+        .copy-recovery-btn {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-self: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .copy-recovery-btn:hover {
+            background: linear-gradient(135deg, #138496, #117a8b);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+        }
+        
+        .success-actions {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .continue-btn {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .continue-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+            text-decoration: none;
+            color: white;
         }
         
         .back-link {
@@ -253,6 +372,44 @@
         </div>
         {{end}}
         
+        {{if .SuccessMessage}}
+        <div class="success-message">
+            {{.SuccessMessage}}
+        </div>
+        {{end}}
+        
+        {{if .NewRecoveryCode}}
+        <div class="recovery-code-section">
+            <div class="recovery-code-title">
+                <span style="font-size: 24px;">🔑</span>
+                Your New Recovery Code
+            </div>
+            
+            <div class="recovery-code-warning">
+                <strong>⚠️ IMPORTANT:</strong> This recovery code is displayed only once and cannot be retrieved later. 
+                Save it securely - you'll need it to recover your account if you forget your password again.
+            </div>
+            
+            <div class="recovery-code-display" id="recovery-code-value">{{.NewRecoveryCode}}</div>
+            
+            <button type="button" class="copy-recovery-btn" onclick="copyRecoveryCode()">
+                📋 Copy Recovery Code
+            </button>
+            
+            <div class="recovery-code-instructions">
+                <strong>Please save this recovery code immediately:</strong><br/>
+                • Write it down and store it in a safe place<br/>
+                • This code allows password reset without admin intervention<br/>
+                • Never share this code with anyone
+            </div>
+            
+            <div class="success-actions">
+                <a href="/" class="continue-btn">Continue to Your Secrets</a>
+            </div>
+        </div>
+        {{else}}
+        <!-- Only show the recovery form if no new recovery code is being displayed -->
+        
         <form method="POST" action="/recovery">
             <div class="form-group">
                 <label for="username">Username:</label>
@@ -297,6 +454,7 @@
         <div class="back-link">
             <a href="/login">← Back to Login</a>
         </div>
+        {{end}}
     </div>
     
     <script>
@@ -323,6 +481,61 @@
         
         document.getElementById('newPassword').addEventListener('input', validatePasswords);
         document.getElementById('confirmPassword').addEventListener('input', validatePasswords);
+        
+        function copyRecoveryCode() {
+            const recoveryCodeElement = document.getElementById('recovery-code-value');
+            const recoveryCode = recoveryCodeElement.textContent;
+
+            // Try to use the modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(recoveryCode).then(function() {
+                    showCopySuccess();
+                }).catch(function(err) {
+                    console.error('Failed to copy recovery code: ', err);
+                    fallbackCopyTextToClipboard(recoveryCode);
+                });
+            } else {
+                // Fall back to the older method
+                fallbackCopyTextToClipboard(recoveryCode);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopySuccess();
+                } else {
+                    alert('Failed to copy recovery code. Please manually select and copy the code.');
+                }
+            } catch (err) {
+                console.error('Fallback: Unable to copy', err);
+                alert('Failed to copy recovery code. Please manually select and copy the code.');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showCopySuccess() {
+            const button = document.querySelector('.copy-recovery-btn');
+            const originalText = button.innerHTML;
+            button.innerHTML = '✅ Copied!';
+            button.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            
+            setTimeout(function() {
+                button.innerHTML = originalText;
+                button.style.background = 'linear-gradient(135deg, #17a2b8, #138496)';
+            }, 2000);
+        }
     </script>
 </body>
 </html>
