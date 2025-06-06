@@ -21,11 +21,23 @@
         }
 
         function signOut() {
-            if (confirm('Are you sure you want to sign out?')) {
-                // Clear navigation history for security
-                clearNavigationHistory();
-                window.location.href = '/logout';
-            }
+            // Show custom confirmation modal for sign out
+            showConfirmModal(
+                'Confirm Sign Out',
+                'Are you sure you want to sign out?',
+                '', // No target item for sign out
+                function() {
+                    // User confirmed - proceed with sign out
+                    performSignOut();
+                },
+                'Sign Out' // Custom confirm button text
+            );
+        }
+
+        function performSignOut() {
+            // Clear navigation history for security
+            clearNavigationHistory();
+            window.location.href = '/logout';
         }
 
         function clearNavigationHistory() {
@@ -124,6 +136,82 @@
             toggleClearButton();
         });
 
+        // Modal functions
+        function showConfirmModal(title, message, targetItem, onConfirm, confirmButtonText, warningText) {
+            const modal = document.getElementById('confirmModal');
+            const modalTitle = modal.querySelector('.modal-title');
+            const modalMessage = modal.querySelector('.modal-message');
+            const modalTargetItem = document.getElementById('modalTargetItem');
+            const modalTargetItemContainer = document.getElementById('modalTargetItemContainer');
+            const modalWarning = modal.querySelector('.modal-warning');
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+            
+            // Set content
+            modalTitle.textContent = title || 'Confirm Action';
+            modalMessage.textContent = message || 'Are you sure you want to proceed?';
+            
+            // Handle target item display
+            if (targetItem && targetItem.trim()) {
+                modalTargetItem.textContent = targetItem;
+                modalTargetItemContainer.style.display = 'block';
+            } else {
+                modalTargetItemContainer.style.display = 'none';
+            }
+            
+            // Handle warning text display
+            if (warningText && warningText.trim()) {
+                modalWarning.textContent = warningText;
+                modalWarning.style.display = 'block';
+            } else {
+                modalWarning.style.display = 'none';
+            }
+            
+            // Set confirm button text
+            confirmBtn.innerHTML = `<span class="material-icons">${targetItem ? 'delete_forever' : 'check'}</span>${confirmButtonText || (targetItem ? 'Delete Secret' : 'Confirm')}`;
+            
+            // Set up confirm button
+            confirmBtn.onclick = function() {
+                hideConfirmModal();
+                if (onConfirm) onConfirm();
+            };
+            
+            // Add blur effect to page
+            document.body.classList.add('page-blurred');
+            
+            // Show modal
+            modal.classList.add('show');
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+            
+            // Close on escape key
+            const escapeHandler = function(e) {
+                if (e.key === 'Escape') {
+                    hideConfirmModal();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+            
+            // Close on overlay click
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    hideConfirmModal();
+                }
+            };
+        }
+
+        function hideConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('show');
+            
+            // Remove blur effect from page
+            document.body.classList.remove('page-blurred');
+            
+            // Restore body scroll
+            document.body.style.overflow = '';
+        }
+
         // Close user menu when clicking outside
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('user-menu');
@@ -137,6 +225,33 @@
         // Handle header navigation
         document.querySelector('.header-left').style.textDecoration = 'none';
     </script>
+
+    <!-- Confirmation Modal - placed at body level to avoid blur effects -->
+    <div id="confirmModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="material-icons">warning</span>
+                <h3 class="modal-title">Confirm Action</h3>
+            </div>
+            <div class="modal-body">
+                <div class="modal-message">Are you sure you want to proceed?</div>
+                <div id="modalTargetItemContainer" class="modal-target-item-container">
+                    <div id="modalTargetItem" class="modal-target-item"></div>
+                </div>
+                <div class="modal-warning">This action cannot be undone.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn-cancel" onclick="hideConfirmModal()">
+                    <span class="material-icons">cancel</span>
+                    Cancel
+                </button>
+                <button type="button" class="modal-btn modal-btn-delete" id="modalConfirmBtn">
+                    <span class="material-icons">check</span>
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 {{end}}
