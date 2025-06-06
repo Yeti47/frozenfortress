@@ -56,16 +56,45 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 	// Validate the request
 	if request.UserName == "" {
 		manager.logger.Warn("User creation failed: empty username")
-		return CreateUserResponse{}, ccc.NewInvalidInputError("username", "cannot be empty")
+		return CreateUserResponse{}, ccc.NewInvalidInputErrorWithMessage(
+			"username",
+			"cannot be empty",
+			"Username cannot be empty. Please provide a valid username.",
+		)
 	}
 	if request.Password == "" {
 		manager.logger.Warn("User creation failed: empty password", "username", request.UserName)
-		return CreateUserResponse{}, ccc.NewInvalidInputError("password", "cannot be empty")
+		return CreateUserResponse{}, ccc.NewInvalidInputErrorWithMessage(
+			"password",
+			"cannot be empty",
+			"Password cannot be empty. Please provide a valid password.",
+		)
 	}
 
 	if !manager.IsValidUsername(request.UserName) {
 		manager.logger.Warn("User creation failed: invalid username", "username", request.UserName)
-		return CreateUserResponse{}, ccc.NewInvalidInputError("username", "invalid username")
+		return CreateUserResponse{}, ccc.NewInvalidInputErrorWithMessage(
+			"username",
+			"username invalid",
+			"Username must be 3-20 characters long and can only contain letters, numbers, and underscores.",
+		)
+	}
+
+	// Check if username already exists
+	existingUser, err := manager.userRepository.FindByUserName(request.UserName)
+	if err != nil {
+		manager.logger.Error("Failed to check if username exists", "username", request.UserName, "error", err)
+		return CreateUserResponse{}, ccc.NewDatabaseError("check username existence", err)
+	}
+	if existingUser != nil {
+		manager.logger.Warn("User creation failed: username already exists", "username", request.UserName)
+		userTakenError := ccc.NewInvalidInputErrorWithMessage(
+			"username",
+			"username already taken",
+			"This username is already taken. Please choose a different username.",
+		)
+		userTakenError.Code = ccc.ErrCodeUserNameTaken
+		return CreateUserResponse{}, userTakenError
 	}
 
 	isValidPw, err := manager.IsValidPassword(request.Password)

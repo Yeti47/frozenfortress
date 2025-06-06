@@ -17,6 +17,7 @@ type services struct {
 	SignInHistoryRepository auth.SignInHistoryItemRepository
 	MekStore                auth.MekStore
 	SecretManager           secrets.SecretManager
+	UserManager             auth.UserManager
 	Logger                  ccc.Logger
 }
 
@@ -82,6 +83,16 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		logger,
 	)
 
+	userIdGenerator := auth.NewUuidUserIdGenerator()
+
+	userManager := auth.NewDefaultUserManager(
+		userRepo,
+		userIdGenerator,
+		encryptionService,
+		securityService,
+		logger,
+	)
+
 	return services{
 		SignInManager:           signInManager,
 		EncryptionService:       encryptionService,
@@ -90,6 +101,7 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		SignInHistoryRepository: signInHistoryRepo,
 		MekStore:                mekStore,
 		SecretManager:           secretManager,
+		UserManager:             userManager,
 		Logger:                  logger,
 	}
 }

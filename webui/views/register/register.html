@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frozen Fortress - Register</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #8dbfd9;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .app-title {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-shadow: 
+                0 0 5px rgba(255, 255, 255, 1),
+                0 0 10px rgba(255, 255, 255, 1),
+                0 0 15px rgba(255, 255, 255, 0.9),
+                0 0 20px rgba(255, 255, 255, 0.8),
+                0 0 35px rgba(255, 255, 255, 0.7),
+                0 0 50px rgba(255, 255, 255, 0.5),
+                0 2px 4px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e8f4f8;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: 'Open Sans', sans-serif;
+            transition: all 0.3s ease;
+            background-color: #f8fbfc;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .register-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Open Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 25px;
+        }
+
+        .register-button:hover {
+            background: linear-gradient(135deg, #229954, #1e8449);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(39, 174, 96, 0.3);
+        }
+
+        .register-button:active {
+            transform: translateY(0);
+        }
+
+        .login-link {
+            color: #7f8c8d;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .login-link a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .login-link a:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background-color: #ffeaa7;
+            border: 1px solid #fdcb6e;
+            color: #6c5ce7;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+            text-align: left;
+        }
+
+        .success-message {
+            background-color: #d5f4e6;
+            border: 1px solid #80cbc4;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+            text-align: left;
+        }
+
+        .error-message.show, .success-message.show {
+            display: block;
+        }
+
+        .password-requirements {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        .password-requirements h4 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .password-requirements ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .password-requirements li {
+            color: #6c757d;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .username-requirements {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            text-align: left;
+            color: #6c757d;
+        }
+
+        /* Responsive design */
+        @media (max-width: 480px) {
+            .register-container {
+                padding: 30px 25px;
+                margin: 10px;
+            }
+
+            .app-title {
+                font-size: 24px;
+                margin-bottom: 25px;
+            }
+
+            .logo {
+                width: 80px;
+                height: 80px;
+            }
+        }
+
+        /* Animation for container */
+        .register-container {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/">
+        <img src="/img/fflogo01.png" alt="Frozen Fortress Logo" class="logo">
+    </a>
+    <h1 class="app-title">Frozen Fortress</h1>
+    <div class="register-container">
+        
+        <div id="error-message" class="error-message{{if .ErrorMessage}} show{{end}}">{{.ErrorMessage}}</div>
+        <div id="success-message" class="success-message{{if .SuccessMessage}} show{{end}}">{{.SuccessMessage}}</div>
+        
+        {{if not .SuccessMessage}}
+        <form id="register-form" action="/register" method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" value="{{.Username}}" required autocomplete="username">
+            </div>
+            
+            <div class="username-requirements">
+                <strong>Username requirements:</strong> 3-20 characters, letters, numbers, and underscores only.
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="new-password">
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password">
+            </div>
+            
+            <div class="password-requirements">
+                <h4>Password Requirements:</h4>
+                <ul>
+                    <li>At least 16 characters long</li>
+                    <li>At least one lowercase letter</li>
+                    <li>At least one uppercase letter</li>
+                    <li>At least one number</li>
+                    <li>At least one special character: <br/>@ $ ! % * ? & # _ - . , ; : + § / [ ] ( ) { } =</li>
+                </ul>
+            </div>
+            
+            <button type="submit" class="register-button">Request Account</button>
+        </form>
+        {{end}}
+        
+        <div class="login-link">
+            Already have an account? <a href="/login">Sign in here</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('register-form')?.addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                showError('Passwords do not match. Please ensure both password fields contain the same value.');
+                return;
+            }
+            
+            // Clear any existing messages
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+            errorDiv.classList.remove('show');
+            successDiv.classList.remove('show');
+        });
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            
+            // Scroll to top to show the error
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

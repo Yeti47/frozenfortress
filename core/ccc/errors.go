@@ -15,6 +15,7 @@ const (
 	ErrCodeForbidden        ErrorCode = "FORBIDDEN"
 	ErrCodeInternalError    ErrorCode = "INTERNAL_ERROR"
 	ErrCodeOperationFailed  ErrorCode = "OPERATION_FAILED"
+	ErrCodeUserNameTaken    ErrorCode = "USERNAME_TAKEN"
 )
 
 // ApiError represents application-specific errors with both user-friendly and technical details
@@ -65,6 +66,16 @@ func NewInvalidInputError(field, reason string) *ApiError {
 		StatusCode:       400,
 		Code:             ErrCodeInvalidInput,
 		UserMessage:      "Invalid input provided",
+		TechnicalMessage: fmt.Sprintf("invalid %s: %s", field, reason),
+	}
+}
+
+// NewInvalidInputErrorWithMessage creates an error for invalid input with a custom user message
+func NewInvalidInputErrorWithMessage(field, reason, userMessage string) *ApiError {
+	return &ApiError{
+		StatusCode:       400,
+		Code:             ErrCodeInvalidInput,
+		UserMessage:      userMessage,
 		TechnicalMessage: fmt.Sprintf("invalid %s: %s", field, reason),
 	}
 }
