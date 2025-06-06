@@ -6,7 +6,8 @@ type CreateUserRequest struct {
 }
 
 type CreateUserResponse struct {
-	UserId string
+	UserId       string
+	RecoveryCode string
 }
 
 type ChangePasswordRequest struct {
@@ -57,3 +58,37 @@ const (
 	ClientTypeCLI     ClientType = "CLI"
 	ClientTypeOther   ClientType = "OTHER"
 )
+
+type GenerateRecoveryCodeRequest struct {
+	UserId string
+}
+
+type GenerateRecoveryCodeResponse struct {
+	RecoveryCode string
+	Generated    string // timestamp when generated
+}
+
+type RecoverySignInRequest struct {
+	UserName     string
+	RecoveryCode string
+	NewPassword  string
+}
+
+type RecoverySignInResponse struct {
+	Success bool
+	User    UserDto
+	Error   string
+}
+
+type RecoverySignInResult struct {
+	Success      bool
+	User         *User
+	Mek          string
+	ErrorMessage string
+}
+
+type RecoveryCodeStatus struct {
+	HasRecoveryCode bool
+	Generated       string  // timestamp when generated
+	Used            *string // timestamp when used, nil if unused
+}

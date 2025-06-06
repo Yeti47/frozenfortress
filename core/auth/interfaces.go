@@ -35,6 +35,9 @@ type UserManager interface {
 	IsValidPassword(password string) (bool, error)
 	DeleteUser(id string) (bool, error)
 	VerifyPassword(userId string, password string) (bool, error)
+	GenerateRecoveryCode(request GenerateRecoveryCodeRequest) (GenerateRecoveryCodeResponse, error)
+	GetRecoveryCodeStatus(userId string) (RecoveryCodeStatus, error)
+	VerifyRecoveryCode(userId string, recoveryCode string) (bool, error)
 }
 
 type SecurityService interface {
@@ -50,6 +53,14 @@ type SecurityService interface {
 	EncryptMek(plainMek string, password string) (encryptedMek string, salt string, err error)
 	// GenerateEncryptedMek generates an encrypted MEK using the user's password.
 	GenerateEncryptedMek(password string) (encryptedMek string, salt string, err error)
+	// EncryptMekWithRecoveryCode encrypts the MEK with recovery code for recovery purposes.
+	EncryptMekWithRecoveryCode(plainMek string, recoveryCode string, salt string) (encryptedMek string, err error)
+	// GenerateRecoveryCode generates a new recovery code for a user.
+	GenerateRecoveryCode() (recoveryCode string, hash string, salt string, err error)
+	// VerifyRecoveryCode verifies a recovery code against the stored hash.
+	VerifyRecoveryCode(user User, recoveryCode string) (bool, error)
+	// RecoverMek recovers the user's MEK using recovery code and re-encrypts with new password.
+	RecoverMek(user User, recoveryCode string, newPassword string) (newMek string, newPdkSalt string, err error)
 }
 
 type UserIdGenerator interface {
@@ -58,10 +69,12 @@ type UserIdGenerator interface {
 
 type SignInHandler interface {
 	HandleSignIn(request SignInRequest, context SignInContext) (SignInResult, error)
+	HandleRecoverySignIn(request RecoverySignInRequest, context SignInContext) (RecoverySignInResult, error)
 }
 
 type SignInManager interface {
 	SignIn(w http.ResponseWriter, r *http.Request, request SignInRequest) (SignInResponse, error)
+	RecoverySignIn(w http.ResponseWriter, r *http.Request, request RecoverySignInRequest) (RecoverySignInResponse, error)
 	SignOut(w http.ResponseWriter, r *http.Request) error
 	GetCurrentUser(r *http.Request) (UserDto, error)
 	IsSignedIn(r *http.Request) (bool, error)

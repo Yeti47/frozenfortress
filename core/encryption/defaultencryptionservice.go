@@ -159,6 +159,20 @@ func (s *DefaultEncryptionService) GenerateSalt() (saltBytes []byte, salt string
 	return saltBytes, hex.EncodeToString(saltBytes), nil
 }
 
+// GenerateRandomBytes generates random bytes of the specified length
+func (s *DefaultEncryptionService) GenerateRandomBytes(length int) (randomBytes []byte, err error) {
+	if length <= 0 {
+		return nil, errors.New("length must be positive")
+	}
+
+	randomBytes = make([]byte, length)
+	if _, err := io.ReadFull(rand.Reader, randomBytes); err != nil {
+		return nil, fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+
+	return randomBytes, nil
+}
+
 // GenerateKeyFromPassword generates a key from a password using PBKDF2
 func (s *DefaultEncryptionService) GenerateKeyFromPassword(password string, salt string) (key string, err error) {
 	saltBytes, err := hex.DecodeString(salt)

@@ -185,3 +185,130 @@ func (s *DefaultSecurityService) GenerateEncryptedMek(password string) (encrypte
 	s.logger.Debug("New encrypted MEK generated successfully")
 	return encryptedMek, salt, nil
 }
+
+// GenerateRecoveryCode generates a new recovery code for a user.
+func (s *DefaultSecurityService) GenerateRecoveryCode() (recoveryCode string, hash string, salt string, err error) {
+	s.logger.Debug("Generating new recovery code")
+
+	// Generate a 32-character recovery code using alphanumeric characters
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const codeLength = 32
+
+	// Generate random bytes for the recovery code
+	randomBytes, err := s.encryptionService.GenerateRandomBytes(codeLength)
+	if err != nil {
+		s.logger.Error("Failed to generate random bytes for recovery code", "error", err)
+		return "", "", "", err
+	}
+
+	// Convert random bytes to recovery code format
+	recoveryCodeBytes := make([]byte, codeLength)
+	for i := range codeLength {
+		recoveryCodeBytes[i] = charset[randomBytes[i]%byte(len(charset))]
+	}
+	recoveryCode = string(recoveryCodeBytes)
+
+	// Hash the recovery code
+	hash, salt, err = s.encryptionService.Hash(recoveryCode)
+	if err != nil {
+		s.logger.Error("Failed to hash recovery code", "error", err)
+		return "", "", "", err
+	}
+
+	s.logger.Debug("Recovery code generated successfully")
+	return recoveryCode, hash, salt, nil
+}
+
+// VerifyRecoveryCode verifies a recovery code against the stored hash.
+func (s *DefaultSecurityService) VerifyRecoveryCode(user User, recoveryCode string) (bool, error) {
+	s.logger.Debug("Verifying recovery code", "user_id", user.Id, "username", user.UserName)
+
+	// Check if user has a recovery code
+	if user.RecoveryCodeHash == "" || user.RecoveryCodeSalt == "" {
+		s.logger.Warn("User has no recovery code set", "user_id", user.Id, "username", user.UserName)
+		return false, nil
+	}
+
+	// Check if recovery code has been used
+	if user.RecoveryUsed != nil {
+		s.logger.Warn("Recovery code has already been used", "user_id", user.Id, "username", user.UserName, "used_at", user.RecoveryUsed)
+		return false, nil
+	}
+
+	// Verify the recovery code
+	isValid, err := s.encryptionService.VerifyHash(recoveryCode, user.RecoveryCodeHash, user.RecoveryCodeSalt)
+	if err != nil {
+		s.logger.Error("Failed to verify recovery code", "user_id", user.Id, "username", user.UserName, "error", err)
+		return false, err
+	}
+
+	if isValid {
+		s.logger.Debug("Recovery code verification successful", "user_id", user.Id, "username", user.UserName)
+	} else {
+		s.logger.Warn("Recovery code verification failed", "user_id", user.Id, "username", user.UserName)
+	}
+
+	return isValid, nil
+}
+
+// RecoverMek recovers the user's MEK using recovery code and re-encrypts with new password.
+func (s *DefaultSecurityService) RecoverMek(user User, recoveryCode string, newPassword string) (newMek string, newPdkSalt string, err error) {
+	s.logger.Debug("Recovering MEK with recovery code", "user_id", user.Id, "username", user.UserName)
+
+	// First verify the recovery code
+	isValid, err := s.VerifyRecoveryCode(user, recoveryCode)
+	if err != nil {
+		s.logger.Error("Failed to verify recovery code during MEK recovery", "user_id", user.Id, "username", user.UserName, "error", err)
+		return "", "", err
+	}
+	if !isValid {
+		s.logger.Warn("Invalid recovery code provided for MEK recovery", "user_id", user.Id, "username", user.UserName)
+		return "", "", ccc.NewInvalidInputError("recovery code", "invalid recovery code")
+	}
+
+	// Decrypt the original MEK using the recovery code
+	// Generate a key from the recovery code using PBKDF2 (matching the encryption process)
+	recoveryKey, err := s.encryptionService.GenerateKeyFromPassword(recoveryCode, user.RecoveryCodeSalt)
+	if err != nil {
+		s.logger.Error("Failed to generate key from recovery code during MEK recovery", "user_id", user.Id, "username", user.UserName, "error", err)
+		return "", "", ccc.NewInternalError("generate key from recovery code", err)
+	}
+
+	originalMek, err := s.encryptionService.Decrypt(user.RecoveryMek, recoveryKey)
+	if err != nil {
+		s.logger.Error("Failed to decrypt original MEK with recovery code", "user_id", user.Id, "username", user.UserName, "error", err)
+		return "", "", ccc.NewInternalError("decrypt MEK with recovery code", err)
+	}
+
+	// Re-encrypt the original MEK with the new password
+	newMek, newPdkSalt, err = s.EncryptMek(originalMek, newPassword)
+	if err != nil {
+		s.logger.Error("Failed to encrypt MEK with new password during recovery", "user_id", user.Id, "username", user.UserName, "error", err)
+		return "", "", err
+	}
+
+	s.logger.Debug("MEK recovery completed successfully", "user_id", user.Id, "username", user.UserName)
+	return newMek, newPdkSalt, nil
+}
+
+// EncryptMekWithRecoveryCode encrypts the MEK with recovery code for recovery purposes.
+func (s *DefaultSecurityService) EncryptMekWithRecoveryCode(plainMek string, recoveryCode string, salt string) (encryptedMek string, err error) {
+	s.logger.Debug("Encrypting MEK with recovery code")
+
+	// Generate a key from the recovery code using PBKDF2 (similar to password-based encryption)
+	recoveryKey, err := s.encryptionService.GenerateKeyFromPassword(recoveryCode, salt)
+	if err != nil {
+		s.logger.Error("Failed to generate key from recovery code", "error", err)
+		return "", err
+	}
+
+	// Encrypt the MEK using the recovery-derived key
+	encryptedMek, err = s.encryptionService.Encrypt(plainMek, recoveryKey)
+	if err != nil {
+		s.logger.Error("Failed to encrypt MEK with recovery code", "error", err)
+		return "", err
+	}
+
+	s.logger.Debug("MEK encrypted with recovery code successfully")
+	return encryptedMek, nil
+}

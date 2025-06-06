@@ -211,6 +211,77 @@ func (m *SessionSignInManager) IsSignedIn(r *http.Request) (bool, error) {
 	return isSignedIn, nil
 }
 
+// RecoverySignIn verifies the user's recovery code and new password using SignInHandler and creates a session if successful.
+func (m *SessionSignInManager) RecoverySignIn(w http.ResponseWriter, r *http.Request, request RecoverySignInRequest) (RecoverySignInResponse, error) {
+	m.logger.Info("Processing web recovery sign-in request", "username", request.UserName)
+
+	// Create SignInContext with web client information
+	context := SignInContext{
+		ClientType: ClientTypeWeb,
+	}
+
+	// Extract IP address and user agent from request if available
+	if r != nil {
+		context.IPAddress = r.RemoteAddr
+		context.UserAgent = r.UserAgent()
+		m.logger.Debug("Extracted web context for recovery sign-in", "ip_address", context.IPAddress, "user_agent", context.UserAgent)
+	}
+
+	// Use SignInHandler to perform core recovery authentication logic
+	m.logger.Debug("Delegating to sign-in handler for recovery authentication", "username", request.UserName)
+	result, err := m.signInHandler.HandleRecoverySignIn(request, context)
+	if err != nil {
+		// SignInHandler only returns errors for genuine internal/system issues
+		m.logger.Error("Recovery sign-in handler returned internal error", "username", request.UserName, "error", err)
+		return RecoverySignInResponse{Success: false, Error: "Internal error"}, err
+	}
+
+	// If recovery authentication failed, return the result without an error
+	if !result.Success {
+		m.logger.Debug("Recovery authentication failed via sign-in handler", "username", request.UserName, "error", result.ErrorMessage)
+		return RecoverySignInResponse{Success: false, Error: result.ErrorMessage}, nil
+	}
+
+	m.logger.Info("Recovery authentication successful, creating web session", "username", request.UserName, "user_id", result.User.Id)
+
+	// Recovery authentication succeeded - create session
+	session, err := m.sessionStore.Get(r, sessionName)
+	if err != nil {
+		m.logger.Error("Failed to get session from store", "username", request.UserName, "user_id", result.User.Id, "error", err)
+		return RecoverySignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to get session", err)
+	}
+
+	session.Values["userId"] = result.User.Id
+	err = session.Save(r, w)
+	if err != nil {
+		m.logger.Error("Failed to save session", "username", request.UserName, "user_id", result.User.Id, "error", err)
+		return RecoverySignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to save session", err)
+	}
+
+	m.logger.Debug("Session created and saved successfully", "username", request.UserName, "user_id", result.User.Id)
+
+	// Store the MEK in the session
+	err = m.mekStore.Store(w, r, result.Mek)
+	if err != nil {
+		m.logger.Error("Failed to store MEK in session", "username", request.UserName, "user_id", result.User.Id, "error", err)
+		return RecoverySignInResponse{Success: false, Error: "Internal error"}, ccc.NewInternalError("failed to store MEK", err)
+	}
+
+	m.logger.Info("Web recovery sign-in completed successfully", "username", request.UserName, "user_id", result.User.Id)
+
+	return RecoverySignInResponse{
+		Success: true,
+		User: UserDto{
+			Id:         result.User.Id,
+			UserName:   result.User.UserName,
+			IsActive:   result.User.IsActive,
+			IsLocked:   result.User.IsLocked,
+			CreatedAt:  result.User.CreatedAt.Format(time.RFC3339),
+			ModifiedAt: result.User.ModifiedAt.Format(time.RFC3339),
+		},
+	}, nil
+}
+
 // CreateRedisStore creates a new Redis store for session management.
 // It uses the provided AppConfig for Redis connection details and the
 // SessionKeyProvider to obtain signing and encryption keys.

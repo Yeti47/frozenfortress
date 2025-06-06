@@ -124,18 +124,47 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 
 	manager.logger.Debug("User credentials and encryption keys generated successfully", "user_id", userId, "username", request.UserName)
 
-	user := &User{
-		Id:           userId,
-		UserName:     request.UserName,
-		PasswordHash: pwHash,
-		PasswordSalt: pwSalt,
-		Mek:          mek,
-		PdkSalt:      pdkSalt,
-		IsActive:     false, // Set to false for new users, can be activated by admin
-		IsLocked:     false,
-		CreatedAt:    time.Now(),
-		ModifiedAt:   time.Now(),
+	// Generate recovery code
+	recoveryCode, recoveryHash, recoverySalt, err := manager.securityService.GenerateRecoveryCode()
+	if err != nil {
+		manager.logger.Error("Failed to generate recovery code", "user_id", userId, "username", request.UserName, "error", err)
+		return CreateUserResponse{}, ccc.NewInternalError("generate recovery code", err)
 	}
+
+	user := &User{
+		Id:                userId,
+		UserName:          request.UserName,
+		PasswordHash:      pwHash,
+		PasswordSalt:      pwSalt,
+		Mek:               mek,
+		PdkSalt:           pdkSalt,
+		IsActive:          false, // Set to false for new users, can be activated by admin
+		IsLocked:          false,
+		RecoveryCodeHash:  recoveryHash,
+		RecoveryCodeSalt:  recoverySalt,
+		RecoveryGenerated: time.Now(),
+		RecoveryUsed:      nil,
+		CreatedAt:         time.Now(),
+		ModifiedAt:        time.Now(),
+	}
+
+	// Get the plain MEK to encrypt with recovery code
+	plainMek, err := manager.securityService.UncoverMek(*user, request.Password)
+	if err != nil {
+		manager.logger.Error("Failed to uncover MEK for recovery encryption", "user_id", userId, "username", request.UserName, "error", err)
+		return CreateUserResponse{}, ccc.NewInternalError("uncover MEK for recovery", err)
+	}
+
+	// Encrypt MEK with recovery code
+	recoveryMek, err := manager.securityService.EncryptMekWithRecoveryCode(plainMek, recoveryCode, recoverySalt)
+	if err != nil {
+		manager.logger.Error("Failed to encrypt MEK with recovery code", "user_id", userId, "username", request.UserName, "error", err)
+		return CreateUserResponse{}, ccc.NewInternalError("encrypt MEK with recovery code", err)
+	}
+
+	manager.logger.Debug("Recovery code and MEK encryption completed successfully", "user_id", userId, "username", request.UserName)
+
+	user.RecoveryMek = recoveryMek
 
 	success, err := manager.userRepository.Add(user)
 	if err != nil || !success {
@@ -144,7 +173,10 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 	}
 
 	manager.logger.Info("User created successfully", "user_id", userId, "username", request.UserName)
-	return CreateUserResponse{UserId: userId}, nil
+	return CreateUserResponse{
+		UserId:       userId,
+		RecoveryCode: recoveryCode,
+	}, nil
 }
 
 func (manager *DefaultUserManager) GetUserById(userId string) (UserDto, error) {
@@ -561,4 +593,135 @@ func (manager *DefaultUserManager) VerifyPassword(userId string, password string
 	}
 
 	return success, nil
+}
+
+// GenerateRecoveryCode generates a new recovery code for a user.
+func (manager *DefaultUserManager) GenerateRecoveryCode(request GenerateRecoveryCodeRequest) (GenerateRecoveryCodeResponse, error) {
+	manager.logger.Info("Generating recovery code for user", "user_id", request.UserId)
+
+	if request.UserId == "" {
+		manager.logger.Warn("Recovery code generation failed: empty user ID")
+		return GenerateRecoveryCodeResponse{}, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
+
+	// Find the user
+	user, err := manager.userRepository.FindById(request.UserId)
+	if err != nil {
+		manager.logger.Error("Failed to find user for recovery code generation", "user_id", request.UserId, "error", err)
+		return GenerateRecoveryCodeResponse{}, ccc.NewDatabaseError("find user by ID", err)
+	}
+
+	if user == nil {
+		manager.logger.Warn("User not found for recovery code generation", "user_id", request.UserId)
+		return GenerateRecoveryCodeResponse{}, ccc.NewResourceNotFoundError(request.UserId, "User")
+	}
+
+	// Generate the recovery code
+	recoveryCode, hash, salt, err := manager.securityService.GenerateRecoveryCode()
+	if err != nil {
+		manager.logger.Error("Security service failed to generate recovery code", "user_id", request.UserId, "username", user.UserName, "error", err)
+		return GenerateRecoveryCodeResponse{}, ccc.NewInternalError("generate recovery code", err)
+	}
+
+	// Update the user with the new recovery code
+	user.RecoveryCodeHash = hash
+	user.RecoveryCodeSalt = salt
+	user.RecoveryGenerated = time.Now()
+	user.RecoveryUsed = nil // Reset usage timestamp
+	user.ModifiedAt = time.Now()
+
+	success, err := manager.userRepository.Update(user)
+	if err != nil {
+		manager.logger.Error("Failed to save recovery code for user", "user_id", request.UserId, "username", user.UserName, "error", err)
+		return GenerateRecoveryCodeResponse{}, ccc.NewDatabaseError("update user", err)
+	}
+
+	if !success {
+		manager.logger.Warn("Recovery code save operation returned false", "user_id", request.UserId, "username", user.UserName)
+		return GenerateRecoveryCodeResponse{}, ccc.NewOperationFailedError("save recovery code", "update operation returned false")
+	}
+
+	manager.logger.Info("Recovery code generated successfully", "user_id", request.UserId, "username", user.UserName)
+	return GenerateRecoveryCodeResponse{
+		RecoveryCode: recoveryCode,
+		Generated:    user.RecoveryGenerated.Format(time.RFC3339),
+	}, nil
+}
+
+// GetRecoveryCodeStatus returns the recovery code status for a user.
+func (manager *DefaultUserManager) GetRecoveryCodeStatus(userId string) (RecoveryCodeStatus, error) {
+	manager.logger.Debug("Getting recovery code status", "user_id", userId)
+
+	if userId == "" {
+		manager.logger.Warn("Recovery code status check failed: empty user ID")
+		return RecoveryCodeStatus{}, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
+
+	// Find the user
+	user, err := manager.userRepository.FindById(userId)
+	if err != nil {
+		manager.logger.Error("Failed to find user for recovery code status", "user_id", userId, "error", err)
+		return RecoveryCodeStatus{}, ccc.NewDatabaseError("find user by ID", err)
+	}
+
+	if user == nil {
+		manager.logger.Warn("User not found for recovery code status", "user_id", userId)
+		return RecoveryCodeStatus{}, ccc.NewResourceNotFoundError(userId, "User")
+	}
+
+	// Build the status response
+	status := RecoveryCodeStatus{
+		HasRecoveryCode: user.RecoveryCodeHash != "",
+		Generated:       user.RecoveryGenerated.Format(time.RFC3339),
+	}
+
+	if user.RecoveryUsed != nil {
+		usedTimestamp := user.RecoveryUsed.Format(time.RFC3339)
+		status.Used = &usedTimestamp
+	}
+
+	manager.logger.Debug("Recovery code status retrieved", "user_id", userId, "has_code", status.HasRecoveryCode)
+	return status, nil
+}
+
+// VerifyRecoveryCode verifies a recovery code for a user.
+func (manager *DefaultUserManager) VerifyRecoveryCode(userId string, recoveryCode string) (bool, error) {
+	manager.logger.Debug("Verifying recovery code", "user_id", userId)
+
+	if userId == "" {
+		manager.logger.Warn("Recovery code verification failed: empty user ID")
+		return false, ccc.NewInvalidInputError("user ID", "cannot be empty")
+	}
+
+	if recoveryCode == "" {
+		manager.logger.Warn("Recovery code verification failed: empty recovery code", "user_id", userId)
+		return false, ccc.NewInvalidInputError("recovery code", "cannot be empty")
+	}
+
+	// Find the user
+	user, err := manager.userRepository.FindById(userId)
+	if err != nil {
+		manager.logger.Error("Failed to find user for recovery code verification", "user_id", userId, "error", err)
+		return false, ccc.NewDatabaseError("find user by ID", err)
+	}
+
+	if user == nil {
+		manager.logger.Warn("User not found for recovery code verification", "user_id", userId)
+		return false, ccc.NewResourceNotFoundError(userId, "User")
+	}
+
+	// Verify the recovery code using the security service
+	isValid, err := manager.securityService.VerifyRecoveryCode(*user, recoveryCode)
+	if err != nil {
+		manager.logger.Error("Security service failed to verify recovery code", "user_id", userId, "username", user.UserName, "error", err)
+		return false, ccc.NewInternalError("verify recovery code", err)
+	}
+
+	if isValid {
+		manager.logger.Debug("Recovery code verification successful", "user_id", userId, "username", user.UserName)
+	} else {
+		manager.logger.Warn("Recovery code verification failed", "user_id", userId, "username", user.UserName)
+	}
+
+	return isValid, nil
 }

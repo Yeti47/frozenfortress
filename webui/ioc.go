@@ -52,6 +52,7 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		userRepo,
 		signInHistoryRepo,
 		securityService,
+		encryptionService,
 		config,
 		logger,
 	)

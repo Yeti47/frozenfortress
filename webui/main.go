@@ -6,6 +6,7 @@ import (
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/login"
+	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/recovery"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/register"
 	secretsview "github.com/Yeti47/frozenfortress/frozenfortress/webui/views/secrets"
 	"github.com/gin-gonic/gin"
@@ -67,4 +68,5 @@ func registerRoutes(router *gin.Engine, svc services) {
 	secretsview.RegisterRoutes(router, svc.SignInManager, svc.SecretManager, svc.MekStore, svc.EncryptionService, svc.Logger)
 	login.RegisterRoutes(router, svc.SignInManager)
 	register.RegisterRoutes(router, svc.UserManager)
+	recovery.RegisterRoutes(router, svc.SignInManager)
 }

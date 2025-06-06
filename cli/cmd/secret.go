@@ -83,10 +83,13 @@ var signInHandler = func() func() (auth.SignInHandler, error) {
 
 			config := ccc.LoadConfigFromEnv()
 
+			encServiceInstance := encryptionService()
+
 			instance = auth.NewDefaultSignInHandler(
 				userRepo,
 				signInHistoryRepo,
 				secService,
+				encServiceInstance,
 				config,
 				logger,
 			)

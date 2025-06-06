@@ -36,7 +36,7 @@ func RegisterRoutes(router *gin.Engine, userManager auth.UserManager) {
 		}
 
 		// Call UserManager to create the user - it will handle all validation
-		_, err := userManager.CreateUser(request)
+		response, err := userManager.CreateUser(request)
 		if err != nil {
 			// Check if it's an ApiError to get the user-friendly message
 			var errorMessage string
@@ -59,13 +59,15 @@ func RegisterRoutes(router *gin.Engine, userManager auth.UserManager) {
 			return
 		}
 
-		// Registration successful - show success message
+		// Registration successful - show success message with recovery code
 		successMessage := "Thank you, " + username + "! Your account creation request has been submitted successfully. " +
 			"Your account will be activated by an administrator and you'll be able to sign in once the activation is complete. " +
 			"Please check back later or contact your administrator for activation status."
 
 		c.HTML(200, "register.html", gin.H{
 			"SuccessMessage": successMessage,
+			"RecoveryCode":   response.RecoveryCode,
+			"Username":       username,
 		})
 	})
 }

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Recovery - Frozen Fortress</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #8dbfd9;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .recovery-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .app-title {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-shadow: 
+                0 2px 4px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }        
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e8f4f8;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: 'Open Sans', sans-serif;
+            transition: all 0.3s ease;
+            background-color: #f8fbfc;
+            box-sizing: border-box;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #3498db;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .recovery-code-input {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Open Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 25px;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(135deg, #2980b9, #21618c);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .error {
+            background-color: #ffeaa7;
+            border: 1px solid #fdcb6e;
+            color: #6c5ce7;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .back-link {
+            color: #7f8c8d;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .back-link a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .back-link a:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
+        
+        .help-text {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #6c757d;
+            text-align: left;
+        }
+        
+        .help-text strong {
+            color: #495057;
+        }
+        
+        .password-requirements {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            text-align: left;
+        }
+        
+        .password-requirements h4 {
+            color: #495057;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .password-requirements ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .password-requirements li {
+            color: #6c757d;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        /* Responsive design */
+        @media (max-width: 480px) {
+            .recovery-container {
+                padding: 30px 25px;
+                margin: 10px;
+            }
+
+            .app-title {
+                font-size: 24px;
+                margin-bottom: 25px;
+            }
+
+            .logo {
+                width: 100px;
+                height: 100px;
+            }
+        }
+
+        /* Animation for container */
+        .recovery-container {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/">
+        <img src="/img/fflogo01.png" alt="Frozen Fortress Logo" class="logo">
+    </a>
+    <h1 class="app-title">Frozen Fortress</h1>
+    <div class="recovery-container">
+        <p class="subtitle">
+            Use your recovery code to reset your password and regain access to your secrets.
+        </p>
+        
+        <div class="help-text">
+            <strong>Recovery Code:</strong> This is the 32-character code that was shown to you during registration. 
+            It should look like: <code>ABC123DEF456GHI789JKL012MNO345PQ</code>
+        </div>
+        
+        {{if .ErrorMessage}}
+        <div class="error">
+            {{.ErrorMessage}}
+        </div>
+        {{end}}
+        
+        <form method="POST" action="/recovery">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required autocomplete="username" 
+                       value="{{.Username}}" placeholder="Enter your username">
+            </div>
+            
+            <div class="form-group">
+                <label for="recoveryCode">Recovery Code:</label>
+                <input type="text" id="recoveryCode" name="recoveryCode" required 
+                       class="recovery-code-input" maxlength="32" 
+                       value="{{.RecoveryCode}}" 
+                       placeholder="Enter recovery code">
+            </div>
+            
+            <div class="form-group">
+                <label for="newPassword">New Password:</label>
+                <input type="password" id="newPassword" name="newPassword" required 
+                       autocomplete="new-password" placeholder="Enter your new password">
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmPassword">Confirm New Password:</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required 
+                       autocomplete="new-password" placeholder="Confirm your new password">
+            </div>
+            
+            <div class="password-requirements">
+                <h4>Password Requirements:</h4>
+                <ul>
+                    <li>At least 16 characters long</li>
+                    <li>At least one lowercase letter</li>
+                    <li>At least one uppercase letter</li>
+                    <li>At least one number</li>
+                    <li>At least one special character: <br/>@ $ ! % * ? & # _ - . , ; : + § / [ ] ( ) { } =</li>
+                </ul>
+            </div>
+            
+            <button type="submit" class="btn">Reset Password</button>
+        </form>
+        
+        <div class="back-link">
+            <a href="/login">← Back to Login</a>
+        </div>
+    </div>
+    
+    <script>
+        // Format recovery code input as user types
+        document.getElementById('recoveryCode').addEventListener('input', function(e) {
+            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (value.length > 32) {
+                value = value.substring(0, 32);
+            }
+            e.target.value = value;
+        });
+        
+        // Validate password confirmation
+        function validatePasswords() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                document.getElementById('confirmPassword').setCustomValidity('Passwords do not match');
+            } else {
+                document.getElementById('confirmPassword').setCustomValidity('');
+            }
+        }
+        
+        document.getElementById('newPassword').addEventListener('input', validatePasswords);
+        document.getElementById('confirmPassword').addEventListener('input', validatePasswords);
+    </script>
+</body>
+</html>

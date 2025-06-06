@@ -5,16 +5,21 @@ import (
 )
 
 type User struct {
-	Id           string
-	UserName     string
-	PasswordHash string
-	PasswordSalt string
-	Mek          string
-	PdkSalt      string
-	IsActive     bool
-	IsLocked     bool
-	CreatedAt    time.Time
-	ModifiedAt   time.Time
+	Id                string
+	UserName          string
+	PasswordHash      string
+	PasswordSalt      string
+	Mek               string
+	PdkSalt           string
+	IsActive          bool
+	IsLocked          bool
+	RecoveryCodeHash  string
+	RecoveryCodeSalt  string
+	RecoveryMek       string // MEK encrypted with recovery code for recovery purposes
+	RecoveryGenerated time.Time
+	RecoveryUsed      *time.Time
+	CreatedAt         time.Time
+	ModifiedAt        time.Time
 }
 
 type SignInHistoryItem struct {
