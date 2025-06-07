@@ -94,7 +94,7 @@ func (s *services) changePassword(c *gin.Context) {
 	}
 
 	success, err := s.UserManager.ChangePassword(request)
-	if middleware.HandleErrorWithCustomPage(c, err, "account.html", gin.H{
+	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
 	}, "passwordError") {
@@ -147,7 +147,7 @@ func (s *services) generateRecoveryCode(c *gin.Context) {
 	}
 
 	response, err := s.UserManager.GenerateRecoveryCode(request)
-	if middleware.HandleErrorWithCustomPage(c, err, "account.html", gin.H{
+	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
 	}, "RecoveryError") {
@@ -188,7 +188,7 @@ func (s *services) deactivateAccount(c *gin.Context) {
 
 	// Verify password before deactivating
 	isValid, err := s.UserManager.VerifyPassword(user.Id, password)
-	if middleware.HandleErrorWithCustomPage(c, err, "account.html", gin.H{
+	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
 	}, "DeactivateError") {
@@ -206,7 +206,7 @@ func (s *services) deactivateAccount(c *gin.Context) {
 
 	// Deactivate account
 	success, err := s.UserManager.DeactivateUser(user.Id)
-	if middleware.HandleErrorWithCustomPage(c, err, "account.html", gin.H{
+	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
 	}, "DeactivateError") {
@@ -262,7 +262,7 @@ func (s *services) deleteAccount(c *gin.Context) {
 
 	// Verify password before deleting
 	isValid, err := s.UserManager.VerifyPassword(user.Id, password)
-	if middleware.HandleErrorWithCustomPage(c, err, "account.html", gin.H{
+	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
 	}, "DeleteError") {
@@ -280,7 +280,7 @@ func (s *services) deleteAccount(c *gin.Context) {
 
 	// Delete account
 	success, err := s.UserManager.DeleteUser(user.Id)
-	if middleware.HandleErrorWithCustomPage(c, err, "account.html", gin.H{
+	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
 	}, "DeleteError") {

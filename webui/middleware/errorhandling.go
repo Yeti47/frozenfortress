@@ -34,10 +34,10 @@ func HandleError(c *gin.Context, err error) bool {
 	return true
 }
 
-// HandleErrorWithCustomPage handles errors by checking if they are ApiErrors and rendering a custom page.
+// HandleErrorOnPage handles errors by checking if they are ApiErrors and rendering a custom page.
 // It allows specifying a custom template and merging the error information with additional template data.
 // Returns true if an error was handled, false if there was no error.
-func HandleErrorWithCustomPage(c *gin.Context, err error, templateName string, templateData gin.H, errorKey string) bool {
+func HandleErrorOnPage(c *gin.Context, err error, templateName string, templateData gin.H, errorKey string) bool {
 	if err == nil {
 		return false
 	}

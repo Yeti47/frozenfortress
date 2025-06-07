@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -174,16 +175,34 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 
 	// Parse form data
 	secretId := c.PostForm("secretId")
-	secretName := c.PostForm("secretName")
-	secretValue := c.PostForm("secretValue")
+	secretName := strings.TrimSpace(c.PostForm("secretName"))
+	secretValue := strings.TrimSpace(c.PostForm("secretValue"))
 
 	// Validate input
 	if secretName == "" {
-		renderEditSecretWithError(c, user, secretId, secretName, secretValue, "Secret name is required")
+		templateData := gin.H{
+			"Title":       "Frozen Fortress - Edit Secret",
+			"Username":    user.UserName,
+			"Version":     "1.0.0",
+			"SecretId":    secretId,
+			"SecretName":  secretName,
+			"SecretValue": secretValue,
+		}
+		validationErr := ccc.NewInvalidInputErrorWithMessage("secret name", "cannot be empty", "Secret name is required")
+		middleware.HandleErrorOnPage(c, validationErr, "edit-secret.html", templateData, "ErrorMessage")
 		return
 	}
 	if secretValue == "" {
-		renderEditSecretWithError(c, user, secretId, secretName, secretValue, "Secret value is required")
+		templateData := gin.H{
+			"Title":       "Frozen Fortress - Edit Secret",
+			"Username":    user.UserName,
+			"Version":     "1.0.0",
+			"SecretId":    secretId,
+			"SecretName":  secretName,
+			"SecretValue": secretValue,
+		}
+		validationErr := ccc.NewInvalidInputErrorWithMessage("secret value", "cannot be empty", "Secret value is required")
+		middleware.HandleErrorOnPage(c, validationErr, "edit-secret.html", templateData, "ErrorMessage")
 		return
 	}
 
@@ -205,11 +224,30 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 		success, err := secretManager.UpdateSecret(user.Id, secretId, request, dataProtector)
 		if err != nil {
 			logger.Error("Failed to update secret", "user_id", user.Id, "secret_id", secretId, "error", err)
-			renderEditSecretWithError(c, user, secretId, secretName, secretValue, "Failed to update secret. Please try again.")
+
+			templateData := gin.H{
+				"Title":       "Frozen Fortress - Edit Secret",
+				"Username":    user.UserName,
+				"Version":     "1.0.0",
+				"SecretId":    secretId,
+				"SecretName":  secretName,
+				"SecretValue": secretValue,
+			}
+			middleware.HandleErrorOnPage(c, err, "edit-secret.html", templateData, "ErrorMessage")
 			return
 		}
 		if !success {
-			renderEditSecretWithError(c, user, secretId, secretName, secretValue, "Failed to update secret. Please try again.")
+			templateData := gin.H{
+				"Title":       "Frozen Fortress - Edit Secret",
+				"Username":    user.UserName,
+				"Version":     "1.0.0",
+				"SecretId":    secretId,
+				"SecretName":  secretName,
+				"SecretValue": secretValue,
+			}
+			// Create a generic error for the failure case
+			genericErr := ccc.NewInternalError("update operation did not succeed", nil)
+			middleware.HandleErrorOnPage(c, genericErr, "edit-secret.html", templateData, "ErrorMessage")
 			return
 		}
 
@@ -222,7 +260,16 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 		createResponse, err := secretManager.CreateSecret(user.Id, request, dataProtector)
 		if err != nil {
 			logger.Error("Failed to create secret", "user_id", user.Id, "secret_name", secretName, "error", err)
-			renderEditSecretWithError(c, user, "", secretName, secretValue, "Failed to create secret. Please try again.")
+
+			templateData := gin.H{
+				"Title":       "Frozen Fortress - Edit Secret",
+				"Username":    user.UserName,
+				"Version":     "1.0.0",
+				"SecretId":    "",
+				"SecretName":  secretName,
+				"SecretValue": secretValue,
+			}
+			middleware.HandleErrorOnPage(c, err, "edit-secret.html", templateData, "ErrorMessage")
 			return
 		}
 
@@ -231,21 +278,6 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 		// Redirect to secrets list with success message
 		c.Redirect(302, "/?created=1")
 	}
-}
-
-// renderEditSecretWithError renders the edit secret page with an error message
-func renderEditSecretWithError(c *gin.Context, user auth.UserDto, secretId, secretName, secretValue, errorMessage string) {
-	templateData := gin.H{
-		"Title":        "Frozen Fortress - Edit Secret",
-		"Username":     user.UserName,
-		"Version":      "1.0.0",
-		"SecretId":     secretId,
-		"SecretName":   secretName,
-		"SecretValue":  secretValue,
-		"ErrorMessage": errorMessage,
-	}
-
-	c.HTML(400, "edit-secret.html", templateData)
 }
 
 // handleDeleteSecret handles DELETE requests to delete a secret

@@ -29,17 +29,47 @@ func NewDefaultSecretManager(secretRepository SecretRepository, secretIdGenerato
 	}
 }
 
+// validateSecretRequest validates the secret name and value lengths
+func (m *DefaultSecretManager) validateSecretRequest(request UpsertSecretRequest) error {
+	const (
+		maxSecretNameLength  = 200
+		maxSecretValueLength = 1000
+	)
+
+	if request.SecretName == "" {
+		return ccc.NewInvalidInputError("secret name", "cannot be empty")
+	}
+	if len(request.SecretName) > maxSecretNameLength {
+		return ccc.NewInvalidInputErrorWithMessage(
+			"secret name",
+			"exceeds maximum length of 200 characters",
+			"Secret name cannot be longer than 200 characters",
+		)
+	}
+	if request.SecretValue == "" {
+		return ccc.NewInvalidInputError("secret value", "cannot be empty")
+	}
+	if len(request.SecretValue) > maxSecretValueLength {
+		return ccc.NewInvalidInputErrorWithMessage(
+			"secret value",
+			"exceeds maximum length of 1000 characters",
+			"Secret value cannot be longer than 1000 characters",
+		)
+	}
+	return nil
+}
+
 func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretRequest, dataProtector DataProtector) (CreateSecretResponse, error) {
 	m.logger.Info("Creating secret", "user_id", userId, "secret_name", request.SecretName)
 
+	// Trim whitespace from input
+	request.SecretName = strings.TrimSpace(request.SecretName)
+	request.SecretValue = strings.TrimSpace(request.SecretValue)
+
 	// Validate the request
-	if request.SecretName == "" {
-		m.logger.Warn("Secret creation failed: empty name", "user_id", userId)
-		return CreateSecretResponse{}, ccc.NewInvalidInputError("secret name", "cannot be empty")
-	}
-	if request.SecretValue == "" {
-		m.logger.Warn("Secret creation failed: empty value", "user_id", userId, "secret_name", request.SecretName)
-		return CreateSecretResponse{}, ccc.NewInvalidInputError("secret value", "cannot be empty")
+	if err := m.validateSecretRequest(request); err != nil {
+		m.logger.Warn("Secret creation failed: validation error", "user_id", userId, "error", err)
+		return CreateSecretResponse{}, err
 	}
 
 	// Check if the user exists
@@ -348,14 +378,14 @@ func (m *DefaultSecretManager) sortSecrets(secrets []*Secret, sortBy string, sor
 func (m *DefaultSecretManager) UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector DataProtector) (bool, error) {
 	m.logger.Info("Updating secret", "user_id", userId, "secret_id", secretId, "new_secret_name", request.SecretName)
 
+	// Trim whitespace from input
+	request.SecretName = strings.TrimSpace(request.SecretName)
+	request.SecretValue = strings.TrimSpace(request.SecretValue)
+
 	// Validate the request
-	if request.SecretName == "" {
-		m.logger.Warn("Secret update failed: empty name", "user_id", userId, "secret_id", secretId)
-		return false, ccc.NewInvalidInputError("secret name", "cannot be empty")
-	}
-	if request.SecretValue == "" {
-		m.logger.Warn("Secret update failed: empty value", "user_id", userId, "secret_id", secretId)
-		return false, ccc.NewInvalidInputError("secret value", "cannot be empty")
+	if err := m.validateSecretRequest(request); err != nil {
+		m.logger.Warn("Secret update failed: validation error", "user_id", userId, "secret_id", secretId, "error", err)
+		return false, err
 	}
 
 	// Get the existing secret
