@@ -5,6 +5,7 @@ import (
 	"html/template"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/account"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/login"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/recovery"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/register"
@@ -61,7 +62,7 @@ func registerRoutes(router *gin.Engine, svc services) {
 	tmpl := template.Must(template.New("").Funcs(funcMap).ParseGlob("views/**/*.html"))
 	router.SetHTMLTemplate(tmpl)
 
-	// Serve static files for images
+	// Serve static files
 	router.Static("/img", "./img")
 
 	// Register routes from modules
@@ -69,4 +70,5 @@ func registerRoutes(router *gin.Engine, svc services) {
 	login.RegisterRoutes(router, svc.SignInManager)
 	register.RegisterRoutes(router, svc.UserManager)
 	recovery.RegisterRoutes(router, svc.SignInManager)
+	account.RegisterRoutes(router, svc.UserManager, svc.SignInManager)
 }

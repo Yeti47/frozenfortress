@@ -440,6 +440,17 @@ func (manager *DefaultUserManager) ChangePassword(request ChangePasswordRequest)
 		return false, ccc.NewUnauthorizedError("operation not authorized")
 	}
 
+	// Validate the new password meets requirements
+	isValidNewPassword, err := manager.IsValidPassword(request.NewPassword)
+	if err != nil {
+		manager.logger.Error("Failed to validate new password during password change", "user_id", request.UserId, "username", user.UserName, "error", err)
+		return false, err
+	}
+	if !isValidNewPassword {
+		manager.logger.Warn("Invalid new password provided for password change", "user_id", request.UserId, "username", user.UserName)
+		return false, ccc.NewInvalidInputError("new password", "does not meet password requirements")
+	}
+
 	pwHash, pwSalt, err := manager.encryptionService.Hash(request.NewPassword)
 	if err != nil {
 		manager.logger.Error("Failed to hash new password", "user_id", request.UserId, "username", user.UserName, "error", err)
@@ -500,40 +511,64 @@ func (manager *DefaultUserManager) IsValidPassword(password string) (bool, error
 
 	// Check if the password is empty
 	if password == "" {
-		return false, ccc.NewInvalidInputError("password", "cannot be empty")
+		return false, ccc.NewInvalidInputErrorWithMessage("password", "cannot be empty", "Password cannot be empty")
 	}
 
 	const minPasswordLength = 16
 
 	// 1. Check length
 	if len(password) < minPasswordLength {
-		return false, ccc.NewInvalidInputError("password", "must be at least "+fmt.Sprint(minPasswordLength)+" characters long")
+		return false, ccc.NewInvalidInputErrorWithMessage(
+			"password",
+			"must be at least "+fmt.Sprint(minPasswordLength)+" characters long",
+			fmt.Sprintf("Password must be at least %d characters long", minPasswordLength),
+		)
 	}
 
 	// 2. Check inclusion of lower case letters
 	if !hasLowerRegexp.MatchString(password) {
-		return false, ccc.NewInvalidInputError("password", "must contain at least one lowercase letter")
+		return false, ccc.NewInvalidInputErrorWithMessage(
+			"password",
+			"must contain at least one lowercase letter",
+			"Password must contain at least one lowercase letter (a-z)",
+		)
 	}
 
 	// 3. Check inclusion of upper case letters
 	if !hasUpperRegexp.MatchString(password) {
-		return false, ccc.NewInvalidInputError("password", "must contain at least one uppercase letter")
+		return false, ccc.NewInvalidInputErrorWithMessage(
+			"password",
+			"must contain at least one uppercase letter",
+			"Password must contain at least one uppercase letter (A-Z)",
+		)
 	}
 
 	// 4. Check inclusion of numbers
 	if !hasDigitRegexp.MatchString(password) {
-		return false, ccc.NewInvalidInputError("password", "must contain at least one number")
+		return false, ccc.NewInvalidInputErrorWithMessage(
+			"password",
+			"must contain at least one number",
+			"Password must contain at least one number (0-9)",
+		)
 	}
 
 	// 5. Check inclusion of allowed special characters
 	if !hasSpecialRegexp.MatchString(password) {
-		return false, ccc.NewInvalidInputError("password", "must contain at least one special character. Allowed special characters are: "+displaySpecialChars)
+		return false, ccc.NewInvalidInputErrorWithMessage(
+			"password",
+			"must contain at least one special character. Allowed special characters are: "+displaySpecialChars,
+			"Password must contain at least one special character. Allowed special characters are: "+displaySpecialChars,
+		)
 	}
 
 	// 6. Check that all characters in the password are from the allowed set
 	// (alphanumeric or one of the defined special characters)
 	if !allAllowedCharsRegexp.MatchString(password) {
-		return false, ccc.NewInvalidInputError("password", "contains invalid characters. Only letters, numbers, and the following special characters are allowed: "+displaySpecialChars)
+		return false, ccc.NewInvalidInputErrorWithMessage(
+			"password",
+			"contains invalid characters. Only letters, numbers, and the following special characters are allowed: "+displaySpecialChars,
+			"Password contains invalid characters. Only letters, numbers, and the following special characters are allowed: "+displaySpecialChars,
+		)
 	}
 
 	return true, nil
@@ -603,6 +638,11 @@ func (manager *DefaultUserManager) GenerateRecoveryCode(request GenerateRecovery
 		return GenerateRecoveryCodeResponse{}, ccc.NewInvalidInputError("user ID", "cannot be empty")
 	}
 
+	if request.Password == "" {
+		manager.logger.Warn("Recovery code generation failed: empty password")
+		return GenerateRecoveryCodeResponse{}, ccc.NewInvalidInputError("password", "cannot be empty")
+	}
+
 	// Find the user
 	user, err := manager.userRepository.FindById(request.UserId)
 	if err != nil {
@@ -615,16 +655,51 @@ func (manager *DefaultUserManager) GenerateRecoveryCode(request GenerateRecovery
 		return GenerateRecoveryCodeResponse{}, ccc.NewResourceNotFoundError(request.UserId, "User")
 	}
 
-	// Generate the recovery code
+	// Verify the password before generating recovery code
+	manager.logger.Debug("Verifying password for recovery code generation", "user_id", request.UserId, "username", user.UserName)
+	passwordValid, err := manager.securityService.VerifyUserPassword(*user, request.Password)
+	if err != nil {
+		manager.logger.Error("Password verification failed during recovery code generation", "user_id", request.UserId, "username", user.UserName, "error", err)
+		return GenerateRecoveryCodeResponse{}, err
+	}
+
+	if !passwordValid {
+		manager.logger.Warn("Invalid password provided for recovery code generation", "user_id", request.UserId, "username", user.UserName)
+		return GenerateRecoveryCodeResponse{}, ccc.NewUnauthorizedError("Invalid password")
+	}
+
+	// Uncover the MEK using the current password
+	manager.logger.Debug("Uncovering MEK for recovery code generation", "user_id", request.UserId, "username", user.UserName)
+	plainMek, err := manager.securityService.UncoverMek(*user, request.Password)
+	if err != nil {
+		manager.logger.Error("Failed to uncover MEK for recovery code generation", "user_id", request.UserId, "username", user.UserName, "error", err)
+		return GenerateRecoveryCodeResponse{}, ccc.NewInternalError("uncover MEK", err)
+	}
+
+	if plainMek == "" {
+		manager.logger.Error("MEK uncovering returned empty result for recovery code generation", "user_id", request.UserId, "username", user.UserName)
+		return GenerateRecoveryCodeResponse{}, ccc.NewInternalError("MEK uncovering returned empty result", nil)
+	}
+
+	// Generate the new recovery code
 	recoveryCode, hash, salt, err := manager.securityService.GenerateRecoveryCode()
 	if err != nil {
 		manager.logger.Error("Security service failed to generate recovery code", "user_id", request.UserId, "username", user.UserName, "error", err)
 		return GenerateRecoveryCodeResponse{}, ccc.NewInternalError("generate recovery code", err)
 	}
 
-	// Update the user with the new recovery code
+	// Encrypt the MEK with the new recovery code
+	manager.logger.Debug("Encrypting MEK with new recovery code", "user_id", request.UserId, "username", user.UserName)
+	encryptedMek, err := manager.securityService.EncryptMekWithRecoveryCode(plainMek, recoveryCode, salt)
+	if err != nil {
+		manager.logger.Error("Failed to encrypt MEK with new recovery code", "user_id", request.UserId, "username", user.UserName, "error", err)
+		return GenerateRecoveryCodeResponse{}, ccc.NewInternalError("encrypt MEK with recovery code", err)
+	}
+
+	// Update the user with the new recovery code and encrypted MEK
 	user.RecoveryCodeHash = hash
 	user.RecoveryCodeSalt = salt
+	user.RecoveryMek = encryptedMek
 	user.RecoveryGenerated = time.Now()
 	user.ModifiedAt = time.Now()
 

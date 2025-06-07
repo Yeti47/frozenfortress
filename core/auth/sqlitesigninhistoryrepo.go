@@ -2,7 +2,7 @@ package auth
 
 import (
 	"database/sql"
-	"fmt"
+	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	_ "github.com/mattn/go-sqlite3"
@@ -131,17 +131,20 @@ func (r *SQLiteSignInHistoryItemRepository) GetByUserName(userName string) ([]*S
 
 // GetRecentFailedSignInsByUserName retrieves recent failed sign-in attempts for a username
 func (r *SQLiteSignInHistoryItemRepository) GetRecentFailedSignInsByUserName(userName string, minutesBack int) ([]*SignInHistoryItem, error) {
+	// Calculate the cutoff time in Go to ensure proper timezone handling
+	cutoffTime := time.Now().Add(-time.Duration(minutesBack) * time.Minute)
+	cutoffTimeStr := ccc.FormatSQLiteTimestamp(cutoffTime)
+
 	query := `
 	SELECT id, user_id, user_name, ip_address, user_agent, client_type, sign_in_method, successful, timestamp, denial_reason
 	FROM sign_in_history 
 	WHERE user_name = ? 
 	AND successful = 0 
-	AND timestamp >= datetime('now', ?)
+	AND timestamp >= ?
 	ORDER BY timestamp DESC
 	`
 
-	timeConstraint := fmt.Sprintf("-%d minutes", minutesBack)
-	rows, err := r.db.Query(query, userName, timeConstraint)
+	rows, err := r.db.Query(query, userName, cutoffTimeStr)
 	if err != nil {
 		return nil, err
 	}
@@ -152,17 +155,20 @@ func (r *SQLiteSignInHistoryItemRepository) GetRecentFailedSignInsByUserName(use
 
 // GetRecentFailedSignInsByUserId retrieves recent failed sign-in attempts for a user ID
 func (r *SQLiteSignInHistoryItemRepository) GetRecentFailedSignInsByUserId(userId string, minutesBack int) ([]*SignInHistoryItem, error) {
+	// Calculate the cutoff time in Go to ensure proper timezone handling
+	cutoffTime := time.Now().Add(-time.Duration(minutesBack) * time.Minute)
+	cutoffTimeStr := ccc.FormatSQLiteTimestamp(cutoffTime)
+
 	query := `
 	SELECT id, user_id, user_name, ip_address, user_agent, client_type, sign_in_method, successful, timestamp, denial_reason
 	FROM sign_in_history 
 	WHERE user_id = ? 
 	AND successful = 0 
-	AND timestamp >= datetime('now', ?)
+	AND timestamp >= ?
 	ORDER BY timestamp DESC
 	`
 
-	timeConstraint := fmt.Sprintf("-%d minutes", minutesBack)
-	rows, err := r.db.Query(query, userId, timeConstraint)
+	rows, err := r.db.Query(query, userId, cutoffTimeStr)
 	if err != nil {
 		return nil, err
 	}

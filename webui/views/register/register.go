@@ -65,9 +65,10 @@ func RegisterRoutes(router *gin.Engine, userManager auth.UserManager) {
 			"Please check back later or contact your administrator for activation status."
 
 		c.HTML(200, "register.html", gin.H{
-			"SuccessMessage": successMessage,
-			"RecoveryCode":   response.RecoveryCode,
-			"Username":       username,
+			"SuccessMessage":  successMessage,
+			"RecoveryCode":    response.RecoveryCode,
+			"RecoveryContext": "registration",
+			"Username":        username,
 		})
 	})
 }

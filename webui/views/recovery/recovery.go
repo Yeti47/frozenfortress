@@ -27,36 +27,36 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 		// Validate input
 		if username == "" {
 			c.HTML(http.StatusBadRequest, "recovery.html", gin.H{
-				"ErrorMessage": "Username is required",
-				"Username":     username,
-				"RecoveryCode": recoveryCode,
+				"ErrorMessage":    "Username is required",
+				"Username":        username,
+				"OldRecoveryCode": recoveryCode,
 			})
 			return
 		}
 
 		if recoveryCode == "" {
 			c.HTML(http.StatusBadRequest, "recovery.html", gin.H{
-				"ErrorMessage": "Recovery code is required",
-				"Username":     username,
-				"RecoveryCode": recoveryCode,
+				"ErrorMessage":    "Recovery code is required",
+				"Username":        username,
+				"OldRecoveryCode": recoveryCode,
 			})
 			return
 		}
 
 		if newPassword == "" {
 			c.HTML(http.StatusBadRequest, "recovery.html", gin.H{
-				"ErrorMessage": "New password is required",
-				"Username":     username,
-				"RecoveryCode": recoveryCode,
+				"ErrorMessage":    "New password is required",
+				"Username":        username,
+				"OldRecoveryCode": recoveryCode,
 			})
 			return
 		}
 
 		if newPassword != confirmPassword {
 			c.HTML(http.StatusBadRequest, "recovery.html", gin.H{
-				"ErrorMessage": "Passwords do not match",
-				"Username":     username,
-				"RecoveryCode": recoveryCode,
+				"ErrorMessage":    "Passwords do not match",
+				"Username":        username,
+				"OldRecoveryCode": recoveryCode,
 			})
 			return
 		}
@@ -83,9 +83,9 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 			}
 
 			c.HTML(http.StatusBadRequest, "recovery.html", gin.H{
-				"ErrorMessage": errorMessage,
-				"Username":     username,
-				"RecoveryCode": recoveryCode,
+				"ErrorMessage":    errorMessage,
+				"Username":        username,
+				"OldRecoveryCode": recoveryCode,
 			})
 			return
 		}
@@ -93,7 +93,8 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 		// Recovery successful - display the new recovery code
 		c.HTML(http.StatusOK, "recovery.html", gin.H{
 			"SuccessMessage":  "Password recovery successful! Please save your new recovery code immediately.",
-			"NewRecoveryCode": response.NewRecoveryCode,
+			"RecoveryCode":    response.NewRecoveryCode,
+			"RecoveryContext": "recovery",
 			"Username":        response.User.UserName,
 		})
 	})

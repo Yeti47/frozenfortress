@@ -60,7 +60,8 @@ const (
 )
 
 type GenerateRecoveryCodeRequest struct {
-	UserId string
+	UserId   string
+	Password string
 }
 
 type GenerateRecoveryCodeResponse struct {
