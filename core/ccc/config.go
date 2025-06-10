@@ -13,6 +13,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// BackupConfig contains all backup-related configuration settings
+type BackupConfig struct {
+	Enabled        bool   // Enable/disable backup functionality
+	IntervalDays   int    // Backup interval in days (0 = disabled)
+	Directory      string // Directory where backup files are stored
+	MaxGenerations int    // Maximum number of backup files to keep
+}
+
 type AppConfig struct {
 	DatabasePath string // Path to the database file
 
@@ -31,6 +39,8 @@ type AppConfig struct {
 
 	WebUiPort int    // Port for the Web UI server
 	LogLevel  string // Log level (Debug, Info, Warn, Error)
+
+	Backup BackupConfig // Backup configuration
 }
 
 // String returns a JSON representation of the AppConfig.
@@ -56,26 +66,18 @@ var DefaultConfig = AppConfig{
 	KeyDir:              "",
 	WebUiPort:           8080,   // Default Web UI port
 	LogLevel:            "Info", // Default log level
+	Backup: BackupConfig{
+		Enabled:        false,                                      // Disabled by default
+		IntervalDays:   7,                                          // Weekly backups
+		Directory:      filepath.Join(GetUserDataDir(), "backups"), // Default backup directory
+		MaxGenerations: 10,                                         // Keep 10 backup generations
+	},
 }
 
 // LoadConfigFromEnv loads the application configuration from environment variables.
 // If the environment variables are not set, it falls back to default values.
 func LoadConfigFromEnv() AppConfig {
-	config := AppConfig{
-		DatabasePath:        filepath.Join(GetUserDataDir(), "frozenfortress.db"),
-		MaxSignInAttempts:   3,
-		SignInAttemptWindow: 30,
-		RedisAddress:        "localhost:6379",
-		RedisUser:           "",
-		RedisPassword:       "",
-		RedisSize:           10,
-		RedisNetwork:        "tcp",
-		SigningKey:          "",
-		EncryptionKey:       "",
-		KeyDir:              "",
-		WebUiPort:           8080,
-		LogLevel:            "info", // Default log level
-	}
+	config := DefaultConfig
 
 	// Database configuration
 	if dbPath := os.Getenv("FF_DATABASE_PATH"); dbPath != "" {
@@ -134,6 +136,24 @@ func LoadConfigFromEnv() AppConfig {
 	// Log level configuration
 	if logLevel := os.Getenv("FF_LOG_LEVEL"); logLevel != "" {
 		config.LogLevel = logLevel
+	}
+
+	// Backup configuration
+	if backupEnabled := os.Getenv("FF_BACKUP_ENABLED"); backupEnabled != "" {
+		config.Backup.Enabled = backupEnabled == "true"
+	}
+	if backupInterval := os.Getenv("FF_BACKUP_INTERVAL_DAYS"); backupInterval != "" {
+		if interval, err := strconv.Atoi(backupInterval); err == nil {
+			config.Backup.IntervalDays = interval
+		}
+	}
+	if backupDir := os.Getenv("FF_BACKUP_DIRECTORY"); backupDir != "" {
+		config.Backup.Directory = backupDir
+	}
+	if maxGenerations := os.Getenv("FF_BACKUP_MAX_GENERATIONS"); maxGenerations != "" {
+		if generations, err := strconv.Atoi(maxGenerations); err == nil {
+			config.Backup.MaxGenerations = generations
+		}
 	}
 
 	return config

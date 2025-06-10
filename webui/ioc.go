@@ -4,9 +4,11 @@ import (
 	"database/sql"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/backup"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/secrets"
+	"github.com/Yeti47/frozenfortress/frozenfortress/webui/workers"
 )
 
 type services struct {
@@ -18,6 +20,8 @@ type services struct {
 	MekStore                auth.MekStore
 	SecretManager           secrets.SecretManager
 	UserManager             auth.UserManager
+	BackupService           backup.BackupService
+	BackupWorker            workers.BackupWorker
 	Logger                  ccc.Logger
 }
 
@@ -94,6 +98,12 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		logger,
 	)
 
+	// Create backup service
+	backupService := backup.NewFileBasedBackupService(config, logger)
+
+	// Create backup worker
+	backupWorker := workers.NewDefaultBackupWorker(backupService, config, logger)
+
 	return services{
 		SignInManager:           signInManager,
 		EncryptionService:       encryptionService,
@@ -103,6 +113,8 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		MekStore:                mekStore,
 		SecretManager:           secretManager,
 		UserManager:             userManager,
+		BackupService:           backupService,
+		BackupWorker:            backupWorker,
 		Logger:                  logger,
 	}
 }

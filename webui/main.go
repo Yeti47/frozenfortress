@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/account"
@@ -25,6 +28,20 @@ func main() {
 	}
 
 	svc := configureServices(config, db)
+
+	// Start the backup worker
+	svc.BackupWorker.Start()
+
+	// Set up graceful shutdown
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		svc.Logger.Info("Shutting down backup worker...")
+		svc.BackupWorker.Stop()
+		os.Exit(0)
+	}()
 
 	router := gin.Default()
 

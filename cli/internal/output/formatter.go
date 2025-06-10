@@ -6,6 +6,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/backup"
 )
 
 // Formatter handles output formatting for the CLI
@@ -93,6 +94,29 @@ func (f *Formatter) PrintUsers(users []auth.UserDto) {
 	w.Flush()
 }
 
+// PrintBackups prints a list of backups in a table format
+func (f *Formatter) PrintBackups(backups []*backup.BackupInfo) {
+	if len(backups) == 0 {
+		fmt.Println("No backups found")
+		return
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(w, "FILENAME\tTRIGGER\tSIZE (BYTES)\tCREATED\n")
+	fmt.Fprintf(w, "--------\t-------\t------------\t-------\n")
+
+	for _, backup := range backups {
+		fmt.Fprintf(w, "%s\t%s\t%d\t%s\n",
+			backup.Filename,
+			backup.Trigger.String(),
+			backup.SizeBytes,
+			backup.CreatedAt.Format("2006-01-02 15:04:05"),
+		)
+	}
+
+	w.Flush()
+}
+
 // Package-level convenience functions for easier usage in commands
 var defaultFormatter = NewFormatter(false)
 
@@ -131,4 +155,9 @@ func PrintUser(user *auth.UserDto) {
 // PrintUsers prints a list of users using the default formatter
 func PrintUsers(users []auth.UserDto) {
 	defaultFormatter.PrintUsers(users)
+}
+
+// PrintBackups prints a list of backups using the default formatter
+func PrintBackups(backups []*backup.BackupInfo) {
+	defaultFormatter.PrintBackups(backups)
 }
