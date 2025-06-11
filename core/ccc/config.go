@@ -13,6 +13,27 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Environment variable names
+const (
+	EnvDatabasePath         = "FF_DATABASE_PATH"
+	EnvMaxSignInAttempts    = "FF_MAX_SIGN_IN_ATTEMPTS"
+	EnvSignInAttemptWindow  = "FF_SIGN_IN_ATTEMPT_WINDOW"
+	EnvRedisAddress         = "FF_REDIS_ADDRESS"
+	EnvRedisUser            = "FF_REDIS_USER"
+	EnvRedisPassword        = "FF_REDIS_PASSWORD"
+	EnvRedisSize            = "FF_REDIS_SIZE"
+	EnvRedisNetwork         = "FF_REDIS_NETWORK"
+	EnvSigningKey           = "FF_SIGNING_KEY"
+	EnvEncryptionKey        = "FF_ENCRYPTION_KEY"
+	EnvKeyDir               = "FF_KEY_DIR"
+	EnvWebUIPort            = "FF_WEB_UI_PORT"
+	EnvLogLevel             = "FF_LOG_LEVEL"
+	EnvBackupEnabled        = "FF_BACKUP_ENABLED"
+	EnvBackupIntervalDays   = "FF_BACKUP_INTERVAL_DAYS"
+	EnvBackupDirectory      = "FF_BACKUP_DIRECTORY"
+	EnvBackupMaxGenerations = "FF_BACKUP_MAX_GENERATIONS"
+)
+
 // BackupConfig contains all backup-related configuration settings
 type BackupConfig struct {
 	Enabled        bool   // Enable/disable backup functionality
@@ -80,77 +101,77 @@ func LoadConfigFromEnv() AppConfig {
 	config := DefaultConfig
 
 	// Database configuration
-	if dbPath := os.Getenv("FF_DATABASE_PATH"); dbPath != "" {
+	if dbPath := os.Getenv(EnvDatabasePath); dbPath != "" {
 		config.DatabasePath = dbPath
 	}
 
 	// Security configuration
-	if maxAttempts := os.Getenv("FF_MAX_SIGN_IN_ATTEMPTS"); maxAttempts != "" {
+	if maxAttempts := os.Getenv(EnvMaxSignInAttempts); maxAttempts != "" {
 		if attempts, err := strconv.Atoi(maxAttempts); err == nil {
 			config.MaxSignInAttempts = attempts
 		}
 	}
-	if window := os.Getenv("FF_SIGN_IN_ATTEMPT_WINDOW"); window != "" {
+	if window := os.Getenv(EnvSignInAttemptWindow); window != "" {
 		if minutes, err := strconv.Atoi(window); err == nil {
 			config.SignInAttemptWindow = minutes
 		}
 	}
 
 	// Redis configuration
-	if redisAddr := os.Getenv("FF_REDIS_ADDRESS"); redisAddr != "" {
+	if redisAddr := os.Getenv(EnvRedisAddress); redisAddr != "" {
 		config.RedisAddress = redisAddr
 	}
-	if redisUser := os.Getenv("FF_REDIS_USER"); redisUser != "" {
+	if redisUser := os.Getenv(EnvRedisUser); redisUser != "" {
 		config.RedisUser = redisUser
 	}
-	if redisPass := os.Getenv("FF_REDIS_PASSWORD"); redisPass != "" {
+	if redisPass := os.Getenv(EnvRedisPassword); redisPass != "" {
 		config.RedisPassword = redisPass
 	}
-	if redisSize := os.Getenv("FF_REDIS_SIZE"); redisSize != "" {
+	if redisSize := os.Getenv(EnvRedisSize); redisSize != "" {
 		if size, err := strconv.Atoi(redisSize); err == nil && size > 0 {
 			config.RedisSize = size
 		}
 	}
-	if redisNet := os.Getenv("FF_REDIS_NETWORK"); redisNet != "" {
+	if redisNet := os.Getenv(EnvRedisNetwork); redisNet != "" {
 		config.RedisNetwork = redisNet
 	}
 
 	// Session key configuration
-	if signingKey := os.Getenv("FF_SIGNING_KEY"); signingKey != "" {
+	if signingKey := os.Getenv(EnvSigningKey); signingKey != "" {
 		config.SigningKey = signingKey
 	}
-	if encKey := os.Getenv("FF_ENCRYPTION_KEY"); encKey != "" {
+	if encKey := os.Getenv(EnvEncryptionKey); encKey != "" {
 		config.EncryptionKey = encKey
 	}
-	if keyDir := os.Getenv("FF_KEY_DIR"); keyDir != "" {
+	if keyDir := os.Getenv(EnvKeyDir); keyDir != "" {
 		config.KeyDir = keyDir
 	}
 
 	// Web UI configuration
-	if webUIPort := os.Getenv("FF_WEB_UI_PORT"); webUIPort != "" {
+	if webUIPort := os.Getenv(EnvWebUIPort); webUIPort != "" {
 		if port, err := strconv.Atoi(webUIPort); err == nil {
 			config.WebUiPort = port
 		}
 	}
 
 	// Log level configuration
-	if logLevel := os.Getenv("FF_LOG_LEVEL"); logLevel != "" {
+	if logLevel := os.Getenv(EnvLogLevel); logLevel != "" {
 		config.LogLevel = logLevel
 	}
 
 	// Backup configuration
-	if backupEnabled := os.Getenv("FF_BACKUP_ENABLED"); backupEnabled != "" {
+	if backupEnabled := os.Getenv(EnvBackupEnabled); backupEnabled != "" {
 		config.Backup.Enabled = backupEnabled == "true"
 	}
-	if backupInterval := os.Getenv("FF_BACKUP_INTERVAL_DAYS"); backupInterval != "" {
+	if backupInterval := os.Getenv(EnvBackupIntervalDays); backupInterval != "" {
 		if interval, err := strconv.Atoi(backupInterval); err == nil {
 			config.Backup.IntervalDays = interval
 		}
 	}
-	if backupDir := os.Getenv("FF_BACKUP_DIRECTORY"); backupDir != "" {
+	if backupDir := os.Getenv(EnvBackupDirectory); backupDir != "" {
 		config.Backup.Directory = backupDir
 	}
-	if maxGenerations := os.Getenv("FF_BACKUP_MAX_GENERATIONS"); maxGenerations != "" {
+	if maxGenerations := os.Getenv(EnvBackupMaxGenerations); maxGenerations != "" {
 		if generations, err := strconv.Atoi(maxGenerations); err == nil {
 			config.Backup.MaxGenerations = generations
 		}
