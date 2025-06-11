@@ -4,11 +4,9 @@ import (
 	"database/sql"
 	"encoding/json" // Added import
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -245,26 +243,4 @@ func SetupDatabase(config AppConfig) (*sql.DB, error) {
 	}
 
 	return db, nil
-}
-
-func CreateLogger(config AppConfig) Logger {
-
-	var level slog.Level
-	switch strings.ToLower(config.LogLevel) {
-	case "debug":
-		level = slog.LevelDebug
-	case "info":
-		level = slog.LevelInfo
-	case "warn", "warning":
-		level = slog.LevelWarn
-	case "error":
-		level = slog.LevelError
-	default:
-		// Default to Info if unknown level
-		level = slog.LevelInfo
-	}
-
-	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: level,
-	}))
 }
