@@ -6,6 +6,7 @@ import (
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/dataprotection"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/secrets"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/middleware"
@@ -66,7 +67,7 @@ func handleSecretsPage(c *gin.Context, signInManager auth.SignInManager, secretM
 	}
 
 	// Create MekDataProtector for this request
-	dataProtector := secrets.CreateMekDataProtectorForRequest(
+	dataProtector := dataprotection.CreateMekDataProtectorForRequest(
 		mekStore,
 		encryptionService,
 		c.Request,
@@ -141,7 +142,7 @@ func handleEditSecretPage(c *gin.Context, signInManager auth.SignInManager, secr
 		templateData["SecretId"] = secretId
 
 		// Create MekDataProtector for this request
-		dataProtector := secrets.CreateMekDataProtectorForRequest(
+		dataProtector := dataprotection.CreateMekDataProtectorForRequest(
 			mekStore,
 			encryptionService,
 			c.Request,
@@ -207,7 +208,7 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 	}
 
 	// Create MekDataProtector for this request
-	dataProtector := secrets.CreateMekDataProtectorForRequest(
+	dataProtector := dataprotection.CreateMekDataProtectorForRequest(
 		mekStore,
 		encryptionService,
 		c.Request,

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/dataprotection"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/secrets"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -188,7 +189,7 @@ func authenticateUser(userDto auth.UserDto, password string) error {
 }
 
 // prepareSecretOperation encapsulates common steps for secret operations.
-func prepareSecretOperation(userIdentifier string) (auth.UserDto, secrets.DataProtector, secrets.SecretManager, error) {
+func prepareSecretOperation(userIdentifier string) (auth.UserDto, dataprotection.DataProtector, secrets.SecretManager, error) {
 	// 1. Resolve user identifier
 	userDto, err := resolveUserIdentifier(userIdentifier) // from user.go
 	if err != nil {
@@ -464,7 +465,7 @@ var secretDeleteCmd = &cobra.Command{
 }
 
 // createDataProtector creates a DataProtector instance for the given user and password
-func createDataProtector(userId, password string) (secrets.DataProtector, error) {
+func createDataProtector(userId, password string) (dataprotection.DataProtector, error) {
 	encService := encryptionService()
 	secService, err := securityService()
 	if err != nil {
@@ -476,7 +477,7 @@ func createDataProtector(userId, password string) (secrets.DataProtector, error)
 		return nil, err
 	}
 
-	return secrets.NewPasswordDataProtector(encService, secService, userRepo, userId, password), nil
+	return dataprotection.NewPasswordDataProtector(encService, secService, userRepo, userId, password), nil
 }
 
 func init() {

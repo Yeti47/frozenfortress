@@ -1,4 +1,4 @@
-package secrets
+package dataprotection
 
 import (
 	"errors"

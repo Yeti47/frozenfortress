@@ -7,6 +7,7 @@ import (
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/dataprotection"
 )
 
 type DefaultSecretManager struct {
@@ -59,7 +60,7 @@ func (m *DefaultSecretManager) validateSecretRequest(request UpsertSecretRequest
 	return nil
 }
 
-func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretRequest, dataProtector DataProtector) (CreateSecretResponse, error) {
+func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretRequest, dataProtector dataprotection.DataProtector) (CreateSecretResponse, error) {
 	m.logger.Info("Creating secret", "user_id", userId, "secret_name", request.SecretName)
 
 	// Trim whitespace from input
@@ -140,7 +141,7 @@ func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretR
 }
 
 // GetSecret retrieves a secret by its ID and decrypts it using the provided data protector.
-func (m *DefaultSecretManager) GetSecret(userId string, secretId string, dataProtector DataProtector) (*SecretDto, error) {
+func (m *DefaultSecretManager) GetSecret(userId string, secretId string, dataProtector dataprotection.DataProtector) (*SecretDto, error) {
 	m.logger.Debug("Retrieving secret by ID", "user_id", userId, "secret_id", secretId)
 
 	// Retrieve the secret from the repository
@@ -183,7 +184,7 @@ func (m *DefaultSecretManager) GetSecret(userId string, secretId string, dataPro
 }
 
 // GetSecretByName retrieves a secret by its name for a specific user and decrypts it.
-func (m *DefaultSecretManager) GetSecretByName(userId string, secretName string, dataProtector DataProtector) (*SecretDto, error) {
+func (m *DefaultSecretManager) GetSecretByName(userId string, secretName string, dataProtector dataprotection.DataProtector) (*SecretDto, error) {
 	m.logger.Debug("Retrieving secret by name", "user_id", userId, "secret_name", secretName)
 
 	// Encrypt the secret name to search for it in the repository
@@ -228,7 +229,7 @@ func (m *DefaultSecretManager) GetSecretByName(userId string, secretName string,
 }
 
 // GetSecrets retrieves all secrets for a user with optional filtering and pagination
-func (m *DefaultSecretManager) GetSecrets(userId string, request GetSecretsRequest, dataProtector DataProtector) (PaginatedSecretResponse, error) {
+func (m *DefaultSecretManager) GetSecrets(userId string, request GetSecretsRequest, dataProtector dataprotection.DataProtector) (PaginatedSecretResponse, error) {
 	m.logger.Info("Retrieving secrets for user", "user_id", userId, "name_filter", request.Name, "page", request.Page, "page_size", request.PageSize)
 
 	// Get all secrets for the user from repository
@@ -375,7 +376,7 @@ func (m *DefaultSecretManager) sortSecrets(secrets []*Secret, sortBy string, sor
 }
 
 // UpdateSecret updates an existing secret
-func (m *DefaultSecretManager) UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector DataProtector) (bool, error) {
+func (m *DefaultSecretManager) UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector dataprotection.DataProtector) (bool, error) {
 	m.logger.Info("Updating secret", "user_id", userId, "secret_id", secretId, "new_secret_name", request.SecretName)
 
 	// Trim whitespace from input

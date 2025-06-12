@@ -1,5 +1,9 @@
 package secrets
 
+import (
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/dataprotection"
+)
+
 // Interface for generating secret IDs
 // This interface is used to generate unique IDs for secrets.
 type SecretIdGenerator interface {
@@ -18,15 +22,10 @@ type SecretRepository interface {
 
 // SecretManager interface for managing secrets
 type SecretManager interface {
-	CreateSecret(userId string, request UpsertSecretRequest, dataProtector DataProtector) (CreateSecretResponse, error)
-	GetSecret(userId string, secretId string, dataProtector DataProtector) (*SecretDto, error)
-	GetSecretByName(userId string, secretName string, dataProtector DataProtector) (*SecretDto, error)
-	GetSecrets(userId string, request GetSecretsRequest, dataProtector DataProtector) (PaginatedSecretResponse, error)
-	UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector DataProtector) (bool, error)
+	CreateSecret(userId string, request UpsertSecretRequest, dataProtector dataprotection.DataProtector) (CreateSecretResponse, error)
+	GetSecret(userId string, secretId string, dataProtector dataprotection.DataProtector) (*SecretDto, error)
+	GetSecretByName(userId string, secretName string, dataProtector dataprotection.DataProtector) (*SecretDto, error)
+	GetSecrets(userId string, request GetSecretsRequest, dataProtector dataprotection.DataProtector) (PaginatedSecretResponse, error)
+	UpdateSecret(userId string, secretId string, request UpsertSecretRequest, dataProtector dataprotection.DataProtector) (bool, error)
 	DeleteSecret(userId string, secretId string) (bool, error)
-}
-
-type DataProtector interface {
-	Protect(data string) (protectedData string, err error)
-	Unprotect(protectedData string) (data string, err error)
 }
