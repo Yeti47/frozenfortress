@@ -9,6 +9,8 @@ type EncryptionService interface {
 	Hasher
 	Encrypt(plainText string, key string) (cipherText string, err error)
 	Decrypt(cipherText string, key string) (plainText string, err error)
+	EncryptBytes(plainData []byte, key string) (cipherData []byte, err error)
+	DecryptBytes(cipherData []byte, key string) (plainData []byte, err error)
 	GenerateKey() (key string, err error)
 	GenerateKeyFromPassword(password string, salt string) (key string, err error)
 	GenerateSalt() (saltBytes []byte, salt string, err error)
