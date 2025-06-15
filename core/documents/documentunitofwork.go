@@ -216,3 +216,8 @@ func NewDocumentUnitOfWorkFactory(db *sql.DB) *DefaultDocumentUnitOfWorkFactory 
 		db: db,
 	}
 }
+
+// Create creates a new DocumentUnitOfWork instance.
+func (f *DefaultDocumentUnitOfWorkFactory) Create() DocumentUnitOfWork {
+	return NewDocumentUnitOfWork(f.db)
+}
