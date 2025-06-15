@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+// RowScanner interface for scanning database rows - shared across all SQLite repositories
+type RowScanner interface {
+	Scan(dest ...any) error
+}
+
 // ParseSQLiteTimestamp parses a timestamp string from SQLite using multiple formats
 // to handle different SQLite driver behaviors and format variations.
 func ParseSQLiteTimestamp(timestampStr string) (time.Time, error) {
