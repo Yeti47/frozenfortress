@@ -79,20 +79,18 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		logger,
 	)
 
-	secretIdGenerator := secrets.NewUuidSecretIdGenerator()
+	idGenerator := ccc.NewUuidGenerator()
 
 	secretManager := secrets.NewDefaultSecretManager(
 		secretRepo,
-		secretIdGenerator,
+		idGenerator,
 		userRepo,
 		logger,
 	)
 
-	userIdGenerator := auth.NewUuidUserIdGenerator()
-
 	userManager := auth.NewDefaultUserManager(
 		userRepo,
-		userIdGenerator,
+		idGenerator,
 		encryptionService,
 		securityService,
 		logger,

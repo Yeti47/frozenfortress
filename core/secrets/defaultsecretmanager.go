@@ -102,7 +102,7 @@ func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretR
 	}
 
 	// Generate a new secret ID
-	secretId := m.secretIdGenerator.GenerateSecretId()
+	secretId := m.secretIdGenerator.GenerateId()
 	m.logger.Debug("Generated secret ID", "secret_id", secretId, "user_id", userId)
 
 	// Encrypt the secret name and value

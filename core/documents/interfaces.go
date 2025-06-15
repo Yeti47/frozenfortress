@@ -9,15 +9,15 @@ import (
 
 // ID Generators
 type DocumentIdGenerator interface {
-	GenerateDocumentId() string
+	GenerateId() string
 }
 
 type DocumentFileIdGenerator interface {
-	GenerateDocumentFileId() string
+	GenerateId() string
 }
 
 type TagIdGenerator interface {
-	GenerateTagId() string
+	GenerateId() string
 }
 
 // Core Repository Interfaces - Simple CRUD operations only

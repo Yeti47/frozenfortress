@@ -7,7 +7,7 @@ import (
 // Interface for generating secret IDs
 // This interface is used to generate unique IDs for secrets.
 type SecretIdGenerator interface {
-	GenerateSecretId() string
+	GenerateId() string
 }
 
 type SecretRepository interface {

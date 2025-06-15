@@ -107,7 +107,7 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 		return CreateUserResponse{}, ccc.NewInvalidInputError("password", "invalid password")
 	}
 
-	userId := manager.userIdGenerator.GenerateUserId()
+	userId := manager.userIdGenerator.GenerateId()
 	manager.logger.Debug("Generated user ID", "user_id", userId, "username", request.UserName)
 
 	pwHash, pwSalt, err := manager.encryptionService.Hash(request.Password)
