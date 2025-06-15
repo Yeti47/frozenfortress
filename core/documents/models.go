@@ -42,3 +42,12 @@ type DocumentTag struct {
 	DocumentId string
 	TagId      string
 }
+
+// DocumentFilePreview represents preview/thumbnail data for a document file
+type DocumentFilePreview struct {
+	DocumentFileId string
+	PreviewData    []byte // Encrypted preview image data (e.g., thumbnail JPEG)
+	PreviewType    string // e.g., "image/jpeg", "image/png"
+	Width          int    // Preview image width
+	Height         int    // Preview image height
+}

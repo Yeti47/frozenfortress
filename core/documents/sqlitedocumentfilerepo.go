@@ -3,6 +3,7 @@ package documents
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	_ "github.com/mattn/go-sqlite3"
@@ -14,8 +15,10 @@ type SQLiteDocumentFileRepository struct {
 }
 
 const (
-	// Field list for DocumentFile table queries
+	// Field list for DocumentFile table queries (excludes preview fields)
 	documentFileFieldList = `Id, DocumentId, FileName, ContentType, FileSize, PageCount, FileData, CreatedAt, ModifiedAt`
+	// Field list for DocumentFilePreview queries (from DocumentFile table)
+	documentFilePreviewFieldList = `Id, PreviewData, PreviewType, Width, Height`
 )
 
 // newSQLiteDocumentFileRepository creates a new SQLiteDocumentFileRepository instance.
@@ -43,6 +46,10 @@ func (r *SQLiteDocumentFileRepository) initializeTable(db *sql.DB) error {
 		FileSize INTEGER NOT NULL,
 		PageCount INTEGER DEFAULT 0,
 		FileData BLOB NOT NULL,
+		PreviewData BLOB,
+		PreviewType TEXT,
+		Width INTEGER DEFAULT 0,
+		Height INTEGER DEFAULT 0,
 		CreatedAt TIMESTAMP NOT NULL,
 		ModifiedAt TIMESTAMP NOT NULL
 	);
@@ -115,6 +122,46 @@ func (r *SQLiteDocumentFileRepository) Add(ctx context.Context, file *DocumentFi
 	return err
 }
 
+// AddWithPreview adds a new document file with optional preview data in a single atomic operation.
+// This prevents the ModifiedAt timestamp from being updated twice when creating a file with preview.
+func (r *SQLiteDocumentFileRepository) AddWithPreview(ctx context.Context, file *DocumentFile, preview *DocumentFilePreview) error {
+	// Build the full field list including preview fields
+	fullFieldList := `Id, DocumentId, FileName, ContentType, FileSize, PageCount, FileData, PreviewData, PreviewType, Width, Height, CreatedAt, ModifiedAt`
+	query := `INSERT INTO DocumentFile (` + fullFieldList + `) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+	createdAtStr := ccc.FormatSQLiteTimestamp(file.CreatedAt)
+	modifiedAtStr := ccc.FormatSQLiteTimestamp(file.ModifiedAt)
+
+	// Use preview data if provided, otherwise use null/default values
+	var previewData []byte
+	var previewType string
+	var width, height int
+
+	if preview != nil {
+		previewData = preview.PreviewData
+		previewType = preview.PreviewType
+		width = preview.Width
+		height = preview.Height
+	}
+
+	_, err := r.db.ExecContext(ctx, query,
+		file.Id,
+		file.DocumentId,
+		file.FileName,
+		file.ContentType,
+		file.FileSize,
+		file.PageCount,
+		file.FileData,
+		previewData,
+		previewType,
+		width,
+		height,
+		createdAtStr,
+		modifiedAtStr,
+	)
+	return err
+}
+
 // Update updates an existing document file.
 func (r *SQLiteDocumentFileRepository) Update(ctx context.Context, file *DocumentFile) error {
 	query := `UPDATE DocumentFile SET FileName = ?, ContentType = ?, FileSize = ?, PageCount = ?, FileData = ?, ModifiedAt = ? WHERE Id = ?`
@@ -181,4 +228,75 @@ func scanDocumentFile(scanner ccc.RowScanner) (*DocumentFile, error) {
 	}
 
 	return file, nil
+}
+
+// GetPreview retrieves a document file preview by document file ID.
+// Returns nil if no preview exists or if the document file doesn't exist.
+func (r *SQLiteDocumentFileRepository) GetPreview(ctx context.Context, documentFileId string) (*DocumentFilePreview, error) {
+	query := `SELECT ` + documentFilePreviewFieldList + ` FROM DocumentFile WHERE Id = ? AND PreviewData IS NOT NULL`
+	row := r.db.QueryRowContext(ctx, query, documentFileId)
+	return scanDocumentFilePreview(row)
+}
+
+// SetPreview sets the preview data for a document file.
+// If the document file doesn't exist, the operation fails.
+// This method handles both creating and updating preview data.
+func (r *SQLiteDocumentFileRepository) SetPreview(ctx context.Context, preview *DocumentFilePreview, modifiedAt time.Time) error {
+	// First check if the document file exists
+	checkQuery := `SELECT 1 FROM DocumentFile WHERE Id = ?`
+	var exists int
+	err := r.db.QueryRowContext(ctx, checkQuery, preview.DocumentFileId).Scan(&exists)
+	if err == sql.ErrNoRows {
+		return sql.ErrNoRows // Document file not found
+	}
+	if err != nil {
+		return err
+	}
+
+	// Update the preview fields and ModifiedAt timestamp
+	query := `UPDATE DocumentFile SET PreviewData = ?, PreviewType = ?, Width = ?, Height = ?, ModifiedAt = ? WHERE Id = ?`
+	modifiedAtStr := ccc.FormatSQLiteTimestamp(modifiedAt)
+
+	_, err = r.db.ExecContext(ctx, query,
+		preview.PreviewData,
+		preview.PreviewType,
+		preview.Width,
+		preview.Height,
+		modifiedAtStr,
+		preview.DocumentFileId,
+	)
+	return err
+}
+
+// DeletePreview removes the preview data for a document file by nullifying the preview fields.
+// This operation is idempotent - if the document file doesn't exist, nothing happens.
+func (r *SQLiteDocumentFileRepository) DeletePreview(ctx context.Context, documentFileId string) error {
+	// Null out the preview fields and update ModifiedAt timestamp
+	query := `UPDATE DocumentFile SET PreviewData = NULL, PreviewType = NULL, Width = 0, Height = 0, ModifiedAt = ? WHERE Id = ?`
+	modifiedAtStr := ccc.FormatSQLiteTimestamp(time.Now())
+
+	_, err := r.db.ExecContext(ctx, query, modifiedAtStr, documentFileId)
+	return err
+}
+
+// scanDocumentFilePreview scans a database row into a DocumentFilePreview struct.
+func scanDocumentFilePreview(scanner ccc.RowScanner) (*DocumentFilePreview, error) {
+	preview := &DocumentFilePreview{}
+
+	err := scanner.Scan(
+		&preview.DocumentFileId,
+		&preview.PreviewData,
+		&preview.PreviewType,
+		&preview.Width,
+		&preview.Height,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil // Not found
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return preview, nil
 }

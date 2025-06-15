@@ -2,6 +2,7 @@ package documents
 
 import (
 	"context"
+	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/dataprotection"
 )
@@ -33,9 +34,13 @@ type DocumentFileRepository interface {
 	FindById(ctx context.Context, fileId string) (*DocumentFile, error)
 	FindByDocumentId(ctx context.Context, documentId string) ([]*DocumentFile, error)
 	Add(ctx context.Context, file *DocumentFile) error
+	AddWithPreview(ctx context.Context, file *DocumentFile, preview *DocumentFilePreview) error
 	Update(ctx context.Context, file *DocumentFile) error
 	Delete(ctx context.Context, fileId string) error
 	DeleteByDocumentId(ctx context.Context, documentId string) error
+	GetPreview(ctx context.Context, documentFileId string) (*DocumentFilePreview, error)
+	SetPreview(ctx context.Context, preview *DocumentFilePreview, modifiedAt time.Time) error
+	DeletePreview(ctx context.Context, documentFileId string) error
 }
 
 type DocumentFileMetadataRepository interface {
