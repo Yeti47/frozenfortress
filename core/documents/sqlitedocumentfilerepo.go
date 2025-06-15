@@ -242,22 +242,11 @@ func (r *SQLiteDocumentFileRepository) GetPreview(ctx context.Context, documentF
 // If the document file doesn't exist, the operation fails.
 // This method handles both creating and updating preview data.
 func (r *SQLiteDocumentFileRepository) SetPreview(ctx context.Context, preview *DocumentFilePreview, modifiedAt time.Time) error {
-	// First check if the document file exists
-	checkQuery := `SELECT 1 FROM DocumentFile WHERE Id = ?`
-	var exists int
-	err := r.db.QueryRowContext(ctx, checkQuery, preview.DocumentFileId).Scan(&exists)
-	if err == sql.ErrNoRows {
-		return sql.ErrNoRows // Document file not found
-	}
-	if err != nil {
-		return err
-	}
-
 	// Update the preview fields and ModifiedAt timestamp
 	query := `UPDATE DocumentFile SET PreviewData = ?, PreviewType = ?, Width = ?, Height = ?, ModifiedAt = ? WHERE Id = ?`
 	modifiedAtStr := ccc.FormatSQLiteTimestamp(modifiedAt)
 
-	_, err = r.db.ExecContext(ctx, query,
+	result, err := r.db.ExecContext(ctx, query,
 		preview.PreviewData,
 		preview.PreviewType,
 		preview.Width,
@@ -265,7 +254,20 @@ func (r *SQLiteDocumentFileRepository) SetPreview(ctx context.Context, preview *
 		modifiedAtStr,
 		preview.DocumentFileId,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Check if any rows were affected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows // Document file not found
+	}
+
+	return nil
 }
 
 // DeletePreview removes the preview data for a document file by nullifying the preview fields.
