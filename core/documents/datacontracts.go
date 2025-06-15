@@ -46,6 +46,12 @@ type SearchFilters struct {
 	DateTo   *time.Time
 }
 
+type DocumentSearchRequest struct {
+	SearchTerm string
+	Filters    SearchFilters
+	DeepSearch bool // If true, search within OCR-extracted text content
+}
+
 type PaginatedDocumentResponse struct {
 	Documents  []*DocumentDto
 	TotalCount int

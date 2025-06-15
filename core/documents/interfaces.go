@@ -24,6 +24,7 @@ type TagIdGenerator interface {
 type DocumentRepository interface {
 	FindById(ctx context.Context, documentId string) (*Document, error)
 	FindByUserId(ctx context.Context, userId string) ([]*Document, error)
+	FindByFilters(ctx context.Context, userId string, filters SearchFilters) ([]*Document, error)
 	Add(ctx context.Context, document *Document) error
 	Update(ctx context.Context, document *Document) error
 	Delete(ctx context.Context, documentId string) error
@@ -96,17 +97,9 @@ type OCRService interface {
 	ExtractText(ctx context.Context, imageData []byte) (text string, confidence float32, err error)
 }
 
-// Document Search DAO - focused data access for search operations
-type DocumentSearchDAO interface {
-	SearchDocumentsByText(ctx context.Context, userId, searchTerm string, filters SearchFilters) ([]*DocumentSearchResult, error)
-	IndexDocument(ctx context.Context, documentId string, searchableText string) error
-	RemoveFromIndex(ctx context.Context, documentId string) error
-	UpdateIndex(ctx context.Context, documentId string, searchableText string) error
-}
-
 // Document Search Engine interface
 type DocumentSearchEngine interface {
-	SearchDocuments(ctx context.Context, userId, searchTerm string, filters SearchFilters, dataProtector dataprotection.DataProtector) ([]*DocumentSearchResult, error)
+	SearchDocuments(ctx context.Context, userId string, request DocumentSearchRequest, dataProtector dataprotection.DataProtector) ([]*DocumentSearchResult, error)
 }
 
 // High-level Document Manager - consumer-facing service

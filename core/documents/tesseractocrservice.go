@@ -1,3 +1,5 @@
+//go:build !notesseract
+
 package documents
 
 import (
