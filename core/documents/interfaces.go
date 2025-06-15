@@ -138,3 +138,23 @@ type TagManager interface {
 	UpdateTag(ctx context.Context, userId, tagId string, request UpdateTagRequest) error
 	DeleteTag(ctx context.Context, userId, tagId string) error
 }
+
+// Document File Processing interfaces
+type DocumentFileProcessor interface {
+	// SupportsContentType checks if this processor can handle the given content type
+	SupportsContentType(contentType string) bool
+
+	// ExtractText extracts text from the file data and returns the text, confidence level, and page count
+	ExtractText(ctx context.Context, fileData []byte) (text string, confidence float32, pageCount int, err error)
+
+	// GeneratePreview creates a preview/thumbnail image for the file
+	// Returns a PreviewGenerationResult containing the preview data (unencrypted), type, and dimensions
+	GeneratePreview(ctx context.Context, fileData []byte) (*PreviewGenerationResult, error)
+}
+
+// DocumentFileProcessorFactory creates appropriate DocumentFileProcessor instances
+type DocumentFileProcessorFactory interface {
+	// GetProcessor returns a DocumentFileProcessor for the given content type
+	// Returns an error if no processor is available for the content type
+	GetProcessor(contentType string) (DocumentFileProcessor, error)
+}

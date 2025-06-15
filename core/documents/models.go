@@ -51,3 +51,11 @@ type DocumentFilePreview struct {
 	Width          int    // Preview image width
 	Height         int    // Preview image height
 }
+
+// PreviewGenerationResult encapsulates the result of preview generation
+type PreviewGenerationResult struct {
+	PreviewData []byte // The generated preview image data (unencrypted)
+	PreviewType string // The MIME type of the preview (e.g., "image/jpeg", "image/png")
+	Width       int    // Preview image width in pixels
+	Height      int    // Preview image height in pixels
+}
