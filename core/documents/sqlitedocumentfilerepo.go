@@ -3,6 +3,8 @@ package documents
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -192,6 +194,97 @@ func (r *SQLiteDocumentFileRepository) DeleteByDocumentId(ctx context.Context, d
 	query := `DELETE FROM DocumentFile WHERE DocumentId = ?`
 	_, err := r.db.ExecContext(ctx, query, documentId)
 	return err
+}
+
+// FindDetailed finds all files for multiple documents along with their metadata in a single query.
+// Returns DocumentFileDetails structs that combine file and metadata information.
+// If a file has no metadata, the Metadata field will be nil.
+// Supports batching with multiple document IDs for improved performance.
+func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documentIds []string) ([]*DocumentFileDetails, error) {
+	if len(documentIds) == 0 {
+		return []*DocumentFileDetails{}, nil
+	}
+
+	// Build placeholders for IN clause
+	placeholders := make([]string, len(documentIds))
+	args := make([]interface{}, len(documentIds))
+	for i, id := range documentIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+	SELECT 
+		df.Id, df.DocumentId, df.FileName, df.ContentType, df.FileSize, df.PageCount, df.FileData, df.CreatedAt, df.ModifiedAt,
+		dfm.ExtractedText, dfm.OcrConfidence
+	FROM DocumentFile df
+	LEFT JOIN DocumentFileMetadata dfm ON df.Id = dfm.DocumentFileId
+	WHERE df.DocumentId IN (%s)
+	ORDER BY df.DocumentId, df.CreatedAt ASC`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var fileDetails []*DocumentFileDetails
+
+	for rows.Next() {
+		file := &DocumentFile{}
+		var createdAtStr, modifiedAtStr string
+		var extractedText sql.NullString
+		var ocrConfidence sql.NullFloat64
+
+		err := rows.Scan(
+			// DocumentFile fields
+			&file.Id,
+			&file.DocumentId,
+			&file.FileName,
+			&file.ContentType,
+			&file.FileSize,
+			&file.PageCount,
+			&file.FileData,
+			&createdAtStr,
+			&modifiedAtStr,
+			// DocumentFileMetadata fields (nullable)
+			&extractedText,
+			&ocrConfidence,
+		)
+		if err != nil {
+			continue // Skip problematic rows
+		}
+
+		// Parse DocumentFile timestamps
+		file.CreatedAt, err = ccc.ParseSQLiteTimestamp(createdAtStr)
+		if err != nil {
+			continue
+		}
+		file.ModifiedAt, err = ccc.ParseSQLiteTimestamp(modifiedAtStr)
+		if err != nil {
+			continue
+		}
+
+		// Create DocumentFileDetails with the file
+		fileDetail := &DocumentFileDetails{
+			File: file,
+		}
+
+		// Handle metadata (might be null if no metadata exists)
+		if extractedText.Valid || ocrConfidence.Valid {
+			metadata := &DocumentFileMetadata{
+				DocumentFileId: file.Id,
+				ExtractedText:  extractedText.String,
+				OcrConfidence:  float32(ocrConfidence.Float64),
+			}
+			fileDetail.Metadata = metadata
+		}
+		// If no metadata, fileDetail.Metadata remains nil
+
+		fileDetails = append(fileDetails, fileDetail)
+	}
+
+	return fileDetails, rows.Err()
 }
 
 // scanDocumentFile scans a database row into a DocumentFile struct.

@@ -50,6 +50,8 @@ type DocumentSearchRequest struct {
 	SearchTerm string
 	Filters    SearchFilters
 	DeepSearch bool // If true, search within OCR-extracted text content
+	Page       int  // Page number (1-based)
+	PageSize   int  // Number of results per page
 }
 
 type PaginatedDocumentResponse struct {
@@ -60,14 +62,22 @@ type PaginatedDocumentResponse struct {
 	TotalPages int
 }
 
+type PaginatedDocumentSearchResponse struct {
+	Results    []*DocumentSearchResult
+	TotalCount int
+	Page       int
+	PageSize   int
+	TotalPages int
+}
+
 type DocumentSearchResult struct {
 	DocumentId      string
 	DocumentTitle   string // Decrypted
-	FileName        string // Decrypted
 	HighlightedText string // Decrypted snippet
-	FileId          string
 	OcrConfidence   float32
+	RelevanceScore  float64 // Calculated relevance score for sorting
 	CreatedAt       time.Time
+	MatchTypes      []string // Types of matches found: "title", "description", "filename", "content"
 }
 
 type CreateTagRequest struct {

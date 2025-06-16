@@ -52,6 +52,12 @@ type DocumentFilePreview struct {
 	Height         int    // Preview image height
 }
 
+// DocumentFileDetails combines DocumentFile with its optional metadata
+type DocumentFileDetails struct {
+	File     *DocumentFile
+	Metadata *DocumentFileMetadata // Can be nil if no metadata exists
+}
+
 // PreviewGenerationResult encapsulates the result of preview generation
 type PreviewGenerationResult struct {
 	PreviewData []byte // The generated preview image data (unencrypted)

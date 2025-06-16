@@ -34,6 +34,7 @@ type DocumentRepository interface {
 type DocumentFileRepository interface {
 	FindById(ctx context.Context, fileId string) (*DocumentFile, error)
 	FindByDocumentId(ctx context.Context, documentId string) ([]*DocumentFile, error)
+	FindDetailed(ctx context.Context, documentIds []string) ([]*DocumentFileDetails, error)
 	Add(ctx context.Context, file *DocumentFile) error
 	AddWithPreview(ctx context.Context, file *DocumentFile, preview *DocumentFilePreview) error
 	Update(ctx context.Context, file *DocumentFile) error
@@ -99,7 +100,7 @@ type OCRService interface {
 
 // Document Search Engine interface
 type DocumentSearchEngine interface {
-	SearchDocuments(ctx context.Context, userId string, request DocumentSearchRequest, dataProtector dataprotection.DataProtector) ([]*DocumentSearchResult, error)
+	SearchDocuments(ctx context.Context, userId string, request DocumentSearchRequest, dataProtector dataprotection.DataProtector) (*PaginatedDocumentSearchResponse, error)
 }
 
 // High-level Document Manager - consumer-facing service
