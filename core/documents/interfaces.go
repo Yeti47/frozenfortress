@@ -103,22 +103,28 @@ type DocumentSearchEngine interface {
 	SearchDocuments(ctx context.Context, userId string, request DocumentSearchRequest, dataProtector dataprotection.DataProtector) (*PaginatedDocumentSearchResponse, error)
 }
 
-// High-level Document Manager - consumer-facing service
+// High-level Document Manager - consumer-facing service.
+// DocumentManager handles document CRUD operations
 type DocumentManager interface {
-	// Document operations
 	CreateDocument(ctx context.Context, userId string, request CreateDocumentRequest, dataProtector dataprotection.DataProtector) (*DocumentDto, error)
 	GetDocument(ctx context.Context, userId, documentId string, dataProtector dataprotection.DataProtector) (*DocumentDto, error)
 	GetDocuments(ctx context.Context, userId string, request GetDocumentsRequest, dataProtector dataprotection.DataProtector) (*PaginatedDocumentResponse, error)
 	UpdateDocument(ctx context.Context, userId, documentId string, request UpdateDocumentRequest, dataProtector dataprotection.DataProtector) error
 	DeleteDocument(ctx context.Context, userId, documentId string) error
+}
 
-	// File operations
+// High-level Document File Manager - consumer-facing service.
+// DocumentFileManager handles file operations for documents
+type DocumentFileManager interface {
 	AddDocumentFile(ctx context.Context, userId, documentId string, request AddFileRequest, dataProtector dataprotection.DataProtector) (*DocumentFileDto, error)
 	GetDocumentFiles(ctx context.Context, userId, documentId string, dataProtector dataprotection.DataProtector) ([]*DocumentFileDto, error)
 	GetDocumentFile(ctx context.Context, userId, documentId, fileId string, dataProtector dataprotection.DataProtector) (*DocumentFileDto, error)
 	DeleteDocumentFile(ctx context.Context, userId, documentId, fileId string) error
+}
 
-	// Document tagging operations (managing tags on documents)
+// High-level Document Tag Manager - consumer-facing service.
+// DocumentTagManager handles tagging operations for documents
+type DocumentTagManager interface {
 	TagDocument(ctx context.Context, userId, documentId, tagId string) error
 	UntagDocument(ctx context.Context, userId, documentId, tagId string) error
 	GetDocumentTags(ctx context.Context, userId, documentId string) ([]*TagDto, error)
