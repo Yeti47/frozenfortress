@@ -22,25 +22,14 @@ type AddFileRequest struct {
 }
 
 type GetDocumentsRequest struct {
-	SearchTerm string
-	TagIds     []string
-	DateFrom   *time.Time
-	DateTo     *time.Time
-	Page       int
-	PageSize   int
-	SortBy     string // "title", "created_at", "modified_at"
-	SortAsc    bool
-}
-
-type DocumentFilters struct {
-	TagIds   []string
-	DateFrom *time.Time
-	DateTo   *time.Time
-	SortBy   string
+	Filters  DocumentFilters
+	Page     int
+	PageSize int
+	SortBy   string // "title", "created_at", "modified_at"
 	SortAsc  bool
 }
 
-type SearchFilters struct {
+type DocumentFilters struct {
 	TagIds   []string
 	DateFrom *time.Time
 	DateTo   *time.Time
@@ -48,10 +37,12 @@ type SearchFilters struct {
 
 type DocumentSearchRequest struct {
 	SearchTerm string
-	Filters    SearchFilters
-	DeepSearch bool // If true, search within OCR-extracted text content
-	Page       int  // Page number (1-based)
-	PageSize   int  // Number of results per page
+	Filters    DocumentFilters
+	DeepSearch bool   // If true, search within OCR-extracted text content
+	Page       int    // Page number (1-based)
+	PageSize   int    // Number of results per page
+	SortBy     string // "relevance", "created_at", "modified_at", "title"
+	SortAsc    bool   // If true, sort ascending; if false, sort descending
 }
 
 type PaginatedDocumentResponse struct {
@@ -77,6 +68,7 @@ type DocumentSearchResult struct {
 	OcrConfidence   float32
 	RelevanceScore  float64 // Calculated relevance score for sorting
 	CreatedAt       time.Time
+	ModifiedAt      time.Time
 	MatchTypes      []string // Types of matches found: "title", "description", "filename", "content"
 }
 
@@ -121,4 +113,18 @@ type TagDto struct {
 	Color      string
 	CreatedAt  time.Time
 	ModifiedAt time.Time
+}
+
+// CreateFileRequest encapsulates all parameters needed for creating a document file
+type CreateFileRequest struct {
+	UserId      string
+	DocumentId  string
+	FileName    string
+	ContentType string
+	FileData    []byte
+}
+
+// CreateDocumentResponse represents the response from creating a document
+type CreateDocumentResponse struct {
+	DocumentId string
 }

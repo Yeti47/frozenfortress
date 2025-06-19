@@ -146,6 +146,7 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 				HighlightedText: strings.Join(highlightParts, " | "),
 				OcrConfidence:   maxOcrConfidence,
 				CreatedAt:       doc.CreatedAt,
+				ModifiedAt:      doc.ModifiedAt,
 				MatchTypes:      matchTypes,
 			}
 			resultsByDoc[doc.Id] = result
@@ -158,8 +159,8 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 		allResults = append(allResults, result)
 	}
 
-	// Sort results by relevance and creation date
-	s.sortSearchResults(allResults, searchTerms)
+	// Sort results by specified criteria or default to relevance
+	s.sortSearchResults(allResults, searchTerms, request.SortBy, request.SortAsc)
 
 	// Apply pagination
 	totalCount := len(allResults)
@@ -700,29 +701,82 @@ func (s *DefaultDocumentSearchEngine) highlightMatchesForTerms(text string, matc
 }
 
 // sortSearchResults sorts search results by relevance and creation date
-func (s *DefaultDocumentSearchEngine) sortSearchResults(results []*DocumentSearchResult, searchTerms []string) {
-	// Calculate relevance scores first
+// sortSearchResults sorts search results by the specified criteria
+func (s *DefaultDocumentSearchEngine) sortSearchResults(results []*DocumentSearchResult, searchTerms []string, sortBy string, sortAsc bool) {
+	// Always calculate relevance scores first (may be needed for sorting)
 	for _, result := range results {
 		result.RelevanceScore = s.calculateRelevanceScore(result, searchTerms)
 	}
 
-	// Sort by relevance score (higher is better), then by OCR confidence, then by creation date
+	// Normalize sortBy parameter
+	if sortBy == "" {
+		sortBy = "relevance" // Default to relevance
+	}
+
+	// Sort based on the specified criteria
 	sort.Slice(results, func(i, j int) bool {
-		// First, sort by relevance score
-		if results[i].RelevanceScore != results[j].RelevanceScore {
-			return results[i].RelevanceScore > results[j].RelevanceScore
+		switch strings.ToLower(sortBy) {
+		case "relevance":
+			return s.compareByRelevance(results[i], results[j], sortAsc)
+		case "created_at", "createdat":
+			return s.compareByCreatedAt(results[i], results[j], sortAsc)
+		case "modified_at", "modifiedat":
+			return s.compareByModifiedAt(results[i], results[j], sortAsc)
+		case "title":
+			return s.compareByTitle(results[i], results[j], sortAsc)
+		default:
+			// Default to relevance sorting if unknown sort field
+			return s.compareByRelevance(results[i], results[j], sortAsc)
 		}
-
-		// For equal relevance scores, prioritize by OCR confidence
-		if results[i].OcrConfidence > 0 && results[j].OcrConfidence > 0 {
-			if results[i].OcrConfidence != results[j].OcrConfidence {
-				return results[i].OcrConfidence > results[j].OcrConfidence
-			}
-		}
-
-		// Finally, sort by creation date (newer first)
-		return results[i].CreatedAt.After(results[j].CreatedAt)
 	})
+}
+
+// compareByRelevance compares two results by relevance score, with tiebreakers
+func (s *DefaultDocumentSearchEngine) compareByRelevance(a, b *DocumentSearchResult, sortAsc bool) bool {
+	if a.RelevanceScore != b.RelevanceScore {
+		if sortAsc {
+			return a.RelevanceScore < b.RelevanceScore
+		}
+		return a.RelevanceScore > b.RelevanceScore
+	}
+
+	// Tiebreaker 1: OCR confidence
+	if a.OcrConfidence > 0 && b.OcrConfidence > 0 && a.OcrConfidence != b.OcrConfidence {
+		if sortAsc {
+			return a.OcrConfidence < b.OcrConfidence
+		}
+		return a.OcrConfidence > b.OcrConfidence
+	}
+
+	// Tiebreaker 2: Creation date (newer first for relevance sorting)
+	return a.CreatedAt.After(b.CreatedAt)
+}
+
+// compareByCreatedAt compares two results by creation date
+func (s *DefaultDocumentSearchEngine) compareByCreatedAt(a, b *DocumentSearchResult, sortAsc bool) bool {
+	if sortAsc {
+		return a.CreatedAt.Before(b.CreatedAt)
+	}
+	return a.CreatedAt.After(b.CreatedAt)
+}
+
+// compareByModifiedAt compares two results by modification date
+func (s *DefaultDocumentSearchEngine) compareByModifiedAt(a, b *DocumentSearchResult, sortAsc bool) bool {
+	if sortAsc {
+		return a.ModifiedAt.Before(b.ModifiedAt)
+	}
+	return a.ModifiedAt.After(b.ModifiedAt)
+}
+
+// compareByTitle compares two results by document title
+func (s *DefaultDocumentSearchEngine) compareByTitle(a, b *DocumentSearchResult, sortAsc bool) bool {
+	titleA := strings.ToLower(a.DocumentTitle)
+	titleB := strings.ToLower(b.DocumentTitle)
+
+	if sortAsc {
+		return titleA < titleB
+	}
+	return titleA > titleB
 }
 
 // validatePaginationParams validates and normalizes pagination parameters

@@ -65,3 +65,10 @@ type PreviewGenerationResult struct {
 	Width       int    // Preview image width in pixels
 	Height      int    // Preview image height in pixels
 }
+
+// DocumentDetails combines Document with its associated tags and file count
+type DocumentDetails struct {
+	Document  *Document
+	Tags      []*Tag
+	FileCount int
+}

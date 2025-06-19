@@ -148,7 +148,7 @@ func (r *SQLiteDocumentRepository) GetFileCountByDocumentId(ctx context.Context,
 }
 
 // FindByFilters finds documents for a user with optional date range and tag filtering.
-func (r *SQLiteDocumentRepository) FindByFilters(ctx context.Context, userId string, filters SearchFilters) ([]*Document, error) {
+func (r *SQLiteDocumentRepository) FindByFilters(ctx context.Context, userId string, filters DocumentFilters) ([]*Document, error) {
 	var queryParts []string
 	var args []interface{}
 
@@ -203,6 +203,144 @@ func (r *SQLiteDocumentRepository) FindByFilters(ctx context.Context, userId str
 		documents = append(documents, doc)
 	}
 	return documents, rows.Err()
+}
+
+// FindDetailed finds documents for a user with their tags and file counts
+func (r *SQLiteDocumentRepository) FindDetailed(ctx context.Context, userId string, filters DocumentFilters) ([]*DocumentDetails, error) {
+	var queryParts []string
+	var args []interface{}
+
+	// Build the main query with LEFT JOIN to get tags and file counts
+	queryParts = append(queryParts, `
+		SELECT 
+			d.Id, d.UserId, d.Title, d.Description, d.CreatedAt, d.ModifiedAt,
+			t.Id as TagId, t.Name as TagName, t.Color as TagColor, t.CreatedAt as TagCreatedAt, t.ModifiedAt as TagModifiedAt,
+			COALESCE(fc.FileCount, 0) as FileCount
+		FROM Document d
+		LEFT JOIN DocumentTag dt ON d.Id = dt.DocumentId
+		LEFT JOIN Tag t ON dt.TagId = t.Id
+		LEFT JOIN (
+			SELECT DocumentId, COUNT(*) as FileCount 
+			FROM DocumentFile 
+			GROUP BY DocumentId
+		) fc ON d.Id = fc.DocumentId`)
+
+	// Base WHERE clause
+	whereParts := []string{"d.UserId = ?"}
+	args = append(args, userId)
+
+	// Add date range filters
+	if filters.DateFrom != nil {
+		whereParts = append(whereParts, "d.CreatedAt >= ?")
+		args = append(args, ccc.FormatSQLiteTimestamp(*filters.DateFrom))
+	}
+	if filters.DateTo != nil {
+		whereParts = append(whereParts, "d.CreatedAt <= ?")
+		args = append(args, ccc.FormatSQLiteTimestamp(*filters.DateTo))
+	}
+
+	// Add tag filtering if specified
+	if len(filters.TagIds) > 0 {
+		// For tag filtering, we need to ensure the document has the specified tags
+		// We'll use EXISTS subquery to avoid duplicates in the main result
+		placeholders := make([]string, len(filters.TagIds))
+		for i, tagId := range filters.TagIds {
+			placeholders[i] = "?"
+			args = append(args, tagId)
+		}
+		whereParts = append(whereParts,
+			"EXISTS (SELECT 1 FROM DocumentTag dt2 WHERE dt2.DocumentId = d.Id AND dt2.TagId IN ("+strings.Join(placeholders, ",")+"))")
+	}
+
+	// Build final query
+	queryParts = append(queryParts, "WHERE "+strings.Join(whereParts, " AND "))
+	queryParts = append(queryParts, "ORDER BY d.ModifiedAt DESC, t.Name ASC")
+
+	query := strings.Join(queryParts, " ")
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Group results by document
+	documentMap := make(map[string]*DocumentDetails)
+
+	for rows.Next() {
+		var doc Document
+		var createdAtStr, modifiedAtStr string
+		var tagId, tagName, tagColor, tagCreatedAtStr, tagModifiedAtStr sql.NullString
+		var fileCount int
+
+		err := rows.Scan(
+			&doc.Id, &doc.UserId, &doc.Title, &doc.Description, &createdAtStr, &modifiedAtStr,
+			&tagId, &tagName, &tagColor, &tagCreatedAtStr, &tagModifiedAtStr,
+			&fileCount,
+		)
+		if err != nil {
+			continue // Skip problematic rows
+		}
+
+		// Parse timestamps
+		doc.CreatedAt, err = ccc.ParseSQLiteTimestamp(createdAtStr)
+		if err != nil {
+			continue
+		}
+		doc.ModifiedAt, err = ccc.ParseSQLiteTimestamp(modifiedAtStr)
+		if err != nil {
+			continue
+		}
+
+		// Get or create document details
+		detail, exists := documentMap[doc.Id]
+		if !exists {
+			detail = &DocumentDetails{
+				Document:  &doc,
+				Tags:      []*Tag{},
+				FileCount: fileCount,
+			}
+			documentMap[doc.Id] = detail
+		}
+
+		// Add tag if it exists and we haven't seen it for this document
+		if tagId.Valid && tagName.Valid {
+			// Check if we already have this tag
+			tagExists := false
+			for _, existingTag := range detail.Tags {
+				if existingTag.Id == tagId.String {
+					tagExists = true
+					break
+				}
+			}
+
+			if !tagExists {
+				tag := &Tag{
+					Id:     tagId.String,
+					UserId: userId, // We know this from the query
+					Name:   tagName.String,
+					Color:  tagColor.String,
+				}
+
+				if tagCreatedAtStr.Valid {
+					tag.CreatedAt, _ = ccc.ParseSQLiteTimestamp(tagCreatedAtStr.String)
+				}
+				if tagModifiedAtStr.Valid {
+					tag.ModifiedAt, _ = ccc.ParseSQLiteTimestamp(tagModifiedAtStr.String)
+				}
+
+				detail.Tags = append(detail.Tags, tag)
+			}
+		}
+	}
+
+	// Convert map to slice
+	result := make([]*DocumentDetails, 0, len(documentMap))
+	for _, detail := range documentMap {
+		result = append(result, detail)
+	}
+
+	return result, rows.Err()
 }
 
 // scanDocument scans a database row into a Document struct.

@@ -24,7 +24,8 @@ type TagIdGenerator interface {
 type DocumentRepository interface {
 	FindById(ctx context.Context, documentId string) (*Document, error)
 	FindByUserId(ctx context.Context, userId string) ([]*Document, error)
-	FindByFilters(ctx context.Context, userId string, filters SearchFilters) ([]*Document, error)
+	FindByFilters(ctx context.Context, userId string, filters DocumentFilters) ([]*Document, error)
+	FindDetailed(ctx context.Context, userId string, filters DocumentFilters) ([]*DocumentDetails, error)
 	Add(ctx context.Context, document *Document) error
 	Update(ctx context.Context, document *Document) error
 	Delete(ctx context.Context, documentId string) error
@@ -103,10 +104,31 @@ type DocumentSearchEngine interface {
 	SearchDocuments(ctx context.Context, userId string, request DocumentSearchRequest, dataProtector dataprotection.DataProtector) (*PaginatedDocumentSearchResponse, error)
 }
 
+// DocumentFileCreator is a domain service that handles the complete file creation workflow
+// This ensures consistent behavior between DocumentManager.CreateDocument and DocumentFileManager.AddDocumentFile
+type DocumentFileCreator interface {
+	// CreateDocumentFile handles the complete file creation workflow including:
+	// - File validation and processing
+	// - File data encryption
+	// - Text extraction (OCR) if applicable
+	// - Preview generation if applicable
+	// - Database persistence
+	// This method operates within the provided UOW transaction scope to ensure atomicity
+	CreateDocumentFile(
+		ctx context.Context,
+		uow DocumentUnitOfWork,
+		request CreateFileRequest,
+		dataProtector dataprotection.DataProtector,
+	) (*DocumentFile, *DocumentFileMetadata, error)
+
+	// ValidateFileRequest performs basic validation on file request data
+	ValidateFileRequest(request CreateFileRequest) error
+}
+
 // High-level Document Manager - consumer-facing service.
 // DocumentManager handles document CRUD operations
 type DocumentManager interface {
-	CreateDocument(ctx context.Context, userId string, request CreateDocumentRequest, dataProtector dataprotection.DataProtector) (*DocumentDto, error)
+	CreateDocument(ctx context.Context, userId string, request CreateDocumentRequest, dataProtector dataprotection.DataProtector) (*CreateDocumentResponse, error)
 	GetDocument(ctx context.Context, userId, documentId string, dataProtector dataprotection.DataProtector) (*DocumentDto, error)
 	GetDocuments(ctx context.Context, userId string, request GetDocumentsRequest, dataProtector dataprotection.DataProtector) (*PaginatedDocumentResponse, error)
 	UpdateDocument(ctx context.Context, userId, documentId string, request UpdateDocumentRequest, dataProtector dataprotection.DataProtector) error
