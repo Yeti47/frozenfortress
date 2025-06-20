@@ -147,64 +147,6 @@ func (r *SQLiteDocumentRepository) GetFileCountByDocumentId(ctx context.Context,
 	return count, err
 }
 
-// FindByFilters finds documents for a user with optional date range and tag filtering.
-func (r *SQLiteDocumentRepository) FindByFilters(ctx context.Context, userId string, filters DocumentFilters) ([]*Document, error) {
-	var queryParts []string
-	var args []interface{}
-
-	queryParts = append(queryParts, "SELECT "+documentFieldList+" FROM Document")
-
-	// Base WHERE clause
-	whereParts := []string{"UserId = ?"}
-	args = append(args, userId)
-
-	// Add date range filters
-	if filters.DateFrom != nil {
-		whereParts = append(whereParts, "CreatedAt >= ?")
-		args = append(args, ccc.FormatSQLiteTimestamp(*filters.DateFrom))
-	}
-	if filters.DateTo != nil {
-		whereParts = append(whereParts, "CreatedAt <= ?")
-		args = append(args, ccc.FormatSQLiteTimestamp(*filters.DateTo))
-	}
-
-	// Add tag filtering if specified
-	if len(filters.TagIds) > 0 {
-		// Join with DocumentTag table to filter by tags
-		queryParts = append(queryParts, "INNER JOIN DocumentTag dt ON Document.Id = dt.DocumentId")
-
-		// Create placeholders for tag IDs
-		placeholders := make([]string, len(filters.TagIds))
-		for i, tagId := range filters.TagIds {
-			placeholders[i] = "?"
-			args = append(args, tagId)
-		}
-		whereParts = append(whereParts, "dt.TagId IN ("+strings.Join(placeholders, ",")+")")
-	}
-
-	// Build final query
-	queryParts = append(queryParts, "WHERE "+strings.Join(whereParts, " AND "))
-	queryParts = append(queryParts, "ORDER BY ModifiedAt DESC")
-
-	query := strings.Join(queryParts, " ")
-
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var documents []*Document
-	for rows.Next() {
-		doc, err := scanDocument(rows)
-		if err != nil {
-			continue // Skip problematic rows
-		}
-		documents = append(documents, doc)
-	}
-	return documents, rows.Err()
-}
-
 // FindDetailed finds documents for a user with their tags and file counts
 func (r *SQLiteDocumentRepository) FindDetailed(ctx context.Context, userId string, filters DocumentFilters) ([]*DocumentDetails, error) {
 	var queryParts []string

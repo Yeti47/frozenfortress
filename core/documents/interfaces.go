@@ -24,7 +24,6 @@ type TagIdGenerator interface {
 type DocumentRepository interface {
 	FindById(ctx context.Context, documentId string) (*Document, error)
 	FindByUserId(ctx context.Context, userId string) ([]*Document, error)
-	FindByFilters(ctx context.Context, userId string, filters DocumentFilters) ([]*Document, error)
 	FindDetailed(ctx context.Context, userId string, filters DocumentFilters) ([]*DocumentDetails, error)
 	Add(ctx context.Context, document *Document) error
 	Update(ctx context.Context, document *Document) error
