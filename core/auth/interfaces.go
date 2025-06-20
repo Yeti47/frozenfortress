@@ -62,7 +62,7 @@ type SecurityService interface {
 }
 
 type UserIdGenerator interface {
-	GenerateUserId() string
+	GenerateId() string
 }
 
 type SignInHandler interface {

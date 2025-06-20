@@ -12,11 +12,6 @@ type SQLiteUserRepository struct {
 	db *sql.DB
 }
 
-// Interface for scanning rows from the database
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
 const (
 	// Field list for User table queries
 	userFieldList = `
@@ -326,7 +321,7 @@ func (repo *SQLiteUserRepository) Update(user *User) (bool, error) {
 }
 
 // Scans a row into a User struct
-func scanUser(scanner rowScanner) (*User, error) {
+func scanUser(scanner ccc.RowScanner) (*User, error) {
 	user := &User{}
 	var createdAtStr string                 // Temporary string for scanning
 	var modifiedAtStr string                // Temporary string for scanning

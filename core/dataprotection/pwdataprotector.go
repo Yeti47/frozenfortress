@@ -71,6 +71,48 @@ func (p *PasswordDataProtector) Unprotect(protectedData string) (data string, er
 	return data, nil
 }
 
+// ProtectBytes encrypts the given byte slice using the user's password.
+func (p *PasswordDataProtector) ProtectBytes(data []byte) (protectedData []byte, err error) {
+
+	user, err := p.getUser()
+	if err != nil {
+		return nil, err
+	}
+
+	plainMek, err := p.securityService.UncoverMek(*user, p.password)
+	if err != nil {
+		return nil, errors.New(("MEK not available: " + err.Error()))
+	}
+
+	protectedData, err = p.encryptionService.EncryptBytes(data, plainMek)
+	if err != nil {
+		return nil, errors.New(("Encryption failed: " + err.Error()))
+	}
+
+	return protectedData, nil
+}
+
+// UnprotectBytes decrypts the given byte slice using the user's password.
+func (p *PasswordDataProtector) UnprotectBytes(protectedData []byte) (data []byte, err error) {
+
+	user, err := p.getUser()
+	if err != nil {
+		return nil, err
+	}
+
+	plainMek, err := p.securityService.UncoverMek(*user, p.password)
+	if err != nil {
+		return nil, errors.New(("MEK not available: " + err.Error()))
+	}
+
+	data, err = p.encryptionService.DecryptBytes(protectedData, plainMek)
+	if err != nil {
+		return nil, errors.New(("Decryption failed: " + err.Error()))
+	}
+
+	return data, nil
+}
+
 // getUser returns the user associated with the PasswordDataProtector and caches it for future use.
 func (p *PasswordDataProtector) getUser() (*auth.User, error) {
 	if p.user == nil {

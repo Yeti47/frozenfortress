@@ -137,6 +137,72 @@ func (s *DefaultEncryptionService) Decrypt(cipherText string, key string) (plain
 	return string(decrypted), nil
 }
 
+// EncryptBytes encrypts byte data using the provided key
+func (s *DefaultEncryptionService) EncryptBytes(plainData []byte, key string) (cipherData []byte, err error) {
+
+	keyBytes, err := hex.DecodeString(key)
+	if err != nil || len(keyBytes) != keyLength {
+		return nil, errors.New("invalid encryption key")
+	}
+
+	block, err := aes.NewCipher(keyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
+	}
+
+	// Create a new GCM mode
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	// Create a nonce
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, fmt.Errorf("failed to generate nonce: %w", err)
+	}
+
+	// Encrypt and seal
+	sealed := gcm.Seal(nonce, nonce, plainData, nil)
+
+	return sealed, nil
+}
+
+// DecryptBytes decrypts byte data using the provided key
+func (s *DefaultEncryptionService) DecryptBytes(cipherData []byte, key string) (plainData []byte, err error) {
+
+	keyBytes, err := hex.DecodeString(key)
+	if err != nil || len(keyBytes) != keyLength {
+		return nil, errors.New("invalid encryption key")
+	}
+
+	block, err := aes.NewCipher(keyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
+	}
+
+	// Create a new GCM mode
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCM: %w", err)
+	}
+
+	// Check minimal length
+	if len(cipherData) < gcm.NonceSize() {
+		return nil, errors.New("cipher data too short")
+	}
+	// Extract nonce and ciphertext
+	nonce := cipherData[:gcm.NonceSize()]
+	sealedData := cipherData[gcm.NonceSize():]
+
+	// Decrypt
+	decrypted, err := gcm.Open(nil, nonce, sealedData, nil)
+	if err != nil {
+		return nil, fmt.Errorf("decryption failed: %w", err)
+	}
+	return decrypted, nil
+}
+
 // GenerateKey generates a new random encryption key
 func (s *DefaultEncryptionService) GenerateKey() (key string, err error) {
 

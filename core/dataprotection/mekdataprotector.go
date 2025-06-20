@@ -59,3 +59,37 @@ func (p *MekDataProtector) Unprotect(protectedData string) (data string, err err
 
 	return decryptedData, nil
 }
+
+// ProtectBytes encrypts the given byte slice using the MEK (Master Encryption Key) stored in the MekStore.
+func (p *MekDataProtector) ProtectBytes(data []byte) (protectedData []byte, err error) {
+
+	mek, err := p.mekStore.Retrieve(p.request)
+	if err != nil || mek == "" {
+		return nil, errors.New("MEK not available")
+	}
+
+	// Encrypt the byte slice using the MEK
+	encryptedData, err := p.encryptionService.EncryptBytes(data, mek)
+	if err != nil {
+		return nil, err
+	}
+
+	return encryptedData, nil
+}
+
+// UnprotectBytes decrypts the given byte slice using the MEK (Master Encryption Key) stored in the MekStore.
+func (p *MekDataProtector) UnprotectBytes(protectedData []byte) (data []byte, err error) {
+
+	mek, err := p.mekStore.Retrieve(p.request)
+	if err != nil || mek == "" {
+		return nil, errors.New("MEK not available")
+	}
+
+	// Decrypt the byte slice using the MEK
+	decryptedData, err := p.encryptionService.DecryptBytes(protectedData, mek)
+	if err != nil {
+		return nil, err
+	}
+
+	return decryptedData, nil
+}

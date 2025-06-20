@@ -102,7 +102,7 @@ func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretR
 	}
 
 	// Generate a new secret ID
-	secretId := m.secretIdGenerator.GenerateSecretId()
+	secretId := m.secretIdGenerator.GenerateId()
 	m.logger.Debug("Generated secret ID", "secret_id", secretId, "user_id", userId)
 
 	// Encrypt the secret name and value
@@ -119,14 +119,16 @@ func (m *DefaultSecretManager) CreateSecret(userId string, request UpsertSecretR
 
 	m.logger.Debug("Secret data encrypted successfully", "user_id", userId, "secret_id", secretId)
 
+	now := time.Now()
+
 	// Create a new secret object
 	secret := &Secret{
 		Id:         secretId,
 		UserId:     userId,
 		Name:       encryptedName,
 		Value:      encryptedValue,
-		CreatedAt:  time.Now(),
-		ModifiedAt: time.Now(),
+		CreatedAt:  now,
+		ModifiedAt: now,
 	}
 
 	// Add the secret to the repository

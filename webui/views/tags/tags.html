@@ -1,0 +1,653 @@
+{{template "header" .}}
+    <style>
+        /* Override body and main content layout for better space utilization */
+        body {
+            min-height: 100vh !important;
+            height: auto !important;
+            overflow: auto !important;
+        }
+        
+        .main-content {
+            align-items: flex-start !important;
+            padding: 20px 15px !important;
+            flex: 1 !important;
+            min-height: calc(100vh - 260px) !important; /* Account for header, nav, and footer */
+            overflow: visible !important;
+        }
+        
+        .content-container {
+            max-width: 1400px !important;
+            padding: 30px !important;
+            margin: 0 auto;
+            max-height: calc(100vh - 300px); /* Account for header, nav, footer, and margins */
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .tags-container {
+            width: 100%;
+            padding: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tags-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .tags-title {
+            color: #2c3e50;
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .tags-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            padding-top: 3px;
+        }
+
+        .create-tag-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .create-tag-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 45px;
+            border: 2px solid rgba(52, 152, 219, 0.2);
+            border-radius: 25px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7f8c8d;
+            font-size: 18px;
+        }
+
+        .tags-grid-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            margin-right: -10px;
+        }
+
+        /* Custom scrollbar styling */
+        .tags-grid-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tags-grid-container::-webkit-scrollbar-track {
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 4px;
+        }
+
+        .tags-grid-container::-webkit-scrollbar-thumb {
+            background: rgba(52, 152, 219, 0.3);
+            border-radius: 4px;
+        }
+
+        .tags-grid-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(52, 152, 219, 0.5);
+        }
+
+        .tags-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            padding: 10px 0;
+        }
+
+        .tag-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+        }
+
+        .tag-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+            border-color: rgba(52, 152, 219, 0.2);
+        }
+
+        .tag-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .tag-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .tag-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tag-color-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .tag-color-value {
+            font-size: 12px;
+            color: #7f8c8d;
+            font-family: 'Courier New', monospace;
+            background: rgba(127, 140, 141, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .tag-dates {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 10px;
+        }
+
+        .tag-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+            margin-left: 15px;
+        }
+
+        .tag-btn {
+            background: none;
+            border: 2px solid;
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+        }
+
+        .edit-btn {
+            border-color: #f39c12;
+            color: #f39c12;
+        }
+
+        .edit-btn:hover {
+            background: #f39c12;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .delete-btn {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .delete-btn:hover {
+            background: #e74c3c;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            color: #bdc3c7;
+            margin-bottom: 20px;
+        }
+
+        .empty-state-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+            line-height: 1.5;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .success-message {
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(46, 204, 113, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.5s ease;
+            transition: all 0.4s ease;
+            overflow: hidden;
+        }
+
+        .success-message.fadeOut {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-width: 0;
+        }
+
+        .error-message {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(231, 76, 60, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.5s ease;
+            transition: all 0.4s ease;
+            overflow: hidden;
+        }
+
+        .error-message.fadeOut {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-width: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* Remove unused modal styles */
+
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            .content-container {
+                max-width: 95%;
+                padding: 20px;
+            }
+            
+            .tags-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 15px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 15px 10px;
+                min-height: calc(100vh - 220px);
+            }
+            
+            .content-container {
+                padding: 20px 15px;
+                max-height: calc(100vh - 260px);
+            }
+            
+            .tags-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            
+            .tags-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .search-container {
+                max-width: none;
+            }
+            
+            .tags-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+                padding: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .tags-title {
+                font-size: 24px;
+            }
+            
+            .tag-card {
+                padding: 15px;
+            }
+            
+            .tag-name {
+                font-size: 16px;
+            }
+            
+            .tag-actions {
+                gap: 6px;
+            }
+            
+            .tag-btn {
+                width: 32px;
+                height: 32px;
+                padding: 6px;
+            }
+        }
+    </style>
+
+    <div class="tags-container">
+        {{if .SuccessMessage}}
+        <div class="success-message">
+            <span class="material-icons">check_circle</span>
+            {{.SuccessMessage}}
+        </div>
+        {{end}}
+
+        <div class="tags-header">
+            <h1 class="tags-title">My Tags</h1>
+            <div class="tags-actions">
+                <div class="search-container">
+                    <span class="material-icons search-icon">search</span>
+                    <input type="text" class="search-input" placeholder="Search tags..." id="tagsSearchInput">
+                </div>
+                <button class="create-tag-btn" onclick="window.location.href='/edit-tag'">
+                    <span class="material-icons">add</span>
+                    Create Tag
+                </button>
+            </div>
+        </div>
+
+        {{if .Tags}}
+            <div class="tags-grid-container">
+                <div class="tags-grid" id="tagsGrid">
+                    {{range .Tags}}
+                    <div class="tag-card" data-tag-name="{{.Name}}" data-tag-color="{{.Color}}">
+                        <div class="tag-header">
+                            <div class="tag-info">
+                                <div class="tag-name">
+                                    <div class="tag-color-preview" style="background-color: {{.Color}}"></div>
+                                    {{.Name}}
+                                </div>
+                                <div class="tag-color-value">{{.Color}}</div>
+                                <div class="tag-dates">
+                                    Created: {{.CreatedAt.Format "2006-01-02 15:04:05"}}
+                                    {{if ne .CreatedAt .ModifiedAt}}
+                                    <br>Modified: {{.ModifiedAt.Format "2006-01-02 15:04:05"}}
+                                    {{end}}
+                                </div>
+                            </div>
+                            <div class="tag-actions">
+                                <button class="tag-btn edit-btn" onclick="window.location.href='/edit-tag?id={{.Id}}'" title="Edit Tag">
+                                    <span class="material-icons">edit</span>
+                                </button>
+                                <button class="tag-btn delete-btn" onclick="deleteTag('{{.Id}}', '{{.Name}}')" title="Delete Tag">
+                                    <span class="material-icons">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        {{else}}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <span class="material-icons" style="font-size: inherit;">local_offer</span>
+                </div>
+                <h2 class="empty-state-title">No Tags Yet</h2>
+                <p class="empty-state-text">
+                    Create your first tag to start organizing your documents.
+                    Tags help you categorize and find your content quickly.
+                </p>
+            </div>
+        {{end}}
+    </div>
+
+    <script>
+        // Search functionality
+        const searchInput = document.getElementById('tagsSearchInput');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const tagCards = document.querySelectorAll('.tag-card');
+                
+                tagCards.forEach(card => {
+                    const tagName = card.dataset.tagName?.toLowerCase() || '';
+                    const tagColor = card.dataset.tagColor?.toLowerCase() || '';
+                    
+                    if (tagName.includes(searchTerm) || tagColor.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Delete tag function
+        function deleteTag(tagId, tagName) {
+            // Store reference to the delete button for later use
+            const deleteButton = event.target.closest('.delete-btn');
+            
+            // Show custom confirmation modal
+            showConfirmModal(
+                'Confirm Deletion',
+                'Are you sure you want to delete this tag?',
+                tagName,
+                function() {
+                    // User confirmed - proceed with deletion
+                    performTagDelete(tagId, tagName, deleteButton);
+                },
+                'Delete Tag', // Custom confirm button text
+                'This action cannot be undone.' // Warning text for destructive action
+            );
+        }
+
+        function performTagDelete(tagId, tagName, deleteButton) {
+            // Disable the delete button to prevent double-clicks
+            const originalContent = deleteButton.innerHTML;
+            deleteButton.disabled = true;
+            deleteButton.innerHTML = '<span class="material-icons">hourglass_empty</span>';
+            deleteButton.style.opacity = '0.6';
+            deleteButton.style.cursor = 'not-allowed';
+
+            // Make AJAX request to delete the tag
+            fetch(`/tags/${tagId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => {
+                // Always try to parse the response as JSON first
+                return response.json().then(data => {
+                    return { 
+                        ok: response.ok,
+                        status: response.status,
+                        data: data
+                    };
+                }).catch(jsonError => {
+                    // If JSON parsing fails, return error info
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                        data: null,
+                        jsonError: true
+                    };
+                });
+            })
+            .then(result => {
+                if (result.ok && result.data && result.data.success) {
+                    // Success: redirect to show success message
+                    window.location.href = '/tags?deleted=1';
+                } else {
+                    // Handle error - either from server response or HTTP error
+                    let errorMessage = 'Unknown error';
+                    
+                    if (result.data && result.data.error) {
+                        errorMessage = `${result.data.error} (${result.status})`;
+                    } else if (result.jsonError) {
+                        errorMessage = `HTTP error! status: ${result.status}`;
+                    } else {
+                        errorMessage = `Server error occurred (${result.status})`;
+                    }
+                    
+                    showErrorMessage(`Error deleting tag: ${errorMessage}`);
+                    
+                    // Re-enable the button
+                    deleteButton.disabled = false;
+                    deleteButton.innerHTML = originalContent;
+                    deleteButton.style.opacity = '1';
+                    deleteButton.style.cursor = 'pointer';
+                }
+            })
+            .catch(error => {
+                console.error('Network error deleting tag:', error);
+                showErrorMessage(`Error deleting tag: Network error occurred`);
+                // Re-enable the button
+                deleteButton.disabled = false;
+                deleteButton.innerHTML = originalContent;
+                deleteButton.style.opacity = '1';
+                deleteButton.style.cursor = 'pointer';
+            });
+        }
+
+        // Function to show error messages consistently with success messages
+        function showErrorMessage(message) {
+            // Remove any existing error message
+            const existingError = document.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+
+            // Create error message element
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = `
+                <span class="material-icons">error</span>
+                ${message}
+            `;
+
+            // Insert at the top of the tags container, after any success message
+            const tagsContainer = document.querySelector('.tags-container');
+            const successMessage = document.querySelector('.success-message');
+            if (successMessage) {
+                successMessage.insertAdjacentElement('afterend', errorDiv);
+            } else {
+                tagsContainer.insertBefore(errorDiv, tagsContainer.firstChild);
+            }
+
+            // Auto-dismiss error message after 5 seconds
+            setTimeout(function() {
+                errorDiv.classList.add('fadeOut');
+                // Remove from DOM after animation completes
+                setTimeout(function() {
+                    errorDiv.remove();
+                }, 400); // Match the CSS transition duration
+            }, 5000); // Show for 5 seconds (longer than success messages)
+        }
+
+        // Auto-dismiss success message after 3 seconds
+        const successMessage = document.querySelector('.success-message');
+        if (successMessage) {
+            setTimeout(function() {
+                successMessage.classList.add('fadeOut');
+                // Remove from DOM after animation completes
+                setTimeout(function() {
+                    successMessage.remove();
+                }, 400); // Match the CSS transition duration
+            }, 3000); // Show for 3 seconds
+        }
+
+        // Auto-dismiss any existing error message after 5 seconds
+        const errorMessage = document.querySelector('.error-message');
+        if (errorMessage) {
+            setTimeout(function() {
+                errorMessage.classList.add('fadeOut');
+                // Remove from DOM after animation completes
+                setTimeout(function() {
+                    errorMessage.remove();
+                }, 400); // Match the CSS transition duration
+            }, 5000); // Show for 5 seconds
+        }
+    </script>
+
+{{template "footer" .}}

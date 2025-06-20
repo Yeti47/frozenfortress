@@ -89,7 +89,7 @@ var userManager = func() func() (auth.UserManager, error) {
 				return
 			}
 
-			userIdGenerator := auth.NewUuidUserIdGenerator()
+			userIdGenerator := ccc.NewUuidGenerator()
 
 			// Create user manager using singleton dependencies
 			instance = auth.NewDefaultUserManager(

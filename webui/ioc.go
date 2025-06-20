@@ -6,6 +6,7 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/backup"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/documents"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/secrets"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/workers"
@@ -23,6 +24,7 @@ type services struct {
 	BackupService           backup.BackupService
 	BackupWorker            workers.BackupWorker
 	Logger                  ccc.Logger
+	TagManager              documents.TagManager
 }
 
 // configureServices configures the services used by the web UI.
@@ -79,20 +81,18 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		logger,
 	)
 
-	secretIdGenerator := secrets.NewUuidSecretIdGenerator()
+	idGenerator := ccc.NewUuidGenerator()
 
 	secretManager := secrets.NewDefaultSecretManager(
 		secretRepo,
-		secretIdGenerator,
+		idGenerator,
 		userRepo,
 		logger,
 	)
 
-	userIdGenerator := auth.NewUuidUserIdGenerator()
-
 	userManager := auth.NewDefaultUserManager(
 		userRepo,
-		userIdGenerator,
+		idGenerator,
 		encryptionService,
 		securityService,
 		logger,
@@ -103,6 +103,10 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 
 	// Create backup worker
 	backupWorker := workers.NewDefaultBackupWorker(backupService, config, logger)
+
+	// Create document unit of work factory and tag manager
+	uowFactory := documents.NewDocumentUnitOfWorkFactory(db)
+	tagManager := documents.NewDefaultTagManager(uowFactory, idGenerator, logger)
 
 	return services{
 		SignInManager:           signInManager,
@@ -116,5 +120,6 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		BackupService:           backupService,
 		BackupWorker:            backupWorker,
 		Logger:                  logger,
+		TagManager:              tagManager,
 	}
 }

@@ -44,7 +44,7 @@ var secretIdGenerator = func() func() secrets.SecretIdGenerator {
 
 	return func() secrets.SecretIdGenerator {
 		once.Do(func() {
-			instance = secrets.NewUuidSecretIdGenerator()
+			instance = ccc.NewUuidGenerator()
 		})
 		return instance
 	}

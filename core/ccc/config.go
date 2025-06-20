@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -30,6 +31,7 @@ const (
 	EnvBackupIntervalDays   = "FF_BACKUP_INTERVAL_DAYS"
 	EnvBackupDirectory      = "FF_BACKUP_DIRECTORY"
 	EnvBackupMaxGenerations = "FF_BACKUP_MAX_GENERATIONS"
+	EnvOCRLanguages         = "FF_OCR_LANGUAGES"
 )
 
 // BackupConfig contains all backup-related configuration settings
@@ -38,6 +40,11 @@ type BackupConfig struct {
 	IntervalDays   int    // Backup interval in days (0 = disabled)
 	Directory      string // Directory where backup files are stored
 	MaxGenerations int    // Maximum number of backup files to keep
+}
+
+// OCRConfig contains OCR-related configuration settings
+type OCRConfig struct {
+	Languages []string // OCR languages to use (e.g., ["eng", "deu"] for English and German)
 }
 
 type AppConfig struct {
@@ -60,6 +67,7 @@ type AppConfig struct {
 	LogLevel  string // Log level (Debug, Info, Warn, Error)
 
 	Backup BackupConfig // Backup configuration
+	OCR    OCRConfig    // OCR configuration
 }
 
 // String returns a JSON representation of the AppConfig.
@@ -90,6 +98,9 @@ var DefaultConfig = AppConfig{
 		IntervalDays:   7,                                          // Weekly backups
 		Directory:      filepath.Join(GetUserDataDir(), "backups"), // Default backup directory
 		MaxGenerations: 10,                                         // Keep 10 backup generations
+	},
+	OCR: OCRConfig{
+		Languages: []string{"eng"}, // English by default
 	},
 }
 
@@ -172,6 +183,24 @@ func LoadConfigFromEnv() AppConfig {
 	if maxGenerations := os.Getenv(EnvBackupMaxGenerations); maxGenerations != "" {
 		if generations, err := strconv.Atoi(maxGenerations); err == nil {
 			config.Backup.MaxGenerations = generations
+		}
+	}
+
+	// OCR configuration
+	if ocrLanguages := os.Getenv(EnvOCRLanguages); ocrLanguages != "" {
+		// Parse comma-separated languages (e.g., "eng,deu" or "eng+deu")
+		languages := strings.FieldsFunc(ocrLanguages, func(c rune) bool {
+			return c == ',' || c == '+' || c == ' '
+		})
+		// Filter out empty strings and trim whitespace
+		var cleanLanguages []string
+		for _, lang := range languages {
+			if trimmed := strings.TrimSpace(lang); trimmed != "" {
+				cleanLanguages = append(cleanLanguages, trimmed)
+			}
+		}
+		if len(cleanLanguages) > 0 {
+			config.OCR.Languages = cleanLanguages
 		}
 	}
 

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"slices"
+
 	"github.com/Yeti47/frozenfortress/frozenfortress/cli/internal/output"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/spf13/cobra"
@@ -196,6 +198,14 @@ func runSetup(readOnly bool) error {
 			DefaultValue: strconv.Itoa(defaultConfig.Backup.MaxGenerations),
 			Type:         "int",
 			Validation:   validatePositiveInt,
+		},
+		{
+			EnvVar:       ccc.EnvOCRLanguages,
+			Description:  "OCR languages (comma-separated, e.g., 'eng,deu' for English and German)",
+			CurrentValue: strings.Join(currentConfig.OCR.Languages, ","),
+			DefaultValue: strings.Join(defaultConfig.OCR.Languages, ","),
+			Type:         "string",
+			Validation:   validateOCRLanguages,
 		},
 	}
 
@@ -473,6 +483,53 @@ func validateRedisNetwork(value string) (string, error) {
 	}
 
 	return lower, nil
+}
+
+func validateOCRLanguages(value string) (string, error) {
+	if value == "" {
+		return "", fmt.Errorf("value cannot be empty")
+	}
+
+	// Split by comma and validate each language code
+	languages := strings.Split(value, ",")
+	var validatedLanguages []string
+
+	for _, lang := range languages {
+		lang = strings.TrimSpace(lang)
+		if lang == "" {
+			continue // Skip empty entries
+		}
+
+		// Basic validation: language codes should be 3 characters long
+		if len(lang) != 3 {
+			return "", fmt.Errorf("language code '%s' must be exactly 3 characters (e.g., 'eng', 'deu')", lang)
+		}
+
+		// Convert to lowercase for consistency
+		lang = strings.ToLower(lang)
+
+		// Check for common language codes (basic validation)
+		validLanguages := []string{
+			"eng", "deu", "fra", "spa", "ita", "por", "rus", "jpn", "chi_sim", "chi_tra",
+			"ara", "hin", "kor", "tha", "vie", "nld", "swe", "dan", "nor", "fin",
+		}
+
+		isValid := slices.Contains(validLanguages, lang)
+
+		if !isValid {
+			fmt.Printf("  Warning: '%s' is not a commonly recognized language code.\n", lang)
+			fmt.Printf("  Common codes: eng (English), deu (German), fra (French), spa (Spanish), etc.\n")
+			fmt.Printf("  The language will be included but may not work if not installed.\n")
+		}
+
+		validatedLanguages = append(validatedLanguages, lang)
+	}
+
+	if len(validatedLanguages) == 0 {
+		return "", fmt.Errorf("at least one language code must be provided")
+	}
+
+	return strings.Join(validatedLanguages, ","), nil
 }
 
 func init() {

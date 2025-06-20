@@ -17,11 +17,6 @@ type SQLiteSecretRepository struct {
 	db *sql.DB
 }
 
-// rowScanner interface for scanning rows from the database, used by scanSecret.
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
 const (
 	// secretFieldList defines the column order for secret queries.
 	secretFieldList = `Id, UserId, Name, Value, CreatedAt, ModifiedAt`
@@ -80,7 +75,7 @@ func (repo *SQLiteSecretRepository) initializeTable() error {
 }
 
 // scanSecret scans a database row into a Secret struct.
-func scanSecret(scanner rowScanner) (*Secret, error) {
+func scanSecret(scanner ccc.RowScanner) (*Secret, error) {
 	secret := &Secret{}
 	var createdAtStr, modifiedAtStr string
 
