@@ -95,17 +95,17 @@ type DocumentDto struct {
 }
 
 type DocumentFileDto struct {
-	Id          string
-	DocumentId  string
-	FileName    string // Decrypted
-	ContentType string
-	FileSize    int64
-	PageCount   int
-	OcrText     string // Decrypted, if available
-	Confidence  float32
-	FileData    []byte // Decrypted, only when explicitly requested
-	CreatedAt   time.Time
-	ModifiedAt  time.Time
+	Id            string
+	DocumentId    string
+	FileName      string // Decrypted
+	ContentType   string
+	FileSize      int64
+	PageCount     int
+	ExtractedText string // Decrypted, if available
+	Confidence    float32
+	FileData      []byte // Decrypted, only when explicitly requested
+	CreatedAt     time.Time
+	ModifiedAt    time.Time
 }
 
 type TagDto struct {
