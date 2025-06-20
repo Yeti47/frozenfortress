@@ -64,6 +64,7 @@ func handleTagsPage(c *gin.Context, signInManager auth.SignInManager, tagManager
 	// Render the tags page
 	c.HTML(http.StatusOK, "tags.html", gin.H{
 		"Title":          "Frozen Fortress - Tags",
+		"Username":       user.UserName,
 		"User":           user,
 		"Tags":           tags,
 		"SuccessMessage": successMessage,
@@ -108,7 +109,8 @@ func handleEditTagPage(c *gin.Context, signInManager auth.SignInManager, tagMana
 
 	// Initialize template data
 	data := gin.H{
-		"Title": "Frozen Fortress - Edit Tag",
+		"Title":    "Frozen Fortress - Edit Tag",
+		"Username": user.UserName,
 	}
 
 	// If we have an ID, we're editing an existing tag
