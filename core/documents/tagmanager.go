@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 )
@@ -57,14 +58,17 @@ func (m *DefaultTagManager) CreateTag(ctx context.Context, userId string, reques
 	if err := validateTagInput(request.Name, request.Color); err != nil {
 		return nil, err
 	}
+	now := time.Now()
 	uow := m.uowFactory.Create()
 	var tag *Tag
 	err := uow.Execute(ctx, func(uow DocumentUnitOfWork) error {
 		tag = &Tag{
-			Id:     m.idGenerator.GenerateId(),
-			UserId: userId,
-			Name:   request.Name,
-			Color:  request.Color,
+			Id:         m.idGenerator.GenerateId(),
+			UserId:     userId,
+			Name:       request.Name,
+			Color:      request.Color,
+			CreatedAt:  now,
+			ModifiedAt: now,
 		}
 		if err := uow.TagRepo().Add(ctx, tag); err != nil {
 			m.logger.Error("Failed to create tag", "userId", userId, "name", request.Name, "err", err)
@@ -77,9 +81,11 @@ func (m *DefaultTagManager) CreateTag(ctx context.Context, userId string, reques
 	}
 	m.logger.Info("Tag created", "userId", userId, "name", request.Name)
 	return &TagDto{
-		Id:    tag.Id,
-		Name:  tag.Name,
-		Color: tag.Color,
+		Id:         tag.Id,
+		Name:       tag.Name,
+		Color:      tag.Color,
+		CreatedAt:  tag.CreatedAt,
+		ModifiedAt: tag.ModifiedAt,
 	}, nil
 }
 
@@ -97,9 +103,11 @@ func (m *DefaultTagManager) GetTag(ctx context.Context, userId, tagId string) (*
 		return nil, ccc.NewResourceNotFoundError(tagId, "Tag")
 	}
 	return &TagDto{
-		Id:    tag.Id,
-		Name:  tag.Name,
-		Color: tag.Color,
+		Id:         tag.Id,
+		Name:       tag.Name,
+		Color:      tag.Color,
+		CreatedAt:  tag.CreatedAt,
+		ModifiedAt: tag.ModifiedAt,
 	}, nil
 }
 
@@ -114,9 +122,11 @@ func (m *DefaultTagManager) GetUserTags(ctx context.Context, userId string) ([]*
 	var dtos []*TagDto
 	for _, tag := range tags {
 		dtos = append(dtos, &TagDto{
-			Id:    tag.Id,
-			Name:  tag.Name,
-			Color: tag.Color,
+			Id:         tag.Id,
+			Name:       tag.Name,
+			Color:      tag.Color,
+			CreatedAt:  tag.CreatedAt,
+			ModifiedAt: tag.ModifiedAt,
 		})
 	}
 	return dtos, nil
