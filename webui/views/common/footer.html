@@ -70,6 +70,7 @@
         function performSearch(event) {
             event.preventDefault();
             const searchTerm = event.target.searchTerm.value.trim();
+            const searchType = document.getElementById('searchTypeDropdown').value;
             const urlParams = new URLSearchParams(window.location.search);
             
             if (searchTerm) {
@@ -84,17 +85,26 @@
             urlParams.delete('updated');
             urlParams.delete('deleted');
             
-            // Stay on current page if we're on secrets page, otherwise go to root
-            if (window.location.pathname === '/' || window.location.pathname === '/secrets') {
-                window.location.search = urlParams.toString();
+            // Determine target URL based on search type
+            let targetUrl;
+            if (searchType === 'documents') {
+                targetUrl = `/documents?${urlParams.toString()}`;
             } else {
-                window.location.href = `/?${urlParams.toString()}`;
+                // Default to secrets search
+                if (window.location.pathname === '/' || window.location.pathname === '/secrets') {
+                    targetUrl = `${window.location.pathname}?${urlParams.toString()}`;
+                } else {
+                    targetUrl = `/?${urlParams.toString()}`;
+                }
             }
+            
+            window.location.href = targetUrl;
         }
 
         function clearSearch() {
             const searchInput = document.getElementById('searchInput');
             const clearButton = document.getElementById('searchClearButton');
+            const searchType = document.getElementById('searchTypeDropdown').value;
             
             // Clear the input
             searchInput.value = '';
@@ -112,12 +122,20 @@
             urlParams.delete('updated');
             urlParams.delete('deleted');
             
-            // Stay on current page if we're on secrets page, otherwise go to root
-            if (window.location.pathname === '/' || window.location.pathname === '/secrets') {
-                window.location.search = urlParams.toString();
+            // Determine target URL based on search type
+            let targetUrl;
+            if (searchType === 'documents') {
+                targetUrl = `/documents?${urlParams.toString()}`;
             } else {
-                window.location.href = `/?${urlParams.toString()}`;
+                // Default to secrets search
+                if (window.location.pathname === '/' || window.location.pathname === '/secrets') {
+                    targetUrl = `${window.location.pathname}?${urlParams.toString()}`;
+                } else {
+                    targetUrl = `/?${urlParams.toString()}`;
+                }
             }
+            
+            window.location.href = targetUrl;
         }
 
         function toggleClearButton() {
@@ -131,9 +149,36 @@
             }
         }
 
-        // Initialize clear button visibility on page load
+        function updateSearchPlaceholder() {
+            const searchInput = document.getElementById('searchInput');
+            const searchType = document.getElementById('searchTypeDropdown').value;
+            
+            if (searchType === 'documents') {
+                searchInput.placeholder = 'Search documents...';
+            } else {
+                searchInput.placeholder = 'Search secrets...';
+            }
+        }
+
+        function initializeSearchType() {
+            const searchTypeDropdown = document.getElementById('searchTypeDropdown');
+            const currentPath = window.location.pathname;
+            
+            // Check if URL contains "document" (ignoring query params)
+            if (currentPath.includes('document')) {
+                searchTypeDropdown.value = 'documents';
+            } else {
+                searchTypeDropdown.value = 'secrets';
+            }
+            
+            // Update placeholder based on selection
+            updateSearchPlaceholder();
+        }
+
+        // Initialize clear button visibility and search type on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleClearButton();
+            initializeSearchType();
         });
 
         // Modal functions
