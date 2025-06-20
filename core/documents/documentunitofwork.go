@@ -212,12 +212,29 @@ type DefaultDocumentUnitOfWorkFactory struct {
 
 // NewDocumentUnitOfWorkFactory creates a new DefaultDocumentUnitOfWorkFactory instance.
 func NewDocumentUnitOfWorkFactory(db *sql.DB) *DefaultDocumentUnitOfWorkFactory {
-	return &DefaultDocumentUnitOfWorkFactory{
+	factory := &DefaultDocumentUnitOfWorkFactory{
 		db: db,
 	}
+
+	// Initialize all tables immediately to ensure they exist before any operations
+	factory.initializeTables()
+
+	return factory
 }
 
 // Create creates a new DocumentUnitOfWork instance.
 func (f *DefaultDocumentUnitOfWorkFactory) Create() DocumentUnitOfWork {
 	return NewDocumentUnitOfWork(f.db)
+}
+
+// initializeTables initializes all database tables by creating temporary repositories
+// This ensures all tables exist before any transactional operations occur
+func (f *DefaultDocumentUnitOfWorkFactory) initializeTables() {
+	// Create temporary repositories with direct DB connection to trigger table initialization
+	// These calls will create the tables if they don't exist
+	newSQLiteDocumentRepository(f.db)
+	newSQLiteDocumentFileRepository(f.db)
+	newSQLiteDocumentFileMetadataRepository(f.db)
+	newSQLiteTagRepository(f.db)
+	newSQLiteDocumentTagRepository(f.db)
 }

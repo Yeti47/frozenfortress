@@ -32,7 +32,7 @@ func NewDefaultTagManager(uowFactory DocumentUnitOfWorkFactory, idGenerator TagI
 
 // validateTagInput validates the tag name and color according to business rules.
 func validateTagInput(name, color string) error {
-	const maxNameLength = 40
+	const maxNameLength = 20
 
 	if len(name) > maxNameLength {
 		return ccc.NewInvalidInputErrorWithMessage(
@@ -170,6 +170,9 @@ func (m *DefaultTagManager) UpdateTag(ctx context.Context, userId, tagId string,
 		if request.Color != "" {
 			tag.Color = request.Color
 		}
+
+		tag.ModifiedAt = time.Now()
+
 		if err := uow.TagRepo().Update(ctx, tag); err != nil {
 			m.logger.Error("Failed to update tag", "userId", userId, "tagId", tagId, "err", err)
 			return ccc.NewDatabaseError("update tag", err)

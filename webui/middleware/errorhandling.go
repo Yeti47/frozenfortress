@@ -66,3 +66,31 @@ func HandleErrorOnPage(c *gin.Context, err error, templateName string, templateD
 
 	return true
 }
+
+// HandleErrorWithJson handles errors by checking if they are ApiErrors and responding with JSON.
+// Returns true if an error was handled, false if there was no error.
+func HandleErrorWithJson(c *gin.Context, err error, defaultMessage string) bool {
+	if err == nil {
+		return false
+	}
+
+	var statusCode int
+	var errorMessage string
+
+	// Check if it's an ApiError
+	if apiErr, ok := ccc.IsApiError(err); ok {
+		statusCode = apiErr.StatusCode
+		errorMessage = apiErr.UserMessage
+	} else {
+		// Not an ApiError - use default error response
+		statusCode = 500
+		errorMessage = defaultMessage
+		if defaultMessage == "" {
+			errorMessage = "An unexpected error occurred. Please try again."
+		}
+	}
+
+	// Return JSON error response
+	c.JSON(statusCode, gin.H{"error": errorMessage})
+	return true
+}
