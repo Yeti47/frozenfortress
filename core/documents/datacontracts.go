@@ -69,7 +69,8 @@ type DocumentSearchResult struct {
 	RelevanceScore  float64 // Calculated relevance score for sorting
 	CreatedAt       time.Time
 	ModifiedAt      time.Time
-	MatchTypes      []string // Types of matches found: "title", "description", "filename", "content"
+	MatchTypes      []string  // Types of matches found: "title", "description", "filename", "content"
+	Tags            []*TagDto // Associated tags
 }
 
 type CreateTagRequest struct {

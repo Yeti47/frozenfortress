@@ -16,13 +16,15 @@ import (
 type DefaultDocumentSearchEngine struct {
 	uowFactory DocumentUnitOfWorkFactory
 	logger     ccc.Logger
+	sorter     DocumentSorter[*DocumentSearchResult]
 }
 
 // NewDefaultDocumentSearchEngine creates a new DefaultDocumentSearchEngine instance.
-func NewDefaultDocumentSearchEngine(uowFactory DocumentUnitOfWorkFactory, logger ccc.Logger) *DefaultDocumentSearchEngine {
+func NewDefaultDocumentSearchEngine(uowFactory DocumentUnitOfWorkFactory, logger ccc.Logger, sorter DocumentSorter[*DocumentSearchResult]) *DefaultDocumentSearchEngine {
 	return &DefaultDocumentSearchEngine{
 		uowFactory: uowFactory,
 		logger:     logger,
+		sorter:     sorter,
 	}
 }
 
@@ -50,14 +52,14 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 	// Create unit of work
 	uow := s.uowFactory.Create()
 
-	// Get documents based on filters
-	documents, err := uow.DocumentRepo().FindByFilters(ctx, userId, request.Filters)
+	// Get documents with tags based on filters
+	documentDetails, err := uow.DocumentRepo().FindDetailed(ctx, userId, request.Filters)
 	if err != nil {
-		s.logger.Error("Failed to retrieve documents", "userId", userId, "error", err)
-		return nil, ccc.NewDatabaseError("find documents by filters", err)
+		s.logger.Error("Failed to retrieve detailed documents", "userId", userId, "error", err)
+		return nil, ccc.NewDatabaseError("find detailed documents", err)
 	}
 
-	s.logger.Debug("Retrieved documents for search", "count", len(documents))
+	s.logger.Debug("Retrieved detailed documents for search", "count", len(documentDetails))
 
 	// Use map to aggregate results by document ID
 	resultsByDoc := make(map[string]*DocumentSearchResult)
@@ -65,9 +67,10 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 	// If deep search is requested, collect file matches in batches for better performance
 	var allFileMatches map[string]*fileMatchInfo
 	if request.DeepSearch {
-		s.logger.Debug("Starting deep search file processing", "documentCount", len(documents))
+		s.logger.Debug("Starting deep search file processing", "documentCount", len(documentDetails))
+
 		var err error
-		allFileMatches, err = s.collectAllFileMatches(ctx, documents, searchTerms, dataProtector, uow)
+		allFileMatches, err = s.collectAllFileMatches(ctx, documentDetails, searchTerms, dataProtector, uow)
 		if err != nil {
 			// Log error but continue with document-level search
 			s.logger.Warn("Failed to collect file matches, continuing with document-level search only", "error", err)
@@ -77,7 +80,8 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 		}
 	}
 
-	for _, doc := range documents {
+	for _, docDetail := range documentDetails {
+		doc := docDetail.Document
 		// Decrypt document title and description
 		decryptedTitle, err := dataProtector.Unprotect(doc.Title)
 		if err != nil {
@@ -140,6 +144,18 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 
 		// Only add result if we found any matches
 		if len(matchTypes) > 0 {
+			// Build tag DTOs from DocumentDetails
+			tagDtos := make([]*TagDto, 0, len(docDetail.Tags))
+			for _, tag := range docDetail.Tags {
+				tagDtos = append(tagDtos, &TagDto{
+					Id:         tag.Id,
+					Name:       tag.Name,
+					Color:      tag.Color,
+					CreatedAt:  tag.CreatedAt,
+					ModifiedAt: tag.ModifiedAt,
+				})
+			}
+
 			result := &DocumentSearchResult{
 				DocumentId:      doc.Id,
 				DocumentTitle:   decryptedTitle,
@@ -148,6 +164,7 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 				CreatedAt:       doc.CreatedAt,
 				ModifiedAt:      doc.ModifiedAt,
 				MatchTypes:      matchTypes,
+				Tags:            tagDtos,
 			}
 			resultsByDoc[doc.Id] = result
 		}
@@ -293,24 +310,24 @@ const (
 // collectAllFileMatches collects file matches for all documents using batch loading for optimal performance
 func (s *DefaultDocumentSearchEngine) collectAllFileMatches(
 	ctx context.Context,
-	documents []*Document,
+	documentDetails []*DocumentDetails,
 	searchTerms []string,
 	dataProtector dataprotection.DataProtector,
 	uow DocumentUnitOfWork,
 ) (map[string]*fileMatchInfo, error) {
 	allMatches := make(map[string]*fileMatchInfo)
 
-	s.logger.Debug("Starting batch file collection", "totalDocuments", len(documents), "batchSize", maxBatchSize)
+	s.logger.Debug("Starting batch file collection", "totalDocuments", len(documentDetails), "batchSize", maxBatchSize)
 
 	// Process documents in batches to optimize database queries
 	batchCount := 0
-	for i := 0; i < len(documents); i += maxBatchSize {
+	for i := 0; i < len(documentDetails); i += maxBatchSize {
 		end := i + maxBatchSize
-		if end > len(documents) {
-			end = len(documents)
+		if end > len(documentDetails) {
+			end = len(documentDetails)
 		}
 
-		batch := documents[i:end]
+		batch := documentDetails[i:end]
 		batchCount++
 		s.logger.Debug("Processing batch", "batchNumber", batchCount, "documentsInBatch", len(batch))
 
@@ -334,24 +351,24 @@ func (s *DefaultDocumentSearchEngine) collectAllFileMatches(
 // collectFileMatchesBatch processes a batch of documents to collect file matches efficiently
 func (s *DefaultDocumentSearchEngine) collectFileMatchesBatch(
 	ctx context.Context,
-	documents []*Document,
+	documentDetails []*DocumentDetails,
 	searchTerms []string,
 	dataProtector dataprotection.DataProtector,
 	uow DocumentUnitOfWork,
 ) (map[string]*fileMatchInfo, error) {
-	if len(documents) == 0 {
+	if len(documentDetails) == 0 {
 		return make(map[string]*fileMatchInfo), nil
 	}
 
 	// Safety check: ensure we don't exceed SQLite parameter limits
-	if len(documents) > sqliteMaxParams {
-		return nil, ccc.NewInvalidInputError("documentIds", fmt.Sprintf("batch size %d exceeds SQLite parameter limit of %d", len(documents), sqliteMaxParams))
+	if len(documentDetails) > sqliteMaxParams {
+		return nil, ccc.NewInvalidInputError("documentIds", fmt.Sprintf("batch size %d exceeds SQLite parameter limit of %d", len(documentDetails), sqliteMaxParams))
 	}
 
 	// Extract document IDs for batch query
-	documentIds := make([]string, len(documents))
-	for i, doc := range documents {
-		documentIds[i] = doc.Id
+	documentIds := make([]string, len(documentDetails))
+	for i, docDetail := range documentDetails {
+		documentIds[i] = docDetail.Document.Id
 	}
 
 	// Get all file details for all documents in a single query
@@ -369,7 +386,8 @@ func (s *DefaultDocumentSearchEngine) collectFileMatchesBatch(
 
 	// Process each document's files
 	results := make(map[string]*fileMatchInfo)
-	for _, doc := range documents {
+	for _, docDetail := range documentDetails {
+		doc := docDetail.Document
 		matchInfo := &fileMatchInfo{
 			FileNameMatches: []string{},
 			OcrMatches:      []ocrMatch{},
@@ -700,83 +718,19 @@ func (s *DefaultDocumentSearchEngine) highlightMatchesForTerms(text string, matc
 	return result
 }
 
-// sortSearchResults sorts search results by relevance and creation date
 // sortSearchResults sorts search results by the specified criteria
 func (s *DefaultDocumentSearchEngine) sortSearchResults(results []*DocumentSearchResult, searchTerms []string, sortBy string, sortAsc bool) {
-	// Always calculate relevance scores first (may be needed for sorting)
+	if len(results) <= 1 {
+		return
+	}
+
+	// Calculate relevance scores for all results (needed for relevance sorting)
 	for _, result := range results {
 		result.RelevanceScore = s.calculateRelevanceScore(result, searchTerms)
 	}
 
-	// Normalize sortBy parameter
-	if sortBy == "" {
-		sortBy = "relevance" // Default to relevance
-	}
-
-	// Sort based on the specified criteria
-	sort.Slice(results, func(i, j int) bool {
-		switch strings.ToLower(sortBy) {
-		case "relevance":
-			return s.compareByRelevance(results[i], results[j], sortAsc)
-		case "created_at", "createdat":
-			return s.compareByCreatedAt(results[i], results[j], sortAsc)
-		case "modified_at", "modifiedat":
-			return s.compareByModifiedAt(results[i], results[j], sortAsc)
-		case "title":
-			return s.compareByTitle(results[i], results[j], sortAsc)
-		default:
-			// Default to relevance sorting if unknown sort field
-			return s.compareByRelevance(results[i], results[j], sortAsc)
-		}
-	})
-}
-
-// compareByRelevance compares two results by relevance score, with tiebreakers
-func (s *DefaultDocumentSearchEngine) compareByRelevance(a, b *DocumentSearchResult, sortAsc bool) bool {
-	if a.RelevanceScore != b.RelevanceScore {
-		if sortAsc {
-			return a.RelevanceScore < b.RelevanceScore
-		}
-		return a.RelevanceScore > b.RelevanceScore
-	}
-
-	// Tiebreaker 1: OCR confidence
-	if a.OcrConfidence > 0 && b.OcrConfidence > 0 && a.OcrConfidence != b.OcrConfidence {
-		if sortAsc {
-			return a.OcrConfidence < b.OcrConfidence
-		}
-		return a.OcrConfidence > b.OcrConfidence
-	}
-
-	// Tiebreaker 2: Creation date (newer first for relevance sorting)
-	return a.CreatedAt.After(b.CreatedAt)
-}
-
-// compareByCreatedAt compares two results by creation date
-func (s *DefaultDocumentSearchEngine) compareByCreatedAt(a, b *DocumentSearchResult, sortAsc bool) bool {
-	if sortAsc {
-		return a.CreatedAt.Before(b.CreatedAt)
-	}
-	return a.CreatedAt.After(b.CreatedAt)
-}
-
-// compareByModifiedAt compares two results by modification date
-func (s *DefaultDocumentSearchEngine) compareByModifiedAt(a, b *DocumentSearchResult, sortAsc bool) bool {
-	if sortAsc {
-		return a.ModifiedAt.Before(b.ModifiedAt)
-	}
-	return a.ModifiedAt.After(b.ModifiedAt)
-}
-
-// compareByTitle compares two results by document title
-func (s *DefaultDocumentSearchEngine) compareByTitle(a, b *DocumentSearchResult, sortAsc bool) bool {
-	titleA := strings.ToLower(a.DocumentTitle)
-	titleB := strings.ToLower(b.DocumentTitle)
-
-	if sortAsc {
-		return titleA < titleB
-	}
-	return titleA > titleB
+	// Let the sorter handle all sorting logic, including relevance
+	s.sorter.Sort(results, sortBy, sortAsc)
 }
 
 // validatePaginationParams validates and normalizes pagination parameters

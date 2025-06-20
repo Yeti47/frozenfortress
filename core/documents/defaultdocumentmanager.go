@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -18,6 +16,7 @@ type DefaultDocumentManager struct {
 	documentIdGen DocumentIdGenerator
 	fileCreator   DocumentFileCreator
 	logger        ccc.Logger
+	sorter        DocumentSorter[*DocumentDetails]
 }
 
 // NewDefaultDocumentManager creates a new DefaultDocumentManager instance
@@ -26,6 +25,7 @@ func NewDefaultDocumentManager(
 	documentIdGen DocumentIdGenerator,
 	fileCreator DocumentFileCreator,
 	logger ccc.Logger,
+	sorter DocumentSorter[*DocumentDetails],
 ) *DefaultDocumentManager {
 	if logger == nil {
 		logger = ccc.NopLogger
@@ -36,6 +36,7 @@ func NewDefaultDocumentManager(
 		documentIdGen: documentIdGen,
 		fileCreator:   fileCreator,
 		logger:        logger,
+		sorter:        sorter,
 	}
 }
 
@@ -177,7 +178,22 @@ func (m *DefaultDocumentManager) GetDocument(
 		return nil, ccc.NewDatabaseError("failed to find document tags", err)
 	}
 
-	return m.buildDocumentDto(document, tags, fileCount, dataProtector)
+	// Decrypt fields upfront
+	if decrypted, err := dataProtector.Unprotect(document.Title); err == nil {
+		document.Title = decrypted
+	} else {
+		m.logger.Warn("Failed to decrypt title", "documentId", document.Id, "error", err)
+		document.Title = ""
+	}
+
+	if decrypted, err := dataProtector.Unprotect(document.Description); err == nil {
+		document.Description = decrypted
+	} else {
+		m.logger.Warn("Failed to decrypt description", "documentId", document.Id, "error", err)
+		document.Description = ""
+	}
+
+	return m.buildDocumentDto(document, tags, fileCount), nil
 }
 
 // GetDocuments retrieves paginated documents for a user
@@ -213,8 +229,11 @@ func (m *DefaultDocumentManager) GetDocuments(
 		return nil, ccc.NewDatabaseError("failed to load detailed documents", err)
 	}
 
-	// Apply sorting directly on document details
-	m.sortDocumentDetails(documentDetails, request.SortBy, request.SortAsc, dataProtector)
+	// Decrypt all fields upfront
+	m.decryptDocumentDetails(documentDetails, dataProtector)
+
+	// Apply sorting on decrypted data
+	m.sorter.Sort(documentDetails, request.SortBy, request.SortAsc)
 
 	// Calculate pagination
 	totalCount := len(documentDetails)
@@ -231,14 +250,10 @@ func (m *DefaultDocumentManager) GetDocuments(
 		pagedDetails = documentDetails[offset:end]
 	}
 
-	// Build DTOs with full tag information
+	// Build DTOs with full tag information (data already decrypted)
 	documentDtos := make([]*DocumentDto, 0, len(pagedDetails))
 	for _, detail := range pagedDetails {
-		dto, err := m.buildDocumentDto(detail.Document, detail.Tags, detail.FileCount, dataProtector)
-		if err != nil {
-			m.logger.Error("Failed to build document DTO", "error", err, "documentId", detail.Document.Id)
-			continue
-		}
+		dto := m.buildDocumentDto(detail.Document, detail.Tags, detail.FileCount)
 		documentDtos = append(documentDtos, dto)
 	}
 
@@ -393,18 +408,7 @@ func (m *DefaultDocumentManager) validateUpdateDocumentRequest(request UpdateDoc
 	return nil
 }
 
-func (m *DefaultDocumentManager) buildDocumentDto(document *Document, tags []*Tag, fileCount int, dataProtector dataprotection.DataProtector) (*DocumentDto, error) {
-	// Decrypt sensitive data
-	title, err := dataProtector.Unprotect(document.Title)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt document title: %w", err)
-	}
-
-	description, err := dataProtector.Unprotect(document.Description)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt document description: %w", err)
-	}
-
+func (m *DefaultDocumentManager) buildDocumentDto(document *Document, tags []*Tag, fileCount int) *DocumentDto {
 	// Build tag DTOs
 	tagDtos := make([]*TagDto, 0, len(tags))
 	for _, tag := range tags {
@@ -419,61 +423,32 @@ func (m *DefaultDocumentManager) buildDocumentDto(document *Document, tags []*Ta
 
 	return &DocumentDto{
 		Id:          document.Id,
-		Title:       title,
-		Description: description,
+		Title:       document.Title,       // Already decrypted
+		Description: document.Description, // Already decrypted
 		FileCount:   fileCount,
 		Tags:        tagDtos,
 		CreatedAt:   document.CreatedAt,
 		ModifiedAt:  document.ModifiedAt,
-	}, nil
-}
-
-func (m *DefaultDocumentManager) sortDocumentDetails(documentDetails []*DocumentDetails, sortBy string, sortAsc bool, dataProtector dataprotection.DataProtector) {
-	switch sortBy {
-	case "title":
-		m.sortDocumentDetailsByTitle(documentDetails, sortAsc, dataProtector)
-	case "created_at":
-		m.sortDocumentDetailsByCreatedAt(documentDetails, sortAsc)
-	case "modified_at":
-		m.sortDocumentDetailsByModifiedAt(documentDetails, sortAsc)
-	default:
-		// Default to modified_at descending
-		m.sortDocumentDetailsByModifiedAt(documentDetails, false)
 	}
 }
 
-func (m *DefaultDocumentManager) sortDocumentDetailsByTitle(documentDetails []*DocumentDetails, asc bool, dataProtector dataprotection.DataProtector) {
-	sort.Slice(documentDetails, func(i, j int) bool {
-		titleI, err := dataProtector.Unprotect(documentDetails[i].Document.Title)
-		if err != nil {
-			titleI = "" // Fallback
-		}
-		titleJ, err := dataProtector.Unprotect(documentDetails[j].Document.Title)
-		if err != nil {
-			titleJ = "" // Fallback
+// Decrypt all document fields upfront
+func (m *DefaultDocumentManager) decryptDocumentDetails(documentDetails []*DocumentDetails, dataProtector dataprotection.DataProtector) {
+	for _, detail := range documentDetails {
+		// Decrypt title
+		if decrypted, err := dataProtector.Unprotect(detail.Document.Title); err == nil {
+			detail.Document.Title = decrypted
+		} else {
+			m.logger.Warn("Failed to decrypt title", "documentId", detail.Document.Id, "error", err)
+			detail.Document.Title = "" // Fallback
 		}
 
-		if asc {
-			return strings.ToLower(titleI) < strings.ToLower(titleJ)
+		// Decrypt description
+		if decrypted, err := dataProtector.Unprotect(detail.Document.Description); err == nil {
+			detail.Document.Description = decrypted
+		} else {
+			m.logger.Warn("Failed to decrypt description", "documentId", detail.Document.Id, "error", err)
+			detail.Document.Description = "" // Fallback
 		}
-		return strings.ToLower(titleI) > strings.ToLower(titleJ)
-	})
-}
-
-func (m *DefaultDocumentManager) sortDocumentDetailsByCreatedAt(documentDetails []*DocumentDetails, asc bool) {
-	sort.Slice(documentDetails, func(i, j int) bool {
-		if asc {
-			return documentDetails[i].Document.CreatedAt.Before(documentDetails[j].Document.CreatedAt)
-		}
-		return documentDetails[i].Document.CreatedAt.After(documentDetails[j].Document.CreatedAt)
-	})
-}
-
-func (m *DefaultDocumentManager) sortDocumentDetailsByModifiedAt(documentDetails []*DocumentDetails, asc bool) {
-	sort.Slice(documentDetails, func(i, j int) bool {
-		if asc {
-			return documentDetails[i].Document.ModifiedAt.Before(documentDetails[j].Document.ModifiedAt)
-		}
-		return documentDetails[i].Document.ModifiedAt.After(documentDetails[j].Document.ModifiedAt)
-	})
+	}
 }
