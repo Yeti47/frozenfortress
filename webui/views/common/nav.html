@@ -1,0 +1,150 @@
+{{define "nav"}}
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-items">
+                <a href="/" class="nav-item" data-route="/">
+                    <span class="material-icons">lock</span>
+                    <span class="nav-text">Secrets</span>
+                </a>
+                <a href="/documents" class="nav-item" data-route="/documents">
+                    <span class="material-icons">description</span>
+                    <span class="nav-text">Documents</span>
+                </a>
+                <a href="/tags" class="nav-item" data-route="/tags">
+                    <span class="material-icons">local_offer</span>
+                    <span class="nav-text">Tags</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <style>
+        .main-nav {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid rgba(52, 152, 219, 0.2);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 900;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 30px;
+        }
+
+        .nav-items {
+            display: flex;
+            gap: 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 24px;
+            text-decoration: none;
+            color: #7f8c8d;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .nav-item:hover {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .nav-item.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            background: rgba(52, 152, 219, 0.08);
+        }
+
+        .nav-item .material-icons {
+            font-size: 20px;
+        }
+
+        .nav-item .nav-text {
+            font-weight: 600;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0 20px;
+            }
+
+            .nav-item {
+                padding: 14px 16px;
+                font-size: 13px;
+            }
+
+            .nav-item .material-icons {
+                font-size: 18px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-container {
+                padding: 0 15px;
+            }
+
+            .nav-items {
+                justify-content: space-around;
+            }
+
+            .nav-item {
+                flex-direction: column;
+                padding: 12px 8px;
+                gap: 4px;
+                text-align: center;
+                flex: 1;
+            }
+
+            .nav-item .nav-text {
+                font-size: 11px;
+                font-weight: 500;
+            }
+
+            .nav-item .material-icons {
+                font-size: 20px;
+            }
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get current path
+            const currentPath = window.location.pathname;
+            
+            // Remove active class from all nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+            
+            // Find matching nav item and add active class
+            navItems.forEach(item => {
+                const route = item.getAttribute('data-route');
+                
+                // Handle exact matches and special cases
+                if (route === currentPath) {
+                    item.classList.add('active');
+                } else if (route === '/' && currentPath === '/') {
+                    // Secrets page - exact match for root
+                    item.classList.add('active');
+                } else if (route === '/documents' && currentPath.startsWith('/documents')) {
+                    // Documents page - match any documents route
+                    item.classList.add('active');
+                } else if (route === '/tags' && currentPath.startsWith('/tags')) {
+                    // Tags page - match any tags route
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+{{end}}

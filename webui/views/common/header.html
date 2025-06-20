@@ -277,9 +277,10 @@
         .main-content {
             flex: 1;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
             padding: 20px;
+            min-height: calc(100vh - 200px); /* Account for header, nav, and footer */
         }
 
         .content-container {
@@ -676,6 +677,9 @@
             </div>
         </div>
     </header>
+
+    <!-- Navigation -->
+    {{template "nav" .}}
 
     <!-- Main Content -->
     <main class="main-content">
