@@ -203,6 +203,38 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 
 	pagedResults := allResults[startIndex:endIndex]
 
+	// Load preview data for the paged results
+	if len(pagedResults) > 0 {
+		documentIds := make([]string, len(pagedResults))
+		for i, result := range pagedResults {
+			documentIds[i] = result.DocumentId
+		}
+
+		previews, err := uow.DocumentFileRepo().FindOldestPreviewsByDocumentIds(ctx, documentIds)
+		if err != nil {
+			s.logger.Warn("Failed to load document previews for search results", "error", err)
+			// Continue without previews if loading fails
+		} else {
+			// Decrypt and attach preview data to results
+			for _, result := range pagedResults {
+				if preview, exists := previews[result.DocumentId]; exists && preview != nil {
+					decryptedPreviewData, err := dataProtector.Unprotect(string(preview.PreviewData))
+					if err != nil {
+						s.logger.Warn("Failed to decrypt preview data for search result", "documentId", result.DocumentId, "error", err)
+						continue
+					}
+					result.Preview = &DocumentPreviewDto{
+						DocumentFileId: preview.DocumentFileId,
+						PreviewData:    []byte(decryptedPreviewData),
+						PreviewType:    preview.PreviewType,
+						Width:          preview.Width,
+						Height:         preview.Height,
+					}
+				}
+			}
+		}
+	}
+
 	s.logger.Info("Document search completed",
 		"userId", userId,
 		"totalResults", totalCount,

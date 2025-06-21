@@ -193,7 +193,29 @@ func (m *DefaultDocumentManager) GetDocument(
 		document.Description = ""
 	}
 
-	return m.buildDocumentDto(document, tags, fileCount), nil
+	// Get preview data for this document
+	var preview *DocumentPreviewDto
+	previews, err := uow.DocumentFileRepo().FindOldestPreviewsByDocumentIds(ctx, []string{documentId})
+	if err != nil {
+		m.logger.Warn("Failed to load document preview", "documentId", documentId, "error", err)
+		// Continue without preview if loading fails
+	} else if docPreview, exists := previews[documentId]; exists && docPreview != nil {
+		// Decrypt preview data
+		decryptedPreviewData, err := dataProtector.Unprotect(string(docPreview.PreviewData))
+		if err != nil {
+			m.logger.Warn("Failed to decrypt preview data", "documentId", documentId, "error", err)
+		} else {
+			preview = &DocumentPreviewDto{
+				DocumentFileId: docPreview.DocumentFileId,
+				PreviewData:    []byte(decryptedPreviewData),
+				PreviewType:    docPreview.PreviewType,
+				Width:          docPreview.Width,
+				Height:         docPreview.Height,
+			}
+		}
+	}
+
+	return m.buildDocumentDto(document, tags, fileCount, preview), nil
 }
 
 // GetDocuments retrieves paginated documents for a user
@@ -250,10 +272,44 @@ func (m *DefaultDocumentManager) GetDocuments(
 		pagedDetails = documentDetails[offset:end]
 	}
 
-	// Build DTOs with full tag information (data already decrypted)
+	// Get preview data for the paged documents
+	previewData := make(map[string]*DocumentPreviewDto)
+	if len(pagedDetails) > 0 {
+		documentIds := make([]string, len(pagedDetails))
+		for i, detail := range pagedDetails {
+			documentIds[i] = detail.Document.Id
+		}
+
+		previews, err := uow.DocumentFileRepo().FindOldestPreviewsByDocumentIds(ctx, documentIds)
+		if err != nil {
+			m.logger.Warn("Failed to load document previews", "error", err)
+			// Continue without previews if loading fails
+		} else {
+			// Decrypt preview data
+			for docId, preview := range previews {
+				if preview != nil {
+					decryptedPreviewData, err := dataProtector.Unprotect(string(preview.PreviewData))
+					if err != nil {
+						m.logger.Warn("Failed to decrypt preview data", "documentId", docId, "error", err)
+						continue
+					}
+					previewData[docId] = &DocumentPreviewDto{
+						DocumentFileId: preview.DocumentFileId,
+						PreviewData:    []byte(decryptedPreviewData),
+						PreviewType:    preview.PreviewType,
+						Width:          preview.Width,
+						Height:         preview.Height,
+					}
+				}
+			}
+		}
+	}
+
+	// Build DTOs with full tag information and preview data (data already decrypted)
 	documentDtos := make([]*DocumentDto, 0, len(pagedDetails))
 	for _, detail := range pagedDetails {
-		dto := m.buildDocumentDto(detail.Document, detail.Tags, detail.FileCount)
+		preview := previewData[detail.Document.Id]
+		dto := m.buildDocumentDto(detail.Document, detail.Tags, detail.FileCount, preview)
 		documentDtos = append(documentDtos, dto)
 	}
 
@@ -408,7 +464,7 @@ func (m *DefaultDocumentManager) validateUpdateDocumentRequest(request UpdateDoc
 	return nil
 }
 
-func (m *DefaultDocumentManager) buildDocumentDto(document *Document, tags []*Tag, fileCount int) *DocumentDto {
+func (m *DefaultDocumentManager) buildDocumentDto(document *Document, tags []*Tag, fileCount int, preview *DocumentPreviewDto) *DocumentDto {
 	// Build tag DTOs
 	tagDtos := make([]*TagDto, 0, len(tags))
 	for _, tag := range tags {
@@ -427,6 +483,7 @@ func (m *DefaultDocumentManager) buildDocumentDto(document *Document, tags []*Ta
 		Description: document.Description, // Already decrypted
 		FileCount:   fileCount,
 		Tags:        tagDtos,
+		Preview:     preview,
 		CreatedAt:   document.CreatedAt,
 		ModifiedAt:  document.ModifiedAt,
 	}

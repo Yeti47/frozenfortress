@@ -69,8 +69,9 @@ type DocumentSearchResult struct {
 	RelevanceScore  float64 // Calculated relevance score for sorting
 	CreatedAt       time.Time
 	ModifiedAt      time.Time
-	MatchTypes      []string  // Types of matches found: "title", "description", "filename", "content"
-	Tags            []*TagDto // Associated tags
+	MatchTypes      []string            // Types of matches found: "title", "description", "filename", "content"
+	Tags            []*TagDto           // Associated tags
+	Preview         *DocumentPreviewDto // Preview of the oldest file in the document
 }
 
 type CreateTagRequest struct {
@@ -90,6 +91,7 @@ type DocumentDto struct {
 	Description string // Decrypted
 	FileCount   int
 	Tags        []*TagDto
+	Preview     *DocumentPreviewDto // Preview of the oldest file in the document
 	CreatedAt   time.Time
 	ModifiedAt  time.Time
 }
@@ -114,6 +116,15 @@ type TagDto struct {
 	Color      string
 	CreatedAt  time.Time
 	ModifiedAt time.Time
+}
+
+// DocumentPreviewDto represents preview/thumbnail data for a document
+type DocumentPreviewDto struct {
+	DocumentFileId string
+	PreviewData    []byte // Decrypted preview image data
+	PreviewType    string // e.g., "image/jpeg", "image/png"
+	Width          int    // Preview image width
+	Height         int    // Preview image height
 }
 
 // CreateFileRequest encapsulates all parameters needed for creating a document file

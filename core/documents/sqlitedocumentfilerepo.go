@@ -395,3 +395,79 @@ func scanDocumentFilePreview(scanner ccc.RowScanner) (*DocumentFilePreview, erro
 
 	return preview, nil
 }
+
+// FindOldestPreviewsByDocumentIds retrieves the oldest preview for each of the specified document IDs.
+// Returns a map where the key is the document ID and the value is the DocumentFilePreview for the oldest file in that document.
+// Only documents that have at least one file with preview data are included in the result.
+func (r *SQLiteDocumentFileRepository) FindOldestPreviewsByDocumentIds(ctx context.Context, documentIds []string) (map[string]*DocumentFilePreview, error) {
+	if len(documentIds) == 0 {
+		return make(map[string]*DocumentFilePreview), nil
+	}
+
+	// Create placeholders for the IN clause
+	placeholders := make([]string, len(documentIds))
+	args := make([]interface{}, len(documentIds))
+	for i, id := range documentIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	// Query to find the oldest file with preview data for each document
+	// Uses ROW_NUMBER() to get the oldest file per document, then filters for those with preview data
+	query := fmt.Sprintf(`
+		SELECT 
+			DocumentId,
+			Id as DocumentFileId,
+			PreviewData,
+			PreviewType,
+			Width,
+			Height
+		FROM (
+			SELECT 
+				DocumentId,
+				Id,
+				PreviewData,
+				PreviewType,
+				Width,
+				Height,
+				ROW_NUMBER() OVER (PARTITION BY DocumentId ORDER BY CreatedAt ASC) as rn
+			FROM DocumentFile 
+			WHERE DocumentId IN (%s)
+			AND PreviewData IS NOT NULL 
+			AND PreviewType IS NOT NULL
+		) ranked_files
+		WHERE rn = 1
+	`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]*DocumentFilePreview)
+	for rows.Next() {
+		var documentId string
+		preview := &DocumentFilePreview{}
+
+		err := rows.Scan(
+			&documentId,
+			&preview.DocumentFileId,
+			&preview.PreviewData,
+			&preview.PreviewType,
+			&preview.Width,
+			&preview.Height,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		result[documentId] = preview
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

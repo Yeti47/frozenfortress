@@ -43,6 +43,7 @@ type DocumentFileRepository interface {
 	GetPreview(ctx context.Context, documentFileId string) (*DocumentFilePreview, error)
 	SetPreview(ctx context.Context, preview *DocumentFilePreview, modifiedAt time.Time) error
 	DeletePreview(ctx context.Context, documentFileId string) error
+	FindOldestPreviewsByDocumentIds(ctx context.Context, documentIds []string) (map[string]*DocumentFilePreview, error)
 }
 
 type DocumentFileMetadataRepository interface {
