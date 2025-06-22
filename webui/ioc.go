@@ -25,6 +25,7 @@ type services struct {
 	BackupWorker            workers.BackupWorker
 	Logger                  ccc.Logger
 	TagManager              documents.TagManager
+	DocumentManager         documents.DocumentManager
 }
 
 // configureServices configures the services used by the web UI.
@@ -108,6 +109,21 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 	uowFactory := documents.NewDocumentUnitOfWorkFactory(db)
 	tagManager := documents.NewDefaultTagManager(uowFactory, idGenerator, logger)
 
+	// Create document file processor factory
+	pdfProcessor := documents.NewPDFFileProcessor()
+	ocrService := createOCRService(config)
+	imageProcessor := documents.NewImageFileProcessor(ocrService)
+	processorFactory := documents.NewDefaultDocumentFileProcessorFactory(pdfProcessor, imageProcessor)
+
+	// Create document file creator
+	fileCreator := documents.NewDefaultDocumentFileCreator(idGenerator, processorFactory, logger)
+
+	// Create document sorter
+	documentSorter := documents.NewDefaultDocumentSorter[*documents.DocumentDetails]()
+
+	// Create document manager
+	documentManager := documents.NewDefaultDocumentManager(uowFactory, idGenerator, fileCreator, logger, documentSorter)
+
 	return services{
 		SignInManager:           signInManager,
 		EncryptionService:       encryptionService,
@@ -121,5 +137,6 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		BackupWorker:            backupWorker,
 		Logger:                  logger,
 		TagManager:              tagManager,
+		DocumentManager:         documentManager,
 	}
 }

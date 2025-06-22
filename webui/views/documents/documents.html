@@ -1,0 +1,783 @@
+{{template "header" .}}
+    <style>
+        /* Override body and main content layout for better space utilization */
+        body {
+            min-height: 100vh !important;
+            height: auto !important;
+            overflow: auto !important;
+        }
+        
+        .main-content {
+            align-items: flex-start !important;
+            padding: 20px 15px !important;
+            flex: 1 !important;
+            min-height: calc(100vh - 200px) !important; /* Account for header, nav, and footer */
+            overflow: visible !important;
+        }
+        
+        .content-container {
+            max-width: 1400px !important;
+            padding: 30px !important;
+            margin: 0 auto;
+            max-height: calc(100vh - 240px); /* Account for header, nav, footer, and margins */
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .documents-container {
+            width: 100%;
+            padding: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .documents-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .documents-title {
+            color: #2c3e50;
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .documents-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding-top: 3px;
+        }
+
+        .create-document-btn {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .create-document-btn:hover {
+            background: linear-gradient(135deg, #229954, #27ae60);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+        }
+
+        .sorting-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+        }
+
+        .sort-select {
+            border: none;
+            background: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .sort-direction {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .sort-direction:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        /* Filter Controls */
+        .filter-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            background: white;
+            color: #2c3e50;
+            font-size: 14px;
+            min-width: 150px;
+        }
+
+        .clear-filters-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .clear-filters-btn:hover {
+            background: #7f8c8d;
+        }
+
+        /* Documents Grid */
+        .documents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .document-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border: 1px solid #f1f3f4;
+            display: flex;
+            flex-direction: column;
+            height: 280px;
+        }
+
+        .document-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .document-preview {
+            height: 140px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .document-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+
+        .document-preview .pdf-icon {
+            font-size: 48px;
+            color: #e74c3c;
+        }
+
+        .document-preview .generic-icon {
+            font-size: 48px;
+            color: #95a5a6;
+        }
+
+        .document-info {
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .document-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0 0 8px 0;
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .document-description {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin: 0 0 12px 0;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            flex: 1;
+        }
+
+        .document-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #95a5a6;
+            margin-bottom: 8px;
+        }
+
+        .document-file-count {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .document-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: auto;
+        }
+
+        .document-tag {
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* Pagination */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+            gap: 10px;
+        }
+
+        .pagination-info {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .pagination-btn {
+            background: white;
+            border: 1px solid #e1e8ed;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .pagination-btn:hover:not(.disabled) {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .pagination-btn.current {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .pagination-btn.disabled {
+            background: #f8f9fa;
+            color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state .material-icons {
+            font-size: 64px;
+            color: #bdc3c7;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        /* Success Message */
+        .success-message {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 20px !important;
+                margin: 10px !important;
+                max-height: calc(100vh - 180px) !important;
+            }
+
+            .documents-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .documents-actions {
+                justify-content: space-between;
+            }
+
+            .documents-title {
+                font-size: 24px;
+                text-align: center;
+            }
+
+            .documents-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 4px;
+            }
+
+            .filter-select {
+                min-width: auto;
+            }
+
+            .pagination-controls {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 10px !important;
+            }
+
+            .content-container {
+                padding: 15px !important;
+            }
+
+            .document-card {
+                height: 260px;
+            }
+
+            .document-preview {
+                height: 120px;
+            }
+
+            .pagination-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
+
+        /* Tag Filter Checkboxes */
+        .filter-limit-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0 10px 0;
+            font-size: 12px;
+        }
+
+        .selected-count {
+            font-weight: 500;
+            color: #3498db;
+        }
+
+        .tags-filter-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 5px 0;
+        }
+
+        .tag-checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+            margin-bottom: 5px;
+        }
+
+        .tag-checkbox {
+            margin-right: 6px;
+            cursor: pointer;
+        }
+
+        .tag-checkbox:disabled {
+            cursor: not-allowed;
+        }
+
+        .tag-checkbox-label {
+            cursor: pointer;
+            font-size: 14px;
+            color: #2c3e50;
+            user-select: none;
+        }
+
+        .tag-checkbox-wrapper.disabled .tag-checkbox-label {
+            color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .filter-limit-message {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-top: 10px;
+        }
+
+        .text-warning {
+            color: #e67e22 !important;
+        }
+    </style>
+
+    <div class="main-content">
+        <div class="content-container">
+            <div class="documents-container">
+                {{if .SuccessMessage}}
+                    <div class="success-message">
+                        {{.SuccessMessage}}
+                    </div>
+                {{end}}
+
+                <div class="documents-header">
+                    <h1 class="documents-title">Documents</h1>
+                    <div class="documents-actions">
+                        <div class="sorting-controls">
+                            <span class="material-icons" style="font-size: 18px; color: #7f8c8d;">sort</span>
+                            <select class="sort-select" onchange="updateSorting(this.value)">
+                                <option value="title" {{if eq .SortBy "title"}}selected{{end}}>Title</option>
+                                <option value="created_at" {{if eq .SortBy "created_at"}}selected{{end}}>Created Date</option>
+                                <option value="modified_at" {{if eq .SortBy "modified_at"}}selected{{end}}>Modified Date</option>
+                            </select>
+                            <button class="sort-direction" onclick="toggleSortDirection()" title="{{if .SortAsc}}Sort Descending{{else}}Sort Ascending{{end}}">
+                                <span class="material-icons">{{if .SortAsc}}keyboard_arrow_up{{else}}keyboard_arrow_down{{end}}</span>
+                            </button>
+                        </div>
+                        <a href="/edit-document" class="create-document-btn">
+                            <span class="material-icons">add</span>
+                            New Document
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label class="filter-label">Filter by Tags:</label>
+                        <div class="filter-limit-info">
+                            <small class="text-muted">Select up to 3 tags for filtering</small>
+                            <div class="selected-count">
+                                <span id="tag-count">{{len .TagIds}}</span>/3 selected
+                            </div>
+                        </div>
+                        <div class="tags-filter-checkboxes">
+                            {{range .AllTags}}
+                            <div class="tag-checkbox-wrapper">
+                                <input class="tag-checkbox" type="checkbox" value="{{.Id}}" id="tag_{{.Id}}" name="tags"
+                                       {{range $.TagIds}}{{if eq . $.Id}}checked{{end}}{{end}}>
+                                <label class="tag-checkbox-label" for="tag_{{.Id}}">
+                                    {{.Name}}
+                                </label>
+                            </div>
+                            {{end}}
+                        </div>
+                        <div class="filter-limit-message" style="display: none;">
+                            <small class="text-warning">Maximum 3 tags can be selected for filtering. Please unselect some tags to choose others.</small>
+                        </div>
+                    </div>
+                    {{if .TagIds}}
+                        <button class="clear-filters-btn" onclick="clearFilters()">Clear Filters</button>
+                    {{end}}
+                </div>
+
+                <!-- Documents Grid -->
+                {{if .Documents}}
+                    <div class="documents-grid">
+                        {{range .Documents}}
+                            <div class="document-card">
+                                <div class="document-preview">
+                                    {{if .Preview}}
+                                        {{if eq .Preview.PreviewType "application/pdf"}}
+                                            <span class="material-icons pdf-icon">picture_as_pdf</span>
+                                        {{else}}
+                                            <img src="data:{{.Preview.PreviewType}};base64,{{printf "%s" .Preview.PreviewData}}" alt="Document preview">
+                                        {{end}}
+                                    {{else}}
+                                        <span class="material-icons generic-icon">description</span>
+                                    {{end}}
+                                </div>
+                                <div class="document-info">
+                                    <h3 class="document-title">{{.Title}}</h3>
+                                    <p class="document-description">{{.Description}}</p>
+                                    <div class="document-meta">
+                                        <span class="document-file-count">
+                                            <span class="material-icons" style="font-size: 14px;">attach_file</span>
+                                            {{.FileCount}} file{{if ne .FileCount 1}}s{{end}}
+                                        </span>
+                                        <span>{{.ModifiedAt.Format "Jan 2, 2006"}}</span>
+                                    </div>
+                                    <div class="document-tags">
+                                        {{range .Tags}}
+                                            <span class="document-tag" style="background-color: {{.Color}}20; color: {{.Color}};">{{.Name}}</span>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+                        {{end}}
+                    </div>
+                {{else}}
+                    <div class="empty-state">
+                        <span class="material-icons">description</span>
+                        <h3>No Documents Found</h3>
+                        <p>{{if .TagIds}}No documents match the selected filters.{{else}}Create your first document to get started.{{end}}</p>
+                    </div>
+                {{end}}
+
+                <!-- Pagination -->
+                {{if gt .TotalPages 1}}
+                    <div class="pagination-container">
+                        <div class="pagination-info">
+                            Showing {{if .Documents}}{{add (mul (sub .Page 1) .PageSize) 1}}-{{min (mul .Page .PageSize) .TotalCount}}{{else}}0{{end}} of {{.TotalCount}} documents
+                        </div>
+                        <div class="pagination-controls">
+                            {{if .HasPrevious}}
+                                <a href="?page={{sub .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">Previous</a>
+                            {{else}}
+                                <span class="pagination-btn disabled">Previous</span>
+                            {{end}}
+                            
+                            {{$currentPage := .Page}}
+                            {{$totalPages := .TotalPages}}
+                            {{$sortBy := .SortBy}}
+                            {{$sortAsc := .SortAsc}}
+                            {{$tagIds := .TagIds}}
+                            
+                            {{range $i := 1}}
+                                {{if le $i $totalPages}}
+                                    {{$start := max 1 (sub $currentPage 2)}}
+                                    {{$end := min $totalPages (add $currentPage 2)}}
+                                    
+                                    {{if gt $start 1}}
+                                        <a href="?page=1&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">1</a>
+                                        {{if gt $start 2}}<span class="pagination-btn disabled">...</span>{{end}}
+                                    {{end}}
+                                    
+                                    {{range $page := $start}}
+                                        {{if le $page $end}}
+                                            {{if eq $page $currentPage}}
+                                                <span class="pagination-btn current">{{$page}}</span>
+                                            {{else}}
+                                                <a href="?page={{$page}}&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">{{$page}}</a>
+                                            {{end}}
+                                        {{end}}
+                                    {{end}}
+                                    
+                                    {{if lt $end $totalPages}}
+                                        {{if lt $end (sub $totalPages 1)}}<span class="pagination-btn disabled">...</span>{{end}}
+                                        <a href="?page={{$totalPages}}&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">{{$totalPages}}</a>
+                                    {{end}}
+                                {{end}}
+                            {{end}}
+                            
+                            {{if .HasNext}}
+                                <a href="?page={{add .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">Next</a>
+                            {{else}}
+                                <span class="pagination-btn disabled">Next</span>
+                            {{end}}
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tag filter functionality with 3-tag limit
+        const MAX_TAGS = 3;
+        let selectedTags = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize selected tags from current URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const tagIds = urlParams.get('tagIds');
+            if (tagIds) {
+                selectedTags = tagIds.split(',').filter(id => id.trim() !== '');
+            }
+            
+            // Add event listeners to all tag checkboxes
+            const tagCheckboxes = document.querySelectorAll('.tag-checkbox');
+            tagCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', handleTagSelection);
+            });
+            
+            // Update UI to reflect current state
+            updateTagFilterUI();
+        });
+
+        function handleTagSelection(event) {
+            const checkbox = event.target;
+            const tagId = checkbox.value;
+            
+            if (checkbox.checked) {
+                // Add tag if not already selected and under limit
+                if (!selectedTags.includes(tagId) && selectedTags.length < MAX_TAGS) {
+                    selectedTags.push(tagId);
+                } else if (selectedTags.length >= MAX_TAGS) {
+                    // Prevent selection if at limit
+                    checkbox.checked = false;
+                    showLimitMessage();
+                    return;
+                }
+            } else {
+                // Remove tag from selection
+                selectedTags = selectedTags.filter(id => id !== tagId);
+            }
+            
+            updateTagFilterUI();
+            applyTagFilters();
+        }
+
+        function updateTagFilterUI() {
+            // Update count display
+            const countElement = document.getElementById('tag-count');
+            if (countElement) {
+                countElement.textContent = selectedTags.length;
+            }
+            
+            // Enable/disable checkboxes based on limit
+            const tagCheckboxes = document.querySelectorAll('.tag-checkbox');
+            tagCheckboxes.forEach(checkbox => {
+                const wrapper = checkbox.closest('.tag-checkbox-wrapper');
+                if (!checkbox.checked && selectedTags.length >= MAX_TAGS) {
+                    checkbox.disabled = true;
+                    wrapper.classList.add('disabled');
+                } else {
+                    checkbox.disabled = false;
+                    wrapper.classList.remove('disabled');
+                }
+            });
+            
+            // Hide limit message if under limit
+            if (selectedTags.length < MAX_TAGS) {
+                hideLimitMessage();
+            }
+        }
+
+        function showLimitMessage() {
+            const messageElement = document.querySelector('.filter-limit-message');
+            if (messageElement) {
+                messageElement.style.display = 'block';
+                setTimeout(hideLimitMessage, 3000); // Hide after 3 seconds
+            }
+        }
+
+        function hideLimitMessage() {
+            const messageElement = document.querySelector('.filter-limit-message');
+            if (messageElement) {
+                messageElement.style.display = 'none';
+            }
+        }
+
+        function applyTagFilters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (selectedTags.length > 0) {
+                urlParams.set('tagIds', selectedTags.join(','));
+            } else {
+                urlParams.delete('tagIds');
+            }
+            urlParams.set('page', '1'); // Reset to first page when filters change
+            window.location.search = urlParams.toString();
+        }
+
+        function updateSorting(newSortBy) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('sortBy', newSortBy);
+            urlParams.set('page', '1'); // Reset to first page when sorting changes
+            window.location.search = urlParams.toString();
+        }
+
+        function toggleSortDirection() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentSortAsc = urlParams.get('sortAsc') !== 'false';
+            urlParams.set('sortAsc', (!currentSortAsc).toString());
+            urlParams.set('page', '1'); // Reset to first page when sorting changes
+            window.location.search = urlParams.toString();
+        }
+
+        function clearFilters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.delete('tagIds');
+            urlParams.set('page', '1');
+            window.location.search = urlParams.toString();
+        }
+    </script>
+
+{{template "footer" .}}
