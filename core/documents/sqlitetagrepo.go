@@ -117,6 +117,20 @@ func (r *SQLiteTagRepository) FindByDocumentId(ctx context.Context, documentId s
 	return tags, rows.Err()
 }
 
+// FindByNameForUser finds a tag by name for a specific user.
+func (r *SQLiteTagRepository) FindByNameForUser(ctx context.Context, userId, name string) (*Tag, error) {
+	query := `SELECT ` + tagFieldList + ` FROM Tag WHERE UserId = ? AND Name = ?`
+	row := r.db.QueryRowContext(ctx, query, userId, name)
+	tag, err := scanTag(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // Tag not found
+		}
+		return nil, err
+	}
+	return tag, nil
+}
+
 // Add adds a new tag.
 func (r *SQLiteTagRepository) Add(ctx context.Context, tag *Tag) error {
 	query := `INSERT INTO Tag (` + tagFieldList + `) VALUES (?, ?, ?, ?, ?, ?)`

@@ -13,6 +13,7 @@ type CreateDocumentRequest struct {
 type UpdateDocumentRequest struct {
 	Title       string
 	Description string
+	TagIds      []string
 }
 
 type AddFileRequest struct {
@@ -106,6 +107,22 @@ type DocumentFileDto struct {
 	ExtractedText string // Decrypted, if available
 	Confidence    float32
 	FileData      []byte // Decrypted, only when explicitly requested
+	CreatedAt     time.Time
+	ModifiedAt    time.Time
+}
+
+// DocumentFilePreviewDto represents a document file with preview data but without full file content
+// This is used for listing files in the UI where we want preview images but not the entire file data
+type DocumentFilePreviewDto struct {
+	Id            string
+	DocumentId    string
+	FileName      string // Decrypted
+	ContentType   string
+	FileSize      int64
+	PageCount     int
+	ExtractedText string // Decrypted, if available
+	Confidence    float32
+	Preview       *DocumentPreviewDto // Preview/thumbnail data, if available
 	CreatedAt     time.Time
 	ModifiedAt    time.Time
 }

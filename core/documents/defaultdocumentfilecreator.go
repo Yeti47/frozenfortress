@@ -87,32 +87,70 @@ func (c *DefaultDocumentFileCreator) CreateDocumentFile(
 		ModifiedAt:  now,
 	}
 
-	// Process file for additional metadata (page count, etc.)
+	// Process file for additional metadata and preview
 	processor, err := c.docProcessorFactory.GetProcessor(request.ContentType)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get processor for content type %s: %w", request.ContentType, err)
 	}
 
-	_, _, pageCount, err := processor.ExtractText(ctx, request.FileData)
+	// Extract text and get page count in a single call
+	extractedText, confidence, pageCount, err := processor.ExtractText(ctx, request.FileData)
 	if err != nil {
-		c.logger.Warn("Failed to process file", "error", err, "fileId", fileId, "contentType", request.ContentType)
+		c.logger.Warn("Failed to process file for text extraction", "error", err, "fileId", fileId, "contentType", request.ContentType)
 		// Continue without processing result - not critical for file creation
 	} else {
 		documentFile.PageCount = pageCount
 	}
 
-	// Persist DocumentFile
-	if err := uow.DocumentFileRepo().Add(ctx, documentFile); err != nil {
-		return nil, nil, ccc.NewDatabaseError("failed to add document file", err)
+	// Generate preview if the processor supports it
+	var preview *DocumentFilePreview
+	previewResult, err := processor.GeneratePreview(ctx, request.FileData)
+	if err != nil {
+		c.logger.Warn("Failed to generate preview", "error", err, "fileId", fileId, "contentType", request.ContentType)
+		// Continue without preview - not critical for file creation
+	} else if previewResult != nil {
+		// Encrypt preview data if it exists
+		var encryptedPreviewData string
+		if len(previewResult.PreviewData) > 0 {
+			encryptedPreviewData, err = dataProtector.Protect(string(previewResult.PreviewData))
+			if err != nil {
+				c.logger.Error("Failed to encrypt preview data", "error", err, "fileId", fileId)
+				// Continue without preview
+			} else {
+				preview = &DocumentFilePreview{
+					DocumentFileId: fileId,
+					PreviewData:    []byte(encryptedPreviewData),
+					PreviewType:    previewResult.PreviewType,
+					Width:          previewResult.Width,
+					Height:         previewResult.Height,
+				}
+			}
+		} else if previewResult.PreviewType != "" {
+			// For non-image previews (like PDF), just store the type without data
+			preview = &DocumentFilePreview{
+				DocumentFileId: fileId,
+				PreviewData:    nil,
+				PreviewType:    previewResult.PreviewType,
+				Width:          previewResult.Width,
+				Height:         previewResult.Height,
+			}
+		}
 	}
 
-	// Extract text using processor (handles OCR for applicable file types)
+	// Persist DocumentFile with preview if available
+	if preview != nil {
+		if err := uow.DocumentFileRepo().AddWithPreview(ctx, documentFile, preview); err != nil {
+			return nil, nil, ccc.NewDatabaseError("failed to add document file with preview", err)
+		}
+	} else {
+		if err := uow.DocumentFileRepo().Add(ctx, documentFile); err != nil {
+			return nil, nil, ccc.NewDatabaseError("failed to add document file", err)
+		}
+	}
+
+	// Handle text extraction metadata
 	var documentFileMetadata *DocumentFileMetadata
-	extractedText, confidence, _, err := processor.ExtractText(ctx, request.FileData)
-	if err != nil {
-		c.logger.Warn("Failed to extract text from file", "error", err, "fileId", fileId)
-		// Continue without text extraction - not critical for file creation
-	} else if extractedText != "" {
+	if extractedText != "" {
 		// Encrypt extracted text
 		encryptedText, err := dataProtector.Protect(extractedText)
 		if err != nil {

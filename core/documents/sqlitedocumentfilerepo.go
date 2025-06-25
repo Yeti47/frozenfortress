@@ -216,7 +216,8 @@ func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documen
 	query := fmt.Sprintf(`
 	SELECT 
 		df.Id, df.DocumentId, df.FileName, df.ContentType, df.FileSize, df.PageCount, df.FileData, df.CreatedAt, df.ModifiedAt,
-		dfm.ExtractedText, dfm.OcrConfidence
+		dfm.ExtractedText, dfm.OcrConfidence,
+		df.PreviewData, df.PreviewType, df.Width, df.Height
 	FROM DocumentFile df
 	LEFT JOIN DocumentFileMetadata dfm ON df.Id = dfm.DocumentFileId
 	WHERE df.DocumentId IN (%s)
@@ -235,6 +236,10 @@ func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documen
 		var createdAtStr, modifiedAtStr string
 		var extractedText sql.NullString
 		var ocrConfidence sql.NullFloat64
+		var previewData sql.NullString
+		var previewType sql.NullString
+		var width sql.NullInt64
+		var height sql.NullInt64
 
 		err := rows.Scan(
 			// DocumentFile fields
@@ -250,6 +255,11 @@ func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documen
 			// DocumentFileMetadata fields (nullable)
 			&extractedText,
 			&ocrConfidence,
+			// DocumentFilePreview fields (nullable)
+			&previewData,
+			&previewType,
+			&width,
+			&height,
 		)
 		if err != nil {
 			continue // Skip problematic rows
@@ -280,6 +290,19 @@ func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documen
 			fileDetail.Metadata = metadata
 		}
 		// If no metadata, fileDetail.Metadata remains nil
+
+		// Handle preview (might be null if no preview exists)
+		if previewData.Valid && previewType.Valid {
+			preview := &DocumentFilePreview{
+				DocumentFileId: file.Id,
+				PreviewData:    []byte(previewData.String),
+				PreviewType:    previewType.String,
+				Width:          int(width.Int64),
+				Height:         int(height.Int64),
+			}
+			fileDetail.Preview = preview
+		}
+		// If no preview, fileDetail.Preview remains nil
 
 		fileDetails = append(fileDetails, fileDetail)
 	}

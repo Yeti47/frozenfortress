@@ -26,6 +26,7 @@ type services struct {
 	Logger                  ccc.Logger
 	TagManager              documents.TagManager
 	DocumentManager         documents.DocumentManager
+	DocumentFileManager     documents.DocumentFileManager
 }
 
 // configureServices configures the services used by the web UI.
@@ -124,6 +125,9 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 	// Create document manager
 	documentManager := documents.NewDefaultDocumentManager(uowFactory, idGenerator, fileCreator, logger, documentSorter)
 
+	// Create document file manager
+	documentFileManager := documents.NewDefaultDocumentFileManager(uowFactory, fileCreator, logger)
+
 	return services{
 		SignInManager:           signInManager,
 		EncryptionService:       encryptionService,
@@ -138,5 +142,6 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		Logger:                  logger,
 		TagManager:              tagManager,
 		DocumentManager:         documentManager,
+		DocumentFileManager:     documentFileManager,
 	}
 }

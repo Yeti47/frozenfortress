@@ -19,7 +19,7 @@
             max-width: 1400px !important;
             padding: 30px !important;
             margin: 0 auto;
-            max-height: calc(100vh - 300px); /* Account for header, nav, footer, and margins */
+            min-height: calc(100vh - 300px); /* Account for header, nav, footer, and margins */
             display: flex;
             flex-direction: column;
             background-color: rgba(255, 255, 255, 0.95);
@@ -61,24 +61,29 @@
         }
 
         .create-tag-btn {
-            background: linear-gradient(135deg, #3498db, #2980b9);
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: 600;
+            border-radius: 8px;
+            padding: 12px 20px;
             font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+            text-decoration: none;
         }
 
         .create-tag-btn:hover {
+            background: linear-gradient(135deg, #229954, #27ae60);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+        }
+
+        .create-tag-btn .button-text-short {
+            display: none;
         }
 
         .tags-container .search-container {
@@ -341,8 +346,12 @@
         /* Responsive design */
         @media (max-width: 1200px) {
             .content-container {
-                max-width: 95%;
-                padding: 20px;
+                padding: 25px !important;
+                min-height: calc(100vh - 220px) !important;
+            }
+            
+            .main-content {
+                padding: 15px 10px !important;
             }
             
             .tags-grid {
@@ -352,44 +361,48 @@
         }
         
         @media (max-width: 768px) {
-            .main-content {
-                padding: 15px 10px;
-                min-height: calc(100vh - 220px);
+            .content-container {
+                padding: 20px !important;
+                margin: 0;
+                min-height: calc(100vh - 140px) !important;
             }
             
-            .content-container {
-                padding: 20px 15px;
-                max-height: calc(100vh - 260px);
+            .main-content {
+                padding: 10px 5px !important;
             }
             
             .tags-header {
                 flex-direction: column;
                 align-items: stretch;
-                gap: 15px;
+                margin-bottom: 20px;
             }
             
             .tags-actions {
-                flex-direction: column;
-                gap: 10px;
+                justify-content: space-between;
             }
             
             .tags-container .search-container {
                 max-width: none;
+                flex: 1;
             }
             
             .tags-grid {
                 grid-template-columns: 1fr;
                 gap: 15px;
             }
-            
-            .modal-content {
-                width: 95%;
-                margin: 10% auto;
-                padding: 20px;
-            }
         }
         
         @media (max-width: 480px) {
+            .content-container {
+                padding: 15px !important;
+                border-radius: 15px !important;
+                min-height: calc(100vh - 120px) !important;
+            }
+            
+            .main-content {
+                padding: 5px !important;
+            }
+
             .tags-title {
                 font-size: 24px;
             }
@@ -411,6 +424,14 @@
                 height: 32px;
                 padding: 6px;
             }
+
+            .create-tag-btn .button-text-full {
+                display: none;
+            }
+
+            .create-tag-btn .button-text-short {
+                display: none;
+            }
         }
     </style>
 
@@ -431,7 +452,8 @@
                 </div>
                 <button class="create-tag-btn" onclick="window.location.href='/edit-tag'">
                     <span class="material-icons">add</span>
-                    Create Tag
+                    <span class="button-text-full">New Tag</span>
+                    <span class="button-text-short">New</span>
                 </button>
             </div>
         </div>

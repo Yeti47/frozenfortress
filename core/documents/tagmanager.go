@@ -62,6 +62,20 @@ func (m *DefaultTagManager) CreateTag(ctx context.Context, userId string, reques
 	uow := m.uowFactory.Create()
 	var tag *Tag
 	err := uow.Execute(ctx, func(uow DocumentUnitOfWork) error {
+		// Check if a tag with the same name already exists for this user
+		existingTag, err := uow.TagRepo().FindByNameForUser(ctx, userId, request.Name)
+		if err != nil {
+			m.logger.Error("Failed to check for existing tag", "userId", userId, "name", request.Name, "err", err)
+			return ccc.NewDatabaseError("check for existing tag", err)
+		}
+		if existingTag != nil {
+			return ccc.NewInvalidInputErrorWithMessage(
+				"name",
+				"already exists",
+				fmt.Sprintf("A tag with the name '%s' already exists.", request.Name),
+			)
+		}
+
 		tag = &Tag{
 			Id:         m.idGenerator.GenerateId(),
 			UserId:     userId,
@@ -164,6 +178,23 @@ func (m *DefaultTagManager) UpdateTag(ctx context.Context, userId, tagId string,
 			m.logger.Warn("Tag not found or not owned by user for update", "userId", userId, "tagId", tagId)
 			return ccc.NewResourceNotFoundError(tagId, "Tag")
 		}
+
+		// Check for duplicate name if the name is being changed
+		if request.Name != "" && request.Name != tag.Name {
+			existingTag, err := uow.TagRepo().FindByNameForUser(ctx, userId, request.Name)
+			if err != nil {
+				m.logger.Error("Failed to check for existing tag during update", "userId", userId, "name", request.Name, "err", err)
+				return ccc.NewDatabaseError("check for existing tag", err)
+			}
+			if existingTag != nil {
+				return ccc.NewInvalidInputErrorWithMessage(
+					"name",
+					"already exists",
+					fmt.Sprintf("A tag with the name '%s' already exists.", request.Name),
+				)
+			}
+		}
+
 		if request.Name != "" {
 			tag.Name = request.Name
 		}

@@ -52,10 +52,26 @@ type DocumentFilePreview struct {
 	Height         int    // Preview image height
 }
 
+// ExtendedDocumentFileMetadata combines DocumentFileMetadata with lightweight DocumentFile fields
+// This is used for efficient searching without loading the full file data
+type ExtendedDocumentFileMetadata struct {
+	DocumentFileId string
+	DocumentId     string
+	FileName       string // Encrypted file name
+	ContentType    string
+	FileSize       int64
+	PageCount      int
+	CreatedAt      time.Time
+	ModifiedAt     time.Time
+	ExtractedText  string // Encrypted extracted text
+	OcrConfidence  float32
+}
+
 // DocumentFileDetails combines DocumentFile with its optional metadata
 type DocumentFileDetails struct {
 	File     *DocumentFile
 	Metadata *DocumentFileMetadata // Can be nil if no metadata exists
+	Preview  *DocumentFilePreview  // Can be nil if no preview exists
 }
 
 // PreviewGenerationResult encapsulates the result of preview generation

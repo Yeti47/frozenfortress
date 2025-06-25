@@ -1,0 +1,1572 @@
+{{template "header" .}}
+    <style>
+        /* Override body and main content layout for better space utilization */
+        body {
+            min-height: 100vh !important;
+            height: auto !important;
+            overflow: auto !important;
+        }
+        
+        .main-content {
+            align-items: flex-start !important;
+            padding: 20px 15px !important;
+            flex: 1 !important;
+            min-height: calc(100vh - 200px) !important;
+            overflow: visible !important;
+        }
+        
+        .content-container {
+            max-width: 1200px !important;
+            padding: 30px !important;
+            margin: 0 auto;
+            min-height: calc(100vh - 240px);
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        .view-document-container {
+            width: 100%;
+            padding: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+
+        .document-title-section {
+            flex: 1;
+        }
+
+        .document-title {
+            color: #2c3e50;
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            line-height: 1.2;
+        }
+
+        .document-metadata {
+            color: #7f8c8d;
+            font-size: 14px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .action-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #1f618d);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+
+        .action-btn.secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .action-btn.secondary:hover {
+            background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+        }
+
+        .action-btn.edit {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .action-btn.edit:hover {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+        }
+
+        /* Tab System */
+        .tab-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tab-navigation {
+            display: flex;
+            border-bottom: 2px solid #e1e8ed;
+            margin-bottom: 30px;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #7f8c8d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-button:hover {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .tab-button.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        .tab-content {
+            flex: 1;
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* General Tab Styles */
+        .general-info {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        .info-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f3f4;
+        }
+
+        .info-section h3 {
+            color: #2c3e50;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .description-text {
+            color: #5a6c7d;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .document-tag {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .no-tags {
+            color: #95a5a6;
+            font-style: italic;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Files Tab Styles */
+        .files-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .files-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .files-count {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .file-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border: 1px solid #f1f3f4;
+        }
+
+        .file-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .file-preview {
+            height: 160px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+
+        .file-preview .pdf-icon {
+            font-size: 48px;
+            color: #e74c3c;
+        }
+
+        .file-preview .generic-icon {
+            font-size: 48px;
+            color: #95a5a6;
+        }
+
+        .file-info {
+            padding: 16px;
+        }
+
+        .file-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0 0 8px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: #95a5a6;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .file-btn {
+            background: none;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none;
+            color: #6c757d;
+        }
+
+        .file-btn:hover {
+            background-color: #f8f9fa;
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        .file-btn.primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-color: #3498db;
+        }
+
+        .file-btn.primary:hover {
+            background: linear-gradient(135deg, #2980b9, #1f618d);
+        }
+
+        /* Empty state for files */
+        .files-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .files-empty .material-icons {
+            font-size: 64px;
+            color: #bdc3c7;
+            margin-bottom: 20px;
+        }
+
+        .files-empty h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+
+        .files-empty p {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        /* Success/Error Messages */
+        .success-message {
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(46, 204, 113, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.5s ease;
+            transition: all 0.4s ease;
+            overflow: hidden;
+        }
+
+        .success-message.fadeOut {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-width: 0;
+        }
+
+        .error-message {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(231, 76, 60, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.5s ease;
+            transition: all 0.4s ease;
+            overflow: hidden;
+        }
+
+        .error-message.fadeOut {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-width: 0;
+        }
+
+        /* File Metadata Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #7f8c8d;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: #f8f9fa;
+            color: #e74c3c;
+        }
+
+        .metadata-section {
+            margin-bottom: 25px;
+        }
+
+        .metadata-section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0 0 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px 20px;
+            align-items: start;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: #5a6c7d;
+        }
+
+        .metadata-value {
+            color: #2c3e50;
+            word-break: break-word;
+        }
+
+        .metadata-value.code {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .extracted-text {
+            background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 20px;
+            background: #e1e8ed;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c 0%, #f39c12 50%, #27ae60 100%);
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .confidence-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Enhanced extracted text styling */
+        .extracted-text-container {
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .extracted-text-header {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .text-length {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .expand-text-btn {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .expand-text-btn:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .expand-text-btn .material-icons {
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .expand-text-btn.expanded .material-icons {
+            transform: rotate(180deg);
+        }
+
+        .extracted-text {
+            background: #f8f9fa;
+            padding: 15px;
+            font-family: 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-y: auto;
+            transition: max-height 0.3s ease;
+        }
+
+        .extracted-text.collapsed {
+            max-height: 120px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .extracted-text.collapsed::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(transparent, #f8f9fa);
+            pointer-events: none;
+        }
+
+        .extracted-text.expanded {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .no-text-message {
+            text-align: center;
+            padding: 30px 15px;
+            color: #7f8c8d;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .no-text-message .material-icons {
+            font-size: 32px;
+            color: #bdc3c7;
+            margin-bottom: 10px;
+        }
+
+        .no-text-message p {
+            margin: 0;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                margin: 10px;
+                padding: 15px;
+                max-height: 95vh;
+                width: calc(100% - 20px);
+                border-radius: 8px;
+            }
+            
+            .modal-header {
+                margin-bottom: 20px;
+                padding-bottom: 12px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .modal-title {
+                font-size: 20px;
+                line-height: 1.3;
+            }
+            
+            .modal-close {
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                font-size: 20px;
+                padding: 8px;
+            }
+            
+            .metadata-section {
+                margin-bottom: 20px;
+            }
+            
+            .metadata-section h3 {
+                font-size: 16px;
+                margin-bottom: 12px;
+            }
+            
+            .metadata-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+            }
+            
+            .metadata-label {
+                font-size: 14px;
+                font-weight: 700;
+                color: #2c3e50;
+                margin-bottom: 4px;
+                padding-bottom: 4px;
+                border-bottom: 1px solid #e1e8ed;
+            }
+            
+            .metadata-value {
+                font-size: 14px;
+                margin-bottom: 12px;
+                padding-left: 8px;
+            }
+            
+            .metadata-value.code {
+                font-size: 12px;
+                padding: 8px 12px;
+                margin: 4px 0;
+                border-radius: 6px;
+            }
+            
+            .extracted-text {
+                font-size: 14px;
+                padding: 12px;
+                max-height: 150px;
+                border-radius: 6px;
+            }
+            
+            .confidence-bar {
+                height: 24px;
+                border-radius: 12px;
+            }
+            
+            .confidence-text {
+                font-size: 11px;
+            }
+            
+            /* Mobile extracted text optimizations */
+            .extracted-text-header {
+                padding: 8px 12px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            
+            .text-length {
+                text-align: center;
+                font-size: 11px;
+            }
+            
+            .expand-text-btn {
+                justify-content: center;
+                padding: 8px;
+                font-size: 13px;
+            }
+            
+            .extracted-text.collapsed {
+                max-height: 100px;
+            }
+            
+            .extracted-text.expanded {
+                max-height: 250px;
+            }
+            
+            .extracted-text {
+                font-size: 13px;
+                padding: 12px;
+            }
+        }
+
+        /* File Metadata Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #7f8c8d;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: #f8f9fa;
+            color: #e74c3c;
+        }
+
+        .metadata-section {
+            margin-bottom: 25px;
+        }
+
+        .metadata-section h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0 0 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px 20px;
+            align-items: start;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: #5a6c7d;
+        }
+
+        .metadata-value {
+            color: #2c3e50;
+            word-break: break-word;
+        }
+
+        .metadata-value.code {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .extracted-text {
+            background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 20px;
+            background: #e1e8ed;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c 0%, #f39c12 50%, #27ae60 100%);
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .confidence-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .loading .material-icons {
+            font-size: 48px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .content-container {
+                padding: 20px !important;
+                margin: 0;
+            }
+
+            .document-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .document-actions {
+                justify-content: space-between;
+            }
+
+            .document-title {
+                font-size: 24px;
+            }
+
+            .tab-navigation {
+                overflow-x: auto;
+            }
+
+            .tab-button {
+                white-space: nowrap;
+                min-width: 120px;
+            }
+
+            .files-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .document-metadata {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .file-actions {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .action-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            /* Extra small screen modal optimizations */
+            .modal-content {
+                margin: 5px;
+                padding: 12px;
+                width: calc(100% - 10px);
+                max-height: 98vh;
+                border-radius: 6px;
+            }
+            
+            .modal-header {
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+            }
+            
+            .modal-title {
+                font-size: 18px;
+                padding-right: 35px; /* Space for close button */
+            }
+            
+            .modal-close {
+                top: 12px;
+                right: 12px;
+                font-size: 18px;
+                padding: 6px;
+            }
+            
+            .metadata-section h3 {
+                font-size: 15px;
+                margin-bottom: 10px;
+            }
+            
+            .metadata-grid {
+                padding: 12px;
+                gap: 10px;
+            }
+            
+            .metadata-label {
+                font-size: 13px;
+            }
+            
+            .metadata-value {
+                font-size: 13px;
+                margin-bottom: 10px;
+            }
+            
+            .extracted-text {
+                font-size: 13px;
+                padding: 10px;
+                max-height: 120px;
+            }
+            
+            .confidence-bar {
+                height: 20px;
+            }
+            
+            .confidence-text {
+                font-size: 10px;
+            }
+        }
+
+        /* Modal header override styles to ensure clean appearance */
+        #fileMetadataModal .modal-header {
+            background: white !important;
+            background-color: white !important;
+        }
+
+        #fileMetadataModal .modal-title {
+            background: none !important;
+            background-color: transparent !important;
+        }
+
+        #fileMetadataModal .modal-content {
+            background: white !important;
+        }
+    </style>
+
+    <div class="view-document-container">
+        {{if .SuccessMessage}}
+        <div class="success-message">
+            <span class="material-icons">check_circle</span>
+            {{.SuccessMessage}}
+        </div>
+        {{end}}
+
+        {{if .ErrorMessage}}
+        <div class="error-message">
+            <span class="material-icons">error</span>
+            {{.ErrorMessage}}
+        </div>
+        {{end}}
+
+        <div class="document-header">
+            <div class="document-title-section">
+                <h1 class="document-title">{{.Document.Title}}</h1>
+                <div class="document-metadata">
+                    <div class="metadata-item">
+                        <span class="material-icons" style="font-size: 16px;">event</span>
+                        <span>Created: {{.Document.CreatedAt.Format "2006-01-02 15:04"}}</span>
+                    </div>
+                    <div class="metadata-item">
+                        <span class="material-icons" style="font-size: 16px;">update</span>
+                        <span>Modified: {{.Document.ModifiedAt.Format "2006-01-02 15:04"}}</span>
+                    </div>
+                    <div class="metadata-item">
+                        <span class="material-icons" style="font-size: 16px;">attach_file</span>
+                        <span>{{.Document.FileCount}} file{{if ne .Document.FileCount 1}}s{{end}}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="document-actions">
+                <a href="/edit-document?id={{.Document.Id}}&returnTo=view-document" class="action-btn edit">
+                    <span class="material-icons">edit</span>
+                    Edit
+                </a>
+                <a href="/documents" class="action-btn secondary">
+                    <span class="material-icons">arrow_back</span>
+                    Back to Documents
+                </a>
+            </div>
+        </div>
+
+        <div class="tab-container">
+            <div class="tab-navigation">
+                <button class="tab-button active" onclick="switchTab('general')">
+                    <span class="material-icons" style="font-size: 18px; margin-right: 5px;">info</span>
+                    General
+                </button>
+                <button class="tab-button" onclick="switchTab('files')">
+                    <span class="material-icons" style="font-size: 18px; margin-right: 5px;">attach_file</span>
+                    Files ({{.Document.FileCount}})
+                </button>
+            </div>
+
+            <!-- General Tab -->
+            <div id="general-tab" class="tab-content active">
+                <div class="general-info">
+                    <div class="info-section">
+                        <h3>
+                            <span class="material-icons">description</span>
+                            Description
+                        </h3>
+                        {{if .Document.Description}}
+                            <p class="description-text">{{.Document.Description}}</p>
+                        {{else}}
+                            <p class="description-text" style="color: #95a5a6; font-style: italic;">No description provided</p>
+                        {{end}}
+                    </div>
+
+                    <div class="info-section">
+                        <h3>
+                            <span class="material-icons">label</span>
+                            Tags
+                        </h3>
+                        {{if .Document.Tags}}
+                            <div class="tags-container">
+                                {{range .Document.Tags}}
+                                    <span class="document-tag" style="background-color: {{.Color}};">
+                                        {{.Name}}
+                                    </span>
+                                {{end}}
+                            </div>
+                        {{else}}
+                            <p class="no-tags">No tags assigned</p>
+                        {{end}}
+                    </div>
+
+                    <div class="info-section">
+                        <h3>
+                            <span class="material-icons">analytics</span>
+                            Statistics
+                        </h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">{{.Document.FileCount}}</div>
+                                <div class="stat-label">Files</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{len .Document.Tags}}</div>
+                                <div class="stat-label">Tags</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{if .Document.Preview}}Yes{{else}}No{{end}}</div>
+                                <div class="stat-label">Preview</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Files Tab -->
+            <div id="files-tab" class="tab-content">
+                <div class="files-container">
+                    <div class="files-header">
+                        <div class="files-count" id="files-count-display">
+                            Loading files...
+                        </div>
+                    </div>
+                    <div id="files-content">
+                        <div class="loading">
+                            <span class="material-icons">hourglass_empty</span>
+                            <p>Loading files...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Metadata Modal -->
+    <div id="fileMetadataModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">File Details</h2>
+                <button class="modal-close" onclick="closeFileMetadataModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div id="fileMetadataContent">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let filesLoaded = false;
+
+        function switchTab(tabName) {
+            // Remove active class from all tabs and buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and button
+            document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            // Load files when Files tab is clicked for the first time
+            if (tabName === 'files' && !filesLoaded) {
+                loadDocumentFiles();
+                filesLoaded = true;
+            }
+        }
+
+        function loadDocumentFiles() {
+            const documentId = '{{.Document.Id}}';
+            const filesContent = document.getElementById('files-content');
+            const filesCountDisplay = document.getElementById('files-count-display');
+
+            fetch(`/api/documents/${documentId}/files`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Always call renderFiles regardless of whether files array is empty
+                        const files = data.files || [];
+                        renderFiles(files);
+                        filesCountDisplay.textContent = `${files.length} file${files.length !== 1 ? 's' : ''}`;
+                    } else {
+                        showFilesError(data.error || 'Failed to load files');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading files:', error);
+                    showFilesError('Failed to load files. Please try again.');
+                });
+        }
+
+        function renderFiles(files) {
+            const filesContent = document.getElementById('files-content');
+            
+            // Store files data globally for metadata modal access
+            window.currentDocumentFiles = files;
+            
+            if (files.length === 0) {
+                filesContent.innerHTML = `
+                    <div class="files-empty">
+                        <span class="material-icons">folder_open</span>
+                        <h3>No Files</h3>
+                        <p>This document doesn't have any files attached.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const filesGrid = files.map(file => {
+                const sizeFormatted = formatFileSize(file.FileSize);
+                const previewHtml = getFilePreviewHtml(file);
+                
+                return `
+                    <div class="file-card">
+                        <div class="file-preview">
+                            ${previewHtml}
+                        </div>
+                        <div class="file-info">
+                            <h4 class="file-name" title="${file.FileName}">${file.FileName}</h4>
+                            <div class="file-details">
+                                <span>${file.ContentType}</span>
+                                <span>${sizeFormatted}</span>
+                            </div>
+                            <div class="file-actions">
+                                <a href="/api/documents/${file.DocumentId}/files/${file.Id}/download" 
+                                   target="_blank" class="file-btn primary">
+                                    <span class="material-icons" style="font-size: 14px;">download</span>
+                                    Download
+                                </a>
+                                <button onclick="showFileMetadata('${file.Id}')" class="file-btn">
+                                    <span class="material-icons" style="font-size: 14px;">info</span>
+                                    Details
+                                </button>
+                                ${canOpenInNewTab(file.ContentType) ? 
+                                    `<a href="/api/documents/${file.DocumentId}/files/${file.Id}/view" 
+                                       target="_blank" class="file-btn">
+                                        <span class="material-icons" style="font-size: 14px;">open_in_new</span>
+                                        View
+                                    </a>` : ''
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            filesContent.innerHTML = `<div class="files-grid">${filesGrid}</div>`;
+        }
+
+        function getFilePreviewHtml(file) {
+            if (file.Preview && file.Preview.PreviewData) {
+                if (file.Preview.PreviewType === 'application/pdf') {
+                    return '<span class="material-icons pdf-icon">picture_as_pdf</span>';
+                } else {
+                    return `<img src="data:${file.Preview.PreviewType};base64,${file.Preview.PreviewData}" alt="File preview">`;
+                }
+            } else {
+                // Fallback icons based on content type
+                if (file.ContentType.startsWith('image/')) {
+                    return '<span class="material-icons generic-icon">image</span>';
+                } else if (file.ContentType === 'application/pdf') {
+                    return '<span class="material-icons pdf-icon">picture_as_pdf</span>';
+                } else {
+                    return '<span class="material-icons generic-icon">description</span>';
+                }
+            }
+        }
+
+        function canOpenInNewTab(contentType) {
+            return contentType.startsWith('image/') || contentType === 'application/pdf';
+        }
+
+        function formatFileSize(bytes) {
+            // Handle undefined, null, or non-numeric values
+            if (bytes == null || isNaN(bytes) || bytes < 0) return '0 B';
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function showFileMetadata(fileId) {
+            // Find the file data from the already loaded files
+            const filesContent = document.getElementById('files-content');
+            if (!filesContent) return;
+
+            // We need to store the files data when they're loaded
+            const files = window.currentDocumentFiles || [];
+            const file = files.find(f => f.Id === fileId);
+            
+            if (!file) {
+                alert('File data not found. Please refresh the page and try again.');
+                return;
+            }
+
+            showFileMetadataModal(file);
+        }
+
+        function showFileMetadataModal(file) {
+            const modal = document.getElementById('fileMetadataModal');
+            const content = document.getElementById('fileMetadataContent');
+            
+            // Format dates
+            const createdDate = new Date(file.CreatedAt).toLocaleString();
+            const modifiedDate = new Date(file.ModifiedAt).toLocaleString();
+            
+            // Format file size
+            const sizeFormatted = formatFileSize(file.FileSize);
+            
+            // Calculate confidence percentage
+            const confidencePercent = Math.round((file.Confidence || 0) * 100);
+            
+            // Build the modal content
+            content.innerHTML = `
+                <div class="metadata-section">
+                    <h3><span class="material-icons">description</span>File Information</h3>
+                    <div class="metadata-grid">
+                        <div class="metadata-label">File Name:</div>
+                        <div class="metadata-value">${file.FileName}</div>
+                        
+                        <div class="metadata-label">File Type:</div>
+                        <div class="metadata-value">${file.ContentType}</div>
+                        
+                        <div class="metadata-label">File Size:</div>
+                        <div class="metadata-value">${sizeFormatted}</div>
+                        
+                        <div class="metadata-label">Page Count:</div>
+                        <div class="metadata-value">${file.PageCount || 'N/A'}</div>
+                        
+                        <div class="metadata-label">File ID:</div>
+                        <div class="metadata-value code">${file.Id}</div>
+                        
+                        <div class="metadata-label">Document ID:</div>
+                        <div class="metadata-value code">${file.DocumentId}</div>
+                    </div>
+                </div>
+                
+                <div class="metadata-section">
+                    <h3><span class="material-icons">schedule</span>Timestamps</h3>
+                    <div class="metadata-grid">
+                        <div class="metadata-label">Created:</div>
+                        <div class="metadata-value">${createdDate}</div>
+                        
+                        <div class="metadata-label">Modified:</div>
+                        <div class="metadata-value">${modifiedDate}</div>
+                    </div>
+                </div>
+                
+                ${file.ExtractedText && file.ExtractedText.trim() || file.Confidence !== undefined ? `
+                <div class="metadata-section">
+                    <h3><span class="material-icons">text_fields</span>Extracted Text</h3>
+                    ${file.Confidence !== undefined ? `
+                    <div class="metadata-grid" style="margin-bottom: 15px;">
+                        <div class="metadata-label">Confidence:</div>
+                        <div class="metadata-value">
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: ${confidencePercent}%"></div>
+                                <div class="confidence-text">${confidencePercent}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${file.ExtractedText && file.ExtractedText.trim() ? `
+                    <div class="extracted-text-container">
+                        <div class="extracted-text-header">
+                            <span class="text-length">${file.ExtractedText.trim().length} characters</span>
+                            <button class="expand-text-btn" onclick="toggleExtractedText(this)">
+                                <span class="material-icons">expand_more</span>
+                                <span class="expand-text">Expand</span>
+                            </button>
+                        </div>
+                        <div class="extracted-text collapsed">${file.ExtractedText}</div>
+                    </div>
+                    ` : `
+                    <div class="no-text-message">
+                        <span class="material-icons">text_snippet</span>
+                        <p>No text was extracted from this file.</p>
+                    </div>
+                    `}
+                </div>
+                ` : ''}
+            `;
+            
+            // Show the modal
+            modal.classList.add('active');
+            
+            // Add click outside to close
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    closeFileMetadataModal();
+                }
+            };
+        }
+
+        function closeFileMetadataModal() {
+            const modal = document.getElementById('fileMetadataModal');
+            modal.classList.remove('active');
+            modal.onclick = null;
+        }
+
+        function toggleExtractedText(button) {
+            const extractedText = button.closest('.extracted-text-container').querySelector('.extracted-text');
+            const expandText = button.querySelector('.expand-text');
+            const icon = button.querySelector('.material-icons');
+            
+            if (extractedText.classList.contains('collapsed')) {
+                // Expand
+                extractedText.classList.remove('collapsed');
+                extractedText.classList.add('expanded');
+                button.classList.add('expanded');
+                expandText.textContent = 'Collapse';
+            } else {
+                // Collapse
+                extractedText.classList.remove('expanded');
+                extractedText.classList.add('collapsed');
+                button.classList.remove('expanded');
+                expandText.textContent = 'Expand';
+            }
+        }
+
+        // Add keyboard support for closing modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('fileMetadataModal');
+                if (modal.classList.contains('active')) {
+                    closeFileMetadataModal();
+                }
+            }
+        });
+
+        function showFilesError(message) {
+            const filesContent = document.getElementById('files-content');
+            filesContent.innerHTML = `
+                <div class="files-empty">
+                    <span class="material-icons">error</span>
+                    <h3>Error Loading Files</h3>
+                    <p>${message}</p>
+                    <button onclick="loadDocumentFiles()" class="action-btn" style="margin-top: 15px;">
+                        <span class="material-icons">refresh</span>
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        // Auto-dismiss messages
+        setTimeout(() => {
+            const messages = document.querySelectorAll('.success-message, .error-message');
+            messages.forEach(msg => {
+                msg.classList.add('fadeOut');
+                setTimeout(() => msg.remove(), 400);
+            });
+        }, 3000);
+    </script>
+
+{{template "footer" .}}

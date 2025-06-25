@@ -30,6 +30,14 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, tagMan
 	router.DELETE("/tags/:id", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
 		handleDeleteTag(c, signInManager, tagManager, logger)
 	})
+
+	// API routes for tag management
+	router.GET("/api/tags", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
+		handleGetTagsAPI(c, signInManager, tagManager, logger)
+	})
+	router.POST("/api/tags", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
+		handleCreateTagAPI(c, signInManager, tagManager, logger)
+	})
 }
 
 // handleTagsPage handles the tags management page
@@ -189,4 +197,78 @@ func handleEditTagSubmit(c *gin.Context, signInManager auth.SignInManager, tagMa
 		// Redirect to tags page with success message
 		c.Redirect(http.StatusSeeOther, "/tags?success=created")
 	}
+}
+
+// API Handlers
+
+// handleGetTagsAPI returns all tags for the current user as JSON
+func handleGetTagsAPI(c *gin.Context, signInManager auth.SignInManager, tagManager documents.TagManager, logger ccc.Logger) {
+	// Get current user
+	user, err := signInManager.GetCurrentUser(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Get all tags for the user
+	tags, err := tagManager.GetUserTags(context.Background(), user.Id)
+	if middleware.HandleErrorWithJson(c, err, "Failed to retrieve tags") {
+		return
+	}
+
+	// Convert to simple JSON format for API
+	tagData := make([]gin.H, len(tags))
+	for i, tag := range tags {
+		tagData[i] = gin.H{
+			"id":    tag.Id,
+			"name":  tag.Name,
+			"color": tag.Color,
+		}
+	}
+
+	c.JSON(http.StatusOK, tagData)
+}
+
+// handleCreateTagAPI creates a new tag via API
+func handleCreateTagAPI(c *gin.Context, signInManager auth.SignInManager, tagManager documents.TagManager, logger ccc.Logger) {
+	// Get current user
+	user, err := signInManager.GetCurrentUser(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Parse JSON request
+	var request struct {
+		Name  string `json:"name" binding:"required"`
+		Color string `json:"color"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		return
+	}
+
+	// Set default color if not provided
+	if request.Color == "" {
+		request.Color = "#3498db"
+	}
+
+	// Create new tag
+	createRequest := documents.CreateTagRequest{
+		Name:  request.Name,
+		Color: request.Color,
+	}
+
+	tag, err := tagManager.CreateTag(context.Background(), user.Id, createRequest)
+	if middleware.HandleErrorWithJson(c, err, "Failed to create tag") {
+		return
+	}
+
+	// Return the created tag
+	c.JSON(http.StatusCreated, gin.H{
+		"id":    tag.Id,
+		"name":  tag.Name,
+		"color": tag.Color,
+	})
 }

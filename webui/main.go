@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"os"
@@ -63,6 +64,9 @@ func registerRoutes(router *gin.Engine, svc services) {
 		"sub": func(a, b int) int {
 			return a - b
 		},
+		"mul": func(a, b int) int {
+			return a * b
+		},
 		"min": func(a, b int) int {
 			if a < b {
 				return a
@@ -74,6 +78,23 @@ func registerRoutes(router *gin.Engine, svc services) {
 				return a
 			}
 			return b
+		},
+		"base64": func(data []byte) string {
+			return base64.StdEncoding.EncodeToString(data)
+		},
+		"dict": func(values ...any) map[string]any {
+			if len(values)%2 != 0 {
+				panic("dict requires an even number of arguments")
+			}
+			dict := make(map[string]any)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					panic("dict keys must be strings")
+				}
+				dict[key] = values[i+1]
+			}
+			return dict
 		},
 	}
 
@@ -87,7 +108,7 @@ func registerRoutes(router *gin.Engine, svc services) {
 	// Register routes from modules
 	secretsview.RegisterRoutes(router, svc.SignInManager, svc.SecretManager, svc.MekStore, svc.EncryptionService, svc.Logger)
 	tagsview.RegisterRoutes(router, svc.SignInManager, svc.TagManager, svc.Logger)
-	documentsview.RegisterRoutes(router, svc.SignInManager, svc.DocumentManager, svc.TagManager, svc.MekStore, svc.EncryptionService, svc.Logger)
+	documentsview.RegisterRoutes(router, svc.SignInManager, svc.DocumentManager, svc.DocumentFileManager, svc.TagManager, svc.MekStore, svc.EncryptionService, svc.Logger)
 	login.RegisterRoutes(router, svc.SignInManager)
 	register.RegisterRoutes(router, svc.UserManager)
 	recovery.RegisterRoutes(router, svc.SignInManager)

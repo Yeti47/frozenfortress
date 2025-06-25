@@ -49,6 +49,7 @@ type DocumentFileRepository interface {
 type DocumentFileMetadataRepository interface {
 	FindByDocumentFileId(ctx context.Context, fileId string) (*DocumentFileMetadata, error)
 	FindByDocumentId(ctx context.Context, documentId string) ([]*DocumentFileMetadata, error)
+	FindExtended(ctx context.Context, documentIds []string) ([]*ExtendedDocumentFileMetadata, error)
 	Add(ctx context.Context, metadata *DocumentFileMetadata) error
 	Update(ctx context.Context, metadata *DocumentFileMetadata) error
 	Delete(ctx context.Context, fileId string) error
@@ -59,6 +60,7 @@ type TagRepository interface {
 	FindById(ctx context.Context, tagId string) (*Tag, error)
 	FindByUserId(ctx context.Context, userId string) ([]*Tag, error)
 	FindByDocumentId(ctx context.Context, documentId string) ([]*Tag, error)
+	FindByNameForUser(ctx context.Context, userId, name string) (*Tag, error)
 	Add(ctx context.Context, tag *Tag) error
 	Update(ctx context.Context, tag *Tag) error
 	Delete(ctx context.Context, tagId string) error
@@ -140,16 +142,9 @@ type DocumentManager interface {
 type DocumentFileManager interface {
 	AddDocumentFile(ctx context.Context, userId, documentId string, request AddFileRequest, dataProtector dataprotection.DataProtector) (*DocumentFileDto, error)
 	GetDocumentFiles(ctx context.Context, userId, documentId string, dataProtector dataprotection.DataProtector) ([]*DocumentFileDto, error)
+	GetDocumentFilePreviews(ctx context.Context, userId, documentId string, dataProtector dataprotection.DataProtector) ([]*DocumentFilePreviewDto, error)
 	GetDocumentFile(ctx context.Context, userId, documentId, fileId string, dataProtector dataprotection.DataProtector) (*DocumentFileDto, error)
 	DeleteDocumentFile(ctx context.Context, userId, documentId, fileId string) error
-}
-
-// High-level Document Tag Manager - consumer-facing service.
-// DocumentTagManager handles tagging operations for documents
-type DocumentTagManager interface {
-	TagDocument(ctx context.Context, userId, documentId, tagId string) error
-	UntagDocument(ctx context.Context, userId, documentId, tagId string) error
-	GetDocumentTags(ctx context.Context, userId, documentId string) ([]*TagDto, error)
 }
 
 // Tag Manager - dedicated service for tag CRUD operations

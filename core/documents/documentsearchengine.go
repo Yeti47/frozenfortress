@@ -264,71 +264,6 @@ type ocrMatch struct {
 	OcrConfidence   float32
 }
 
-// collectFileMatches aggregates file-level matches for a document
-func (s *DefaultDocumentSearchEngine) collectFileMatches(
-	ctx context.Context,
-	document *Document,
-	searchTerms []string,
-	dataProtector dataprotection.DataProtector,
-	uow DocumentUnitOfWork,
-) (*fileMatchInfo, error) {
-	matchInfo := &fileMatchInfo{
-		FileNameMatches: []string{},
-		OcrMatches:      []ocrMatch{},
-	}
-
-	// Get all files for the document along with their metadata in a single query
-	fileDetails, err := uow.DocumentFileRepo().FindDetailed(ctx, []string{document.Id})
-	if err != nil {
-		return nil, ccc.NewDatabaseError("find document files with metadata", err)
-	}
-
-	for _, fileDetail := range fileDetails {
-		file := fileDetail.File
-		metadata := fileDetail.Metadata
-
-		// Decrypt file name
-		decryptedFileName, err := dataProtector.Unprotect(file.FileName)
-		if err != nil {
-			// Skip files we can't decrypt
-			continue
-		}
-
-		// Search in file name
-		fileNameMatches := s.findMatchesForTerms(decryptedFileName, searchTerms)
-		if len(fileNameMatches) > 0 {
-			highlighted := s.highlightMatchesForTerms(decryptedFileName, fileNameMatches, searchTerms)
-			matchInfo.FileNameMatches = append(matchInfo.FileNameMatches, highlighted)
-		}
-
-		// Search in OCR extracted text if metadata exists
-		if metadata != nil && metadata.ExtractedText != "" {
-			decryptedOcrText, err := dataProtector.Unprotect(metadata.ExtractedText)
-			if err != nil {
-				// Skip if we can't decrypt OCR text
-				continue
-			}
-
-			// Search in OCR text
-			ocrMatches := s.findMatchesForTerms(decryptedOcrText, searchTerms)
-			if len(ocrMatches) > 0 {
-				// Create a snippet around the first match with context
-				snippet := s.createSnippet(decryptedOcrText, ocrMatches[0], searchTerms[0], 150)
-				snippetMatches := s.findMatchesForTerms(snippet, searchTerms)
-				highlighted := s.highlightMatchesForTerms(snippet, snippetMatches, searchTerms)
-
-				ocrMatch := ocrMatch{
-					HighlightedText: fmt.Sprintf("Content: %s", highlighted),
-					OcrConfidence:   metadata.OcrConfidence,
-				}
-				matchInfo.OcrMatches = append(matchInfo.OcrMatches, ocrMatch)
-			}
-		}
-	}
-
-	return matchInfo, nil
-}
-
 const (
 	// Maximum number of documents to process in a single batch for file details loading
 	// Limited by SQLite's SQLITE_MAX_VARIABLE_NUMBER (default 999 parameters)
@@ -403,17 +338,17 @@ func (s *DefaultDocumentSearchEngine) collectFileMatchesBatch(
 		documentIds[i] = docDetail.Document.Id
 	}
 
-	// Get all file details for all documents in a single query
-	allFileDetails, err := uow.DocumentFileRepo().FindDetailed(ctx, documentIds)
+	// Get all extended file metadata for all documents in a single query (without file data)
+	allExtendedMetadata, err := uow.DocumentFileMetadataRepo().FindExtended(ctx, documentIds)
 	if err != nil {
-		return nil, ccc.NewDatabaseError("find document files with metadata for batch", err)
+		return nil, ccc.NewDatabaseError("find extended document file metadata for batch", err)
 	}
 
-	// Group file details by document ID
-	fileDetailsByDoc := make(map[string][]*DocumentFileDetails)
-	for _, fileDetail := range allFileDetails {
-		docId := fileDetail.File.DocumentId
-		fileDetailsByDoc[docId] = append(fileDetailsByDoc[docId], fileDetail)
+	// Group extended metadata by document ID
+	metadataByDoc := make(map[string][]*ExtendedDocumentFileMetadata)
+	for _, extended := range allExtendedMetadata {
+		docId := extended.DocumentId
+		metadataByDoc[docId] = append(metadataByDoc[docId], extended)
 	}
 
 	// Process each document's files
@@ -425,13 +360,10 @@ func (s *DefaultDocumentSearchEngine) collectFileMatchesBatch(
 			OcrMatches:      []ocrMatch{},
 		}
 
-		fileDetails := fileDetailsByDoc[doc.Id]
-		for _, fileDetail := range fileDetails {
-			file := fileDetail.File
-			metadata := fileDetail.Metadata
-
+		extendedMetadataList := metadataByDoc[doc.Id]
+		for _, extended := range extendedMetadataList {
 			// Decrypt file name
-			decryptedFileName, err := dataProtector.Unprotect(file.FileName)
+			decryptedFileName, err := dataProtector.Unprotect(extended.FileName)
 			if err != nil {
 				// Skip files we can't decrypt
 				continue
@@ -444,9 +376,9 @@ func (s *DefaultDocumentSearchEngine) collectFileMatchesBatch(
 				matchInfo.FileNameMatches = append(matchInfo.FileNameMatches, highlighted)
 			}
 
-			// Search in OCR extracted text if metadata exists
-			if metadata != nil && metadata.ExtractedText != "" {
-				decryptedOcrText, err := dataProtector.Unprotect(metadata.ExtractedText)
+			// Search in OCR extracted text if available
+			if extended.ExtractedText != "" {
+				decryptedOcrText, err := dataProtector.Unprotect(extended.ExtractedText)
 				if err != nil {
 					// Skip if we can't decrypt OCR text
 					continue
@@ -462,7 +394,7 @@ func (s *DefaultDocumentSearchEngine) collectFileMatchesBatch(
 
 					ocrMatch := ocrMatch{
 						HighlightedText: fmt.Sprintf("Content: %s", highlighted),
-						OcrConfidence:   metadata.OcrConfidence,
+						OcrConfidence:   extended.OcrConfidence,
 					}
 					matchInfo.OcrMatches = append(matchInfo.OcrMatches, ocrMatch)
 				}

@@ -3,6 +3,7 @@ package documents
 import (
 	"context"
 	"database/sql"
+	"strings"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	_ "github.com/mattn/go-sqlite3"
@@ -135,6 +136,61 @@ func (r *SQLiteDocumentFileMetadataRepository) DeleteByDocumentId(ctx context.Co
 	return err
 }
 
+// FindExtended retrieves extended document file metadata (with lightweight file fields) for multiple documents.
+func (r *SQLiteDocumentFileMetadataRepository) FindExtended(ctx context.Context, documentIds []string) ([]*ExtendedDocumentFileMetadata, error) {
+	if len(documentIds) == 0 {
+		return []*ExtendedDocumentFileMetadata{}, nil
+	}
+
+	// Build parameterized query with placeholders
+	placeholders := make([]string, len(documentIds))
+	args := make([]interface{}, len(documentIds))
+	for i, id := range documentIds {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := `
+	SELECT 
+		f.Id AS DocumentFileId,
+		f.DocumentId,
+		f.FileName,
+		f.ContentType,
+		f.FileSize,
+		f.PageCount,
+		f.CreatedAt,
+		f.ModifiedAt,
+		COALESCE(m.ExtractedText, '') AS ExtractedText,
+		COALESCE(m.OcrConfidence, 0.0) AS OcrConfidence
+	FROM DocumentFile f
+	LEFT JOIN DocumentFileMetadata m ON f.Id = m.DocumentFileId
+	WHERE f.DocumentId IN (` + strings.Join(placeholders, ",") + `)
+	ORDER BY f.DocumentId, f.CreatedAt ASC`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*ExtendedDocumentFileMetadata
+	for rows.Next() {
+		extended, err := scanExtendedDocumentFileMetadata(rows)
+		if err != nil {
+			return nil, err
+		}
+		if extended != nil {
+			results = append(results, extended)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 // scanDocumentFileMetadata scans a database row into a DocumentFileMetadata struct.
 func scanDocumentFileMetadata(scanner ccc.RowScanner) (*DocumentFileMetadata, error) {
 	meta := &DocumentFileMetadata{}
@@ -153,4 +209,31 @@ func scanDocumentFileMetadata(scanner ccc.RowScanner) (*DocumentFileMetadata, er
 	}
 
 	return meta, nil
+}
+
+// scanExtendedDocumentFileMetadata scans a database row into an ExtendedDocumentFileMetadata struct.
+func scanExtendedDocumentFileMetadata(scanner ccc.RowScanner) (*ExtendedDocumentFileMetadata, error) {
+	extended := &ExtendedDocumentFileMetadata{}
+
+	err := scanner.Scan(
+		&extended.DocumentFileId,
+		&extended.DocumentId,
+		&extended.FileName,
+		&extended.ContentType,
+		&extended.FileSize,
+		&extended.PageCount,
+		&extended.CreatedAt,
+		&extended.ModifiedAt,
+		&extended.ExtractedText,
+		&extended.OcrConfidence,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil // Not found
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return extended, nil
 }

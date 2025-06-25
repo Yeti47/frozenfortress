@@ -377,6 +377,32 @@ func (m *DefaultDocumentManager) UpdateDocument(
 			return ccc.NewDatabaseError("failed to update document", err)
 		}
 
+		// Update document tags - remove all existing tags first
+		if err := uow.DocumentTagRepo().RemoveAllDocumentTags(ctx, documentId); err != nil {
+			return ccc.NewDatabaseError("failed to remove existing document tags", err)
+		}
+
+		// Add new tags if provided
+		if len(request.TagIds) > 0 {
+			for _, tagId := range request.TagIds {
+				// Verify tag exists and belongs to user
+				tag, err := uow.TagRepo().FindById(ctx, tagId)
+				if err != nil {
+					return ccc.NewDatabaseError(fmt.Sprintf("failed to find tag %s", tagId), err)
+				}
+				if tag == nil {
+					return ccc.NewResourceNotFoundError("tag", tagId)
+				}
+				if tag.UserId != userId {
+					return ccc.NewUnauthorizedError("tag does not belong to user")
+				}
+
+				if err := uow.DocumentTagRepo().AddDocumentTag(ctx, documentId, tagId); err != nil {
+					return ccc.NewDatabaseError("failed to add document tag", err)
+				}
+			}
+		}
+
 		return nil
 	})
 }
@@ -431,8 +457,8 @@ func (m *DefaultDocumentManager) DeleteDocument(ctx context.Context, userId, doc
 // Helper methods
 
 func (m *DefaultDocumentManager) validateCreateDocumentRequest(request CreateDocumentRequest) error {
-	const maxTitleLength = 200
-	const maxDescriptionLength = 1000
+	const maxTitleLength = 50
+	const maxDescriptionLength = 200
 
 	if request.Title == "" {
 		return ccc.NewInvalidInputError("title", "cannot be empty")
@@ -448,8 +474,8 @@ func (m *DefaultDocumentManager) validateCreateDocumentRequest(request CreateDoc
 }
 
 func (m *DefaultDocumentManager) validateUpdateDocumentRequest(request UpdateDocumentRequest) error {
-	const maxTitleLength = 200
-	const maxDescriptionLength = 1000
+	const maxTitleLength = 50
+	const maxDescriptionLength = 200
 
 	if request.Title == "" {
 		return ccc.NewInvalidInputError("title", "cannot be empty")

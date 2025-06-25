@@ -19,7 +19,7 @@
             max-width: 1400px !important;
             padding: 30px !important;
             margin: 0 auto;
-            max-height: calc(100vh - 240px); /* Account for header, nav, footer, and margins */
+            min-height: calc(100vh - 240px); /* Account for header, nav, footer, and margins */
             display: flex;
             flex-direction: column;
             background-color: rgba(255, 255, 255, 0.95);
@@ -27,7 +27,7 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
             backdrop-filter: blur(10px);
         }
-
+        
         .documents-container {
             width: 100%;
             padding: 0;
@@ -36,7 +36,7 @@
             flex-direction: column;
             overflow: hidden;
         }
-
+        
         .documents-header {
             display: flex;
             justify-content: space-between;
@@ -83,6 +83,10 @@
             box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
         }
 
+        .create-document-btn .button-text-short {
+            display: none;
+        }
+
         .sorting-controls {
             display: flex;
             align-items: center;
@@ -98,16 +102,19 @@
             background: none;
             padding: 4px 8px;
             border-radius: 4px;
-            color: #2c3e50;
             font-size: 14px;
+            color: #2c3e50;
+            cursor: pointer;
         }
 
         .sort-direction {
             background: none;
             border: none;
-            color: #3498db;
-            cursor: pointer;
             padding: 4px;
+            cursor: pointer;
+            color: #3498db;
+            display: flex;
+            align-items: center;
             border-radius: 4px;
             transition: background-color 0.2s ease;
         }
@@ -222,6 +229,82 @@
             flex-direction: column;
         }
 
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+
+        .document-title-section {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+
+        .document-btn {
+            background: none;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            padding: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            text-decoration: none;
+            width: 28px;
+            height: 28px;
+        }
+
+        .document-btn:hover {
+            background-color: #f8f9fa;
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        .document-btn .material-icons {
+            font-size: 16px;
+        }
+
+        .view-btn {
+            color: #3498db;
+        }
+
+        .view-btn:hover {
+            color: #2980b9;
+            border-color: #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        .edit-btn {
+            color: #f39c12;
+        }
+
+        .edit-btn:hover {
+            color: #e67e22;
+            border-color: #f39c12;
+            background-color: rgba(243, 156, 18, 0.1);
+        }
+
+        .delete-btn {
+            color: #e74c3c;
+        }
+
+        .delete-btn:hover {
+            color: #c0392b;
+            border-color: #e74c3c;
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+
         .document-title {
             font-size: 16px;
             font-weight: 600;
@@ -232,6 +315,7 @@
             text-overflow: ellipsis;
             display: -webkit-box;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
         }
 
@@ -244,6 +328,7 @@
             text-overflow: ellipsis;
             display: -webkit-box;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             flex: 1;
         }
@@ -267,6 +352,10 @@
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
+            min-height: 20px; /* Reserve space even when no tags */
+        }
+
+        .document-footer {
             margin-top: auto;
         }
 
@@ -335,44 +424,107 @@
             color: #7f8c8d;
         }
 
-        .empty-state .material-icons {
-            font-size: 64px;
+        .empty-state-icon {
+            font-size: 48px;
             color: #bdc3c7;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
-        .empty-state h3 {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #34495e;
         }
 
-        .empty-state p {
-            margin: 0;
+        .empty-state-text {
             font-size: 16px;
+            margin-bottom: 20px;
         }
 
         /* Success Message */
         .success-message {
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
-            color: white;
-            padding: 12px 20px;
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+            padding: 12px 16px;
             border-radius: 8px;
             margin-bottom: 20px;
-            font-weight: 500;
+            border: 1px solid rgba(46, 204, 113, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.5s ease;
+            transition: all 0.4s ease;
+            overflow: hidden;
+        }
+
+        .success-message.fadeOut {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-width: 0;
+        }
+
+        .error-message {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(231, 76, 60, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.5s ease;
+            transition: all 0.4s ease;
+            overflow: hidden;
+        }
+
+        .error-message.fadeOut {
+            opacity: 0;
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-width: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* Mobile Responsiveness */
+        @media (max-width: 1200px) {
+            .content-container {
+                padding: 25px !important;
+                min-height: calc(100vh - 220px) !important;
+            }
+            
+            .main-content {
+                padding: 15px 10px !important;
+            }
+        }
+
         @media (max-width: 768px) {
             .content-container {
                 padding: 20px !important;
-                margin: 10px !important;
-                max-height: calc(100vh - 180px) !important;
+                margin: 0;
+                min-height: calc(100vh - 140px) !important;
+                max-height: none !important;
+            }
+            
+            .main-content {
+                padding: 10px 5px !important;
+                min-height: calc(100vh - 120px) !important;
             }
 
             .documents-header {
                 flex-direction: column;
                 align-items: stretch;
-                gap: 15px;
+                margin-bottom: 20px;
             }
 
             .documents-actions {
@@ -381,12 +533,12 @@
 
             .documents-title {
                 font-size: 24px;
-                text-align: center;
             }
 
             .documents-grid {
                 grid-template-columns: 1fr;
                 gap: 15px;
+                min-height: 400px;
             }
 
             .filter-controls {
@@ -410,14 +562,6 @@
         }
 
         @media (max-width: 480px) {
-            .main-content {
-                padding: 10px !important;
-            }
-
-            .content-container {
-                padding: 15px !important;
-            }
-
             .document-card {
                 height: 260px;
             }
@@ -430,131 +574,303 @@
                 padding: 6px 10px;
                 font-size: 12px;
             }
+
+            .create-document-btn .button-text-full {
+                display: none;
+            }
+
+            .create-document-btn .button-text-short {
+                display: none;
+            }
+
+            .document-actions {
+                gap: 4px;
+            }
+
+            .document-btn {
+                width: 24px;
+                height: 24px;
+                padding: 4px;
+            }
+
+            .document-btn .material-icons {
+                font-size: 14px;
+            }
         }
 
-        /* Tag Filter Checkboxes */
-        .filter-limit-info {
+        /* Filter Controls */
+        .filter-controls {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(248, 249, 250, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 5px 0 10px 0;
-            font-size: 12px;
+            margin-bottom: 15px;
+            gap: 20px;
+            width: 100%;
+            cursor: pointer;
+            user-select: none;
+            padding: 5px;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+
+        .filter-header:hover {
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .filter-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .filter-collapse-icon {
+            font-size: 20px;
+            color: #7f8c8d;
+            transition: transform 0.3s ease;
+            margin-left: 8px;
+        }
+
+        .filter-collapse-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .filter-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .filter-content.collapsed {
+            max-height: 0;
+            margin-bottom: 0;
+            opacity: 0;
+        }
+
+        .filter-status {
+            font-size: 14px;
+            color: #7f8c8d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
         }
 
         .selected-count {
-            font-weight: 500;
-            color: #3498db;
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
-        .tags-filter-checkboxes {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 10px;
-            max-height: 120px;
-            overflow-y: auto;
-            padding: 5px 0;
-        }
-
-        .tag-checkbox-wrapper {
+        .clear-filters-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            margin-right: 15px;
-            margin-bottom: 5px;
+            gap: 4px;
+            margin-left: 8px;
         }
 
-        .tag-checkbox {
-            margin-right: 6px;
+        .clear-filters-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(231, 76, 60, 0.3);
+        }
+
+        .tags-filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .filter-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 20px;
             cursor: pointer;
-        }
-
-        .tag-checkbox:disabled {
-            cursor: not-allowed;
-        }
-
-        .tag-checkbox-label {
-            cursor: pointer;
+            transition: all 0.3s ease;
             font-size: 14px;
-            color: #2c3e50;
-            user-select: none;
+            font-weight: 500;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
         }
 
-        .tag-checkbox-wrapper.disabled .tag-checkbox-label {
-            color: #95a5a6;
+        .filter-tag:not(.selected) {
+            background: white;
+            color: #2c3e50;
+            border-color: #e1e8ed;
+        }
+
+        .filter-tag:not(.selected):hover {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.05);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.15);
+        }
+
+        .filter-tag.selected {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-color: #2980b9;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .filter-tag.selected:hover {
+            background: linear-gradient(135deg, #2980b9, #1f618d);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+
+        .filter-tag.disabled {
+            opacity: 0.4;
             cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .filter-tag.disabled:hover {
+            background: white !important;
+            border-color: #e1e8ed !important;
+            box-shadow: none !important;
+        }
+
+        .tag-color-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
         }
 
         .filter-limit-message {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 6px;
-            padding: 8px 12px;
+            background: rgba(255, 193, 7, 0.1);
+            color: #f39c12;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             margin-top: 10px;
         }
 
-        .text-warning {
-            color: #e67e22 !important;
+        /* Responsive filter layout */
+        @media (max-width: 768px) {
+            .filter-header {
+                gap: 15px;
+            }
+
+            .filter-title {
+                font-size: 15px;
+            }
+
+            .filter-status {
+                font-size: 13px;
+            }
+
+            .clear-filters-btn {
+                padding: 4px 8px;
+                font-size: 11px;
+                border-radius: 14px;
+            }
         }
     </style>
 
-    <div class="main-content">
-        <div class="content-container">
-            <div class="documents-container">
-                {{if .SuccessMessage}}
-                    <div class="success-message">
-                        {{.SuccessMessage}}
-                    </div>
-                {{end}}
+    <div class="documents-container">
+        {{if .SuccessMessage}}
+        <div class="success-message">
+            <span class="material-icons">check_circle</span>
+            {{.SuccessMessage}}
+        </div>
+        {{end}}
 
                 <div class="documents-header">
-                    <h1 class="documents-title">Documents</h1>
+                    <h1 class="documents-title">My Documents</h1>
                     <div class="documents-actions">
                         <div class="sorting-controls">
-                            <span class="material-icons" style="font-size: 18px; color: #7f8c8d;">sort</span>
-                            <select class="sort-select" onchange="updateSorting(this.value)">
+                            <label for="sortBy" style="font-size: 14px; color: #7f8c8d;">Sort by:</label>
+                            <select id="sortBy" class="sort-select" onchange="updateSorting(this.value)">
                                 <option value="title" {{if eq .SortBy "title"}}selected{{end}}>Title</option>
-                                <option value="created_at" {{if eq .SortBy "created_at"}}selected{{end}}>Created Date</option>
-                                <option value="modified_at" {{if eq .SortBy "modified_at"}}selected{{end}}>Modified Date</option>
+                                <option value="created_at" {{if eq .SortBy "created_at"}}selected{{end}}>Created</option>
+                                <option value="modified_at" {{if eq .SortBy "modified_at"}}selected{{end}}>Modified</option>
                             </select>
                             <button class="sort-direction" onclick="toggleSortDirection()" title="{{if .SortAsc}}Sort Descending{{else}}Sort Ascending{{end}}">
-                                <span class="material-icons">{{if .SortAsc}}keyboard_arrow_up{{else}}keyboard_arrow_down{{end}}</span>
+                                <span class="material-icons">{{if .SortAsc}}arrow_upward{{else}}arrow_downward{{end}}</span>
                             </button>
                         </div>
-                        <a href="/edit-document" class="create-document-btn">
+                        <a href="/create-document" class="create-document-btn">
                             <span class="material-icons">add</span>
-                            New Document
+                            <span class="button-text-full">New Document</span>
+                            <span class="button-text-short">New</span>
                         </a>
                     </div>
                 </div>
 
                 <!-- Filter Controls -->
                 <div class="filter-controls">
-                    <div class="filter-group">
-                        <label class="filter-label">Filter by Tags:</label>
-                        <div class="filter-limit-info">
-                            <small class="text-muted">Select up to 3 tags for filtering</small>
-                            <div class="selected-count">
-                                <span id="tag-count">{{len .TagIds}}</span>/3 selected
-                            </div>
+                    <div class="filter-header" onclick="toggleFilterCollapse()">
+                        <h3 class="filter-title">
+                            <span class="material-icons">filter_list</span>
+                            Filter by Tags
+                            <span class="material-icons filter-collapse-icon expanded" id="filterCollapseIcon">keyboard_arrow_down</span>
+                        </h3>
+                        <div class="filter-status">
+                            <span class="selected-count" id="tag-count">{{len .TagIds}}</span>
+                            <span>of 3 selected</span>
+                            {{if .TagIds}}
+                                <button class="clear-filters-btn" onclick="clearFilters(); event.stopPropagation();">
+                                    <span class="material-icons" style="font-size: 16px;">clear</span>
+                                    Clear Filters
+                                </button>
+                            {{end}}
                         </div>
-                        <div class="tags-filter-checkboxes">
+                    </div>
+                    
+                    <div class="filter-content" id="filterContent">
+                        <div class="tags-filter-container" id="tagsFilterContainer">
                             {{range .AllTags}}
-                            <div class="tag-checkbox-wrapper">
-                                <input class="tag-checkbox" type="checkbox" value="{{.Id}}" id="tag_{{.Id}}" name="tags"
-                                       {{range $.TagIds}}{{if eq . $.Id}}checked{{end}}{{end}}>
-                                <label class="tag-checkbox-label" for="tag_{{.Id}}">
-                                    {{.Name}}
-                                </label>
+                            {{$isSelected := false}}
+                            {{range $.TagIds}}{{if eq . $.Id}}{{$isSelected = true}}{{end}}{{end}}
+                            <div class="filter-tag{{if $isSelected}} selected{{end}}" 
+                                 data-tag-id="{{.Id}}" 
+                                 onclick="toggleTagFilter('{{.Id}}')">
+                                <div class="tag-color-dot" style="background-color: {{.Color}};"></div>
+                                <span>{{.Name}}</span>
                             </div>
                             {{end}}
                         </div>
-                        <div class="filter-limit-message" style="display: none;">
-                            <small class="text-warning">Maximum 3 tags can be selected for filtering. Please unselect some tags to choose others.</small>
+                        
+                        <div class="filter-limit-message" id="filterLimitMessage" style="display: none;">
+                            <span class="material-icons" style="font-size: 16px;">warning</span>
+                            Maximum 3 tags can be selected for filtering
                         </div>
                     </div>
-                    {{if .TagIds}}
-                        <button class="clear-filters-btn" onclick="clearFilters()">Clear Filters</button>
-                    {{end}}
                 </div>
 
                 <!-- Documents Grid -->
@@ -567,26 +883,43 @@
                                         {{if eq .Preview.PreviewType "application/pdf"}}
                                             <span class="material-icons pdf-icon">picture_as_pdf</span>
                                         {{else}}
-                                            <img src="data:{{.Preview.PreviewType}};base64,{{printf "%s" .Preview.PreviewData}}" alt="Document preview">
+                                            <img src="data:{{.Preview.PreviewType}};base64,{{base64 .Preview.PreviewData}}" alt="Document preview">
                                         {{end}}
                                     {{else}}
                                         <span class="material-icons generic-icon">description</span>
                                     {{end}}
                                 </div>
                                 <div class="document-info">
-                                    <h3 class="document-title">{{.Title}}</h3>
-                                    <p class="document-description">{{.Description}}</p>
-                                    <div class="document-meta">
-                                        <span class="document-file-count">
-                                            <span class="material-icons" style="font-size: 14px;">attach_file</span>
-                                            {{.FileCount}} file{{if ne .FileCount 1}}s{{end}}
-                                        </span>
-                                        <span>{{.ModifiedAt.Format "Jan 2, 2006"}}</span>
+                                    <div class="document-header">
+                                        <div class="document-title-section">
+                                            <h3 class="document-title">{{.Title}}</h3>
+                                        </div>
+                                        <div class="document-actions">
+                                            <a href="/view-document?id={{.Id}}" class="document-btn view-btn" title="View Document">
+                                                <span class="material-icons">visibility</span>
+                                            </a>
+                                            <a href="/edit-document?id={{.Id}}&returnTo=documents" class="document-btn edit-btn" title="Edit Document">
+                                                <span class="material-icons">edit</span>
+                                            </a>
+                                            <button class="document-btn delete-btn" onclick="deleteDocument('{{.Id}}', '{{.Title}}')" title="Delete Document">
+                                                <span class="material-icons">delete</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="document-tags">
-                                        {{range .Tags}}
-                                            <span class="document-tag" style="background-color: {{.Color}}20; color: {{.Color}};">{{.Name}}</span>
-                                        {{end}}
+                                    <p class="document-description">{{.Description}}</p>
+                                    <div class="document-footer">
+                                        <div class="document-meta">
+                                            <span class="document-file-count">
+                                                <span class="material-icons" style="font-size: 14px;">attach_file</span>
+                                                {{.FileCount}} file{{if ne .FileCount 1}}s{{end}}
+                                            </span>
+                                            <span>{{.ModifiedAt.Format "2006-01-02 15:04:05"}}</span>
+                                        </div>
+                                        <div class="document-tags">
+                                            {{range .Tags}}
+                                                <span class="document-tag" style="background-color: {{.Color}}20; color: {{.Color}};">{{.Name}}</span>
+                                            {{end}}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -594,9 +927,25 @@
                     </div>
                 {{else}}
                     <div class="empty-state">
-                        <span class="material-icons">description</span>
-                        <h3>No Documents Found</h3>
-                        <p>{{if .TagIds}}No documents match the selected filters.{{else}}Create your first document to get started.{{end}}</p>
+                        <div class="empty-state-icon">
+                            <span class="material-icons" style="font-size: inherit;">description</span>
+                        </div>
+                        <div class="empty-state-title">No documents found</div>
+                        <div class="empty-state-text">
+                            {{if .TagIds}}
+                                No documents match the selected filters.
+                            {{else}}
+                                You haven't created any documents yet.
+                            {{end}}
+                        </div>
+                        <a href="/create-document" class="create-document-btn">
+                            <span class="material-icons">add</span>
+                            {{if .TagIds}}
+                                Create new document
+                            {{else}}
+                                Create your first document
+                            {{end}}
+                        </a>
                     </div>
                 {{end}}
 
@@ -655,7 +1004,6 @@
                     </div>
                 {{end}}
             </div>
-        </div>
     </div>
 
     <script>
@@ -670,34 +1018,60 @@
             if (tagIds) {
                 selectedTags = tagIds.split(',').filter(id => id.trim() !== '');
             }
-            
-            // Add event listeners to all tag checkboxes
-            const tagCheckboxes = document.querySelectorAll('.tag-checkbox');
-            tagCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', handleTagSelection);
-            });
-            
-            // Update UI to reflect current state
             updateTagFilterUI();
+            
+            // Initialize filter collapse state
+            initializeFilterCollapse();
         });
 
-        function handleTagSelection(event) {
-            const checkbox = event.target;
-            const tagId = checkbox.value;
+        function initializeFilterCollapse() {
+            // Check if filters are being used
+            const hasActiveFilters = selectedTags.length > 0;
             
-            if (checkbox.checked) {
-                // Add tag if not already selected and under limit
-                if (!selectedTags.includes(tagId) && selectedTags.length < MAX_TAGS) {
+            // Start expanded if there are active filters, collapsed otherwise
+            const shouldExpand = hasActiveFilters;
+            
+            const filterContent = document.getElementById('filterContent');
+            const collapseIcon = document.getElementById('filterCollapseIcon');
+            
+            if (!shouldExpand) {
+                filterContent.classList.add('collapsed');
+                collapseIcon.classList.remove('expanded');
+            }
+        }
+
+        function toggleFilterCollapse() {
+            const filterContent = document.getElementById('filterContent');
+            const collapseIcon = document.getElementById('filterCollapseIcon');
+            
+            if (filterContent.classList.contains('collapsed')) {
+                // Expand
+                filterContent.classList.remove('collapsed');
+                collapseIcon.classList.add('expanded');
+            } else {
+                // Collapse
+                filterContent.classList.add('collapsed');
+                collapseIcon.classList.remove('expanded');
+            }
+        }
+
+        function toggleTagFilter(tagId) {
+            const tagElement = document.querySelector(`[data-tag-id="${tagId}"]`);
+            
+            if (selectedTags.includes(tagId)) {
+                // Remove tag from selection
+                selectedTags = selectedTags.filter(id => id !== tagId);
+                tagElement.classList.remove('selected');
+            } else {
+                // Add tag if under limit
+                if (selectedTags.length < MAX_TAGS) {
                     selectedTags.push(tagId);
-                } else if (selectedTags.length >= MAX_TAGS) {
-                    // Prevent selection if at limit
-                    checkbox.checked = false;
+                    tagElement.classList.add('selected');
+                } else {
+                    // Show limit message
                     showLimitMessage();
                     return;
                 }
-            } else {
-                // Remove tag from selection
-                selectedTags = selectedTags.filter(id => id !== tagId);
             }
             
             updateTagFilterUI();
@@ -711,37 +1085,47 @@
                 countElement.textContent = selectedTags.length;
             }
             
-            // Enable/disable checkboxes based on limit
-            const tagCheckboxes = document.querySelectorAll('.tag-checkbox');
-            tagCheckboxes.forEach(checkbox => {
-                const wrapper = checkbox.closest('.tag-checkbox-wrapper');
-                if (!checkbox.checked && selectedTags.length >= MAX_TAGS) {
-                    checkbox.disabled = true;
-                    wrapper.classList.add('disabled');
+            // Update tag states
+            const allTags = document.querySelectorAll('.filter-tag');
+            allTags.forEach(tag => {
+                const tagId = tag.getAttribute('data-tag-id');
+                const isSelected = selectedTags.includes(tagId);
+                
+                // Update visual state
+                if (isSelected) {
+                    tag.classList.add('selected');
                 } else {
-                    checkbox.disabled = false;
-                    wrapper.classList.remove('disabled');
+                    tag.classList.remove('selected');
+                }
+                
+                // Disable non-selected tags if at limit
+                if (selectedTags.length >= MAX_TAGS && !isSelected) {
+                    tag.classList.add('disabled');
+                } else {
+                    tag.classList.remove('disabled');
                 }
             });
             
-            // Hide limit message if under limit
+            // Hide limit message when under limit
             if (selectedTags.length < MAX_TAGS) {
                 hideLimitMessage();
             }
         }
 
         function showLimitMessage() {
-            const messageElement = document.querySelector('.filter-limit-message');
-            if (messageElement) {
-                messageElement.style.display = 'block';
-                setTimeout(hideLimitMessage, 3000); // Hide after 3 seconds
+            const message = document.getElementById('filterLimitMessage');
+            if (message) {
+                message.style.display = 'flex';
+                setTimeout(() => {
+                    hideLimitMessage();
+                }, 3000);
             }
         }
 
         function hideLimitMessage() {
-            const messageElement = document.querySelector('.filter-limit-message');
-            if (messageElement) {
-                messageElement.style.display = 'none';
+            const message = document.getElementById('filterLimitMessage');
+            if (message) {
+                message.style.display = 'none';
             }
         }
 
@@ -777,6 +1161,116 @@
             urlParams.delete('tagIds');
             urlParams.set('page', '1');
             window.location.search = urlParams.toString();
+        }
+
+        // Auto-dismiss success message after 3 seconds
+        const successMessage = document.querySelector('.success-message');
+        if (successMessage) {
+            setTimeout(() => {
+                successMessage.classList.add('fadeOut');
+                setTimeout(() => {
+                    successMessage.remove();
+                }, 400);
+            }, 3000);
+        }
+
+        // Function to show error messages consistently with success messages
+        function showErrorMessage(message) {
+            // Remove any existing error message
+            const existingError = document.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+
+            // Create error message element
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = `
+                <span class="material-icons">error</span>
+                ${message}
+            `;
+
+            // Insert at the top of the documents container, after any success message
+            const documentsContainer = document.querySelector('.documents-container');
+            const successMessage = documentsContainer.querySelector('.success-message');
+            if (successMessage) {
+                documentsContainer.insertBefore(errorDiv, successMessage.nextSibling);
+            } else {
+                documentsContainer.insertBefore(errorDiv, documentsContainer.firstChild);
+            }
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                errorDiv.classList.add('fadeOut');
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 400);
+            }, 5000);
+        }
+
+        // Delete document function
+        function deleteDocument(documentId, documentTitle) {
+            // Store reference to the delete button for later use
+            const deleteButton = event.target.closest('.delete-btn');
+            
+            // Show custom confirmation modal (similar to secrets page)
+            showConfirmModal(
+                'Confirm Deletion',
+                'Are you sure you want to delete this document?',
+                documentTitle,
+                function() {
+                    // User confirmed - proceed with deletion
+                    performDocumentDelete(documentId, documentTitle, deleteButton);
+                },
+                'Delete Document', // Custom confirm button text
+                'This action cannot be undone. All files associated with this document will also be deleted.' // Warning text for destructive action
+            );
+        }
+
+        function performDocumentDelete(documentId, documentTitle, deleteButton) {
+            // Disable the delete button to prevent double-clicks
+            const originalContent = deleteButton.innerHTML;
+            deleteButton.disabled = true;
+            deleteButton.innerHTML = '<span class="material-icons">hourglass_empty</span>';
+            deleteButton.style.opacity = '0.6';
+            deleteButton.style.cursor = 'not-allowed';
+
+            // Make AJAX request to delete the document
+            fetch(`/documents/${documentId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            })
+            .then(data => {
+                if (data.success) {
+                    // Success: redirect to show success message
+                    window.location.href = '/documents?deleted=1';
+                } else {
+                    // Handle server-side error
+                    alert(`Error deleting document: ${data.error || 'Unknown error'}`);
+                    // Re-enable the button
+                    deleteButton.disabled = false;
+                    deleteButton.innerHTML = originalContent;
+                    deleteButton.style.opacity = '1';
+                    deleteButton.style.cursor = 'pointer';
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting document:', error);
+                alert(`Error deleting document: ${error.message}`);
+                // Re-enable the button
+                deleteButton.disabled = false;
+                deleteButton.innerHTML = originalContent;
+                deleteButton.style.opacity = '1';
+                deleteButton.style.cursor = 'pointer';
+            });
         }
     </script>
 

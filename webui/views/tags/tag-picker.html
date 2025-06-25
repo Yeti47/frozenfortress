@@ -1,0 +1,464 @@
+{{define "tag-picker"}}
+<div class="tag-picker-container">
+    <label for="{{.FieldId}}" class="tag-picker-label">
+        {{.Label}}
+        {{if .Required}}<span class="required-asterisk">*</span>{{end}}
+    </label>
+    
+    <div class="tag-picker">
+        <!-- Selected tags display -->
+        <div class="selected-tags" id="{{.FieldId}}-selected">
+            <!-- Selected tags will be dynamically added here -->
+        </div>
+        
+        <!-- Tag search and add interface -->
+        <div class="tag-picker-input-section">
+            <div class="tag-search-container">
+                <input type="text" 
+                       id="{{.FieldId}}-search" 
+                       class="tag-search-input" 
+                       placeholder="Search or create tags..."
+                       autocomplete="off">
+                <div class="tag-search-dropdown" id="{{.FieldId}}-dropdown">
+                    <!-- Search results will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hidden input to store selected tag IDs -->
+        <input type="hidden" name="{{.FieldName}}" id="{{.FieldId}}-values" value="">
+    </div>
+</div>
+
+<style>
+.tag-picker-container {
+    margin-bottom: 20px;
+}
+
+.tag-picker-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.required-asterisk {
+    color: #e74c3c;
+    margin-left: 4px;
+}
+
+.tag-picker {
+    border: 2px solid #e1e8ed;
+    border-radius: 12px;
+    background: white;
+    transition: border-color 0.3s ease;
+    min-height: 50px;
+    padding: 8px;
+}
+
+.tag-picker:focus-within {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    min-height: 32px;
+}
+
+.selected-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.selected-tag:hover {
+    background: linear-gradient(135deg, #2980b9, #21618c);
+    transform: translateY(-1px);
+}
+
+.selected-tag .tag-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.selected-tag .remove-tag {
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+    font-size: 14px;
+}
+
+.selected-tag .remove-tag:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.tag-picker-input-section {
+    position: relative;
+}
+
+.tag-search-container {
+    position: relative;
+    width: 100%;
+}
+
+.tag-search-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: background 0.3s ease;
+}
+
+.tag-search-input:focus {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tag-search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.tag-search-dropdown.show {
+    display: block;
+}
+
+.tag-option {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.2s ease;
+}
+
+.tag-option:hover {
+    background: #f8f9fa;
+}
+
+.tag-option:last-child {
+    border-bottom: none;
+}
+
+.tag-option.create-new {
+    background: #e8f5e8;
+    color: #27ae60;
+    font-weight: 600;
+    border-top: 2px solid #e1e8ed;
+}
+
+.tag-option.create-new:hover {
+    background: #d5f4d5;
+}
+
+.tag-option .tag-color-preview {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.tag-option .tag-name {
+    flex: 1;
+    font-size: 14px;
+}
+
+.tag-option .tag-icon {
+    font-size: 18px;
+    color: #27ae60;
+}
+
+.no-results {
+    padding: 16px;
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .tag-picker-label {
+        font-size: 16px;
+    }
+    
+    .tag-search-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px;
+    }
+    
+    .selected-tag {
+        font-size: 14px;
+        padding: 8px 14px;
+    }
+    
+    .tag-option {
+        padding: 16px;
+    }
+}
+
+/* Loading state */
+.tag-picker.loading .tag-search-input {
+    background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23999' d='M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z'/%3E%3Cpath fill='%23999' d='M10 6c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2-2 2-2 2v2c2.21 0 4-1.79 4-4s-1.79-4-4-4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+}
+</style>
+
+<script>
+// Tag picker functionality
+(function() {
+    function initializeTagPicker(fieldId) {
+        const searchInput = document.getElementById(fieldId + '-search');
+        const dropdown = document.getElementById(fieldId + '-dropdown');
+        const selectedContainer = document.getElementById(fieldId + '-selected');
+        const hiddenInput = document.getElementById(fieldId + '-values');
+        const picker = document.querySelector(`#${fieldId}-search`).closest('.tag-picker');
+        
+        let selectedTags = [];
+        let availableTags = [];
+        let searchTimeout;
+        
+        // Load available tags
+        async function loadTags() {
+            try {
+                picker.classList.add('loading');
+                const response = await fetch('/api/tags');
+                if (response.ok) {
+                    availableTags = await response.json();
+                }
+            } catch (error) {
+                console.error('Failed to load tags:', error);
+            } finally {
+                picker.classList.remove('loading');
+            }
+        }
+        
+        // Create a new tag
+        async function createTag(name, color = '#3498db') {
+            try {
+                const response = await fetch('/api/tags', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        color: color
+                    })
+                });
+                
+                if (response.ok) {
+                    const newTag = await response.json();
+                    availableTags.push(newTag);
+                    return newTag;
+                }
+            } catch (error) {
+                console.error('Failed to create tag:', error);
+            }
+            return null;
+        }
+        
+        // Update the hidden input with selected tag IDs
+        function updateHiddenInput() {
+            hiddenInput.value = selectedTags.map(tag => tag.id).join(',');
+        }
+        
+        // Render selected tags
+        function renderSelectedTags() {
+            selectedContainer.innerHTML = selectedTags.map(tag => `
+                <div class="selected-tag" data-tag-id="${tag.id}">
+                    <span class="tag-color-dot" style="background-color: ${tag.color}"></span>
+                    <span class="tag-name">${tag.name}</span>
+                    <span class="remove-tag" data-tag-id="${tag.id}">×</span>
+                </div>
+            `).join('');
+        }
+        
+        // Add a tag to selection
+        function addTag(tag) {
+            if (!selectedTags.find(t => t.id === tag.id)) {
+                selectedTags.push(tag);
+                renderSelectedTags();
+                updateHiddenInput();
+                searchInput.value = '';
+                hideDropdown();
+            }
+        }
+        
+        // Remove a tag from selection
+        function removeTag(tagId) {
+            selectedTags = selectedTags.filter(tag => tag.id !== tagId);
+            renderSelectedTags();
+            updateHiddenInput();
+        }
+        
+        // Show dropdown
+        function showDropdown() {
+            dropdown.classList.add('show');
+        }
+        
+        // Hide dropdown
+        function hideDropdown() {
+            dropdown.classList.remove('show');
+        }
+        
+        // Filter and render dropdown options
+        function renderDropdown(searchTerm = '') {
+            const filtered = availableTags.filter(tag => 
+                tag.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                !selectedTags.find(selected => selected.id === tag.id)
+            );
+            
+            let html = '';
+            
+            // Show existing tags
+            filtered.forEach(tag => {
+                html += `
+                    <div class="tag-option" data-tag-id="${tag.id}">
+                        <span class="tag-color-preview" style="background-color: ${tag.color}"></span>
+                        <span class="tag-name">${tag.name}</span>
+                    </div>
+                `;
+            });
+            
+            // Show create new option if search term exists and doesn't match exactly
+            if (searchTerm.trim() && !filtered.find(tag => tag.name.toLowerCase() === searchTerm.toLowerCase())) {
+                html += `
+                    <div class="tag-option create-new" data-create-tag="${searchTerm}">
+                        <span class="tag-icon material-icons">add</span>
+                        <span class="tag-name">Create "${searchTerm}"</span>
+                    </div>
+                `;
+            }
+            
+            if (!html) {
+                html = '<div class="no-results">No tags found</div>';
+            }
+            
+            dropdown.innerHTML = html;
+            
+            // Add click handlers
+            dropdown.querySelectorAll('.tag-option[data-tag-id]').forEach(option => {
+                option.addEventListener('click', () => {
+                    const tagId = option.dataset.tagId;
+                    const tag = availableTags.find(t => t.id === tagId);
+                    if (tag) addTag(tag);
+                });
+            });
+            
+            dropdown.querySelectorAll('.tag-option[data-create-tag]').forEach(option => {
+                option.addEventListener('click', async () => {
+                    const tagName = option.dataset.createTag;
+                    const newTag = await createTag(tagName);
+                    if (newTag) addTag(newTag);
+                });
+            });
+        }
+        
+        // Search input handlers
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value;
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                renderDropdown(searchTerm);
+                if (searchTerm.trim()) {
+                    showDropdown();
+                } else {
+                    hideDropdown();
+                }
+            }, 200);
+        });
+        
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value.trim()) {
+                renderDropdown(searchInput.value);
+                showDropdown();
+            }
+        });
+        
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideDropdown();
+                searchInput.blur();
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!picker.contains(e.target)) {
+                hideDropdown();
+            }
+        });
+        
+        // Handle remove tag clicks using event delegation
+        selectedContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-tag')) {
+                const tagId = e.target.getAttribute('data-tag-id');
+                removeTag(tagId);
+            }
+        });
+        
+        // Expose functions globally for external use (like pre-population)
+        window['tagPicker_' + fieldId] = {
+            removeTag: removeTag,
+            addTag: addTag,
+            getSelectedTags: () => selectedTags,
+            setSelectedTags: (tags) => {
+                selectedTags = tags;
+                renderSelectedTags();
+                updateHiddenInput();
+            }
+        };
+        
+        // Initialize
+        loadTags();
+    }
+    
+    // Auto-initialize tag pickers
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[id$="-search"]').forEach(input => {
+            const fieldId = input.id.replace('-search', '');
+            if (input.closest('.tag-picker')) {
+                initializeTagPicker(fieldId);
+            }
+        });
+    });
+})();
+</script>
+{{end}}
