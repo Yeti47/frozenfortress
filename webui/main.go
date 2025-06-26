@@ -108,7 +108,16 @@ func registerRoutes(router *gin.Engine, svc services) {
 	// Register routes from modules
 	secretsview.RegisterRoutes(router, svc.SignInManager, svc.SecretManager, svc.MekStore, svc.EncryptionService, svc.Logger)
 	tagsview.RegisterRoutes(router, svc.SignInManager, svc.TagManager, svc.Logger)
-	documentsview.RegisterRoutes(router, svc.SignInManager, svc.DocumentManager, svc.DocumentFileManager, svc.TagManager, svc.MekStore, svc.EncryptionService, svc.Logger)
+
+	// Create document services aggregate
+	docServices := documentsview.DocumentServices{
+		DocumentManager:     svc.DocumentManager,
+		DocumentFileManager: svc.DocumentFileManager,
+		DocumentListService: svc.DocumentListService,
+		TagManager:          svc.TagManager,
+	}
+	documentsview.RegisterRoutes(router, svc.SignInManager, docServices, svc.MekStore, svc.EncryptionService, svc.Logger)
+
 	login.RegisterRoutes(router, svc.SignInManager)
 	register.RegisterRoutes(router, svc.UserManager)
 	recovery.RegisterRoutes(router, svc.SignInManager)

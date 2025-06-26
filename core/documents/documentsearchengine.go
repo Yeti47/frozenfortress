@@ -160,6 +160,7 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 				DocumentId:      doc.Id,
 				DocumentTitle:   decryptedTitle,
 				HighlightedText: strings.Join(highlightParts, " | "),
+				FileCount:       docDetail.FileCount,
 				OcrConfidence:   maxOcrConfidence,
 				CreatedAt:       doc.CreatedAt,
 				ModifiedAt:      doc.ModifiedAt,

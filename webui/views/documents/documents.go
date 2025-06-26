@@ -14,11 +14,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// DocumentServices aggregates document-related services for cleaner function signatures
+type DocumentServices struct {
+	DocumentManager     documents.DocumentManager
+	DocumentFileManager documents.DocumentFileManager
+	DocumentListService documents.DocumentListService
+	TagManager          documents.TagManager
+}
+
 // RegisterRoutes registers the documents routes with the provided Gin router.
-func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, documentManager documents.DocumentManager, documentFileManager documents.DocumentFileManager, tagManager documents.TagManager, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
+func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, documentServices DocumentServices, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
 	// Documents page route - protected by authentication
 	router.GET("/documents", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleDocumentsPage(c, signInManager, documentManager, tagManager, mekStore, encryptionService, logger)
+		handleDocumentsPage(c, signInManager, documentServices.DocumentListService, documentServices.TagManager, mekStore, encryptionService, logger)
 	})
 
 	// Create document routes - protected by authentication
@@ -26,47 +34,47 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, docume
 		handleCreateDocumentPage(c, signInManager, logger)
 	})
 	router.POST("/create-document", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleCreateDocumentSubmit(c, signInManager, documentManager, tagManager, mekStore, encryptionService, logger)
+		handleCreateDocumentSubmit(c, signInManager, documentServices.DocumentManager, documentServices.TagManager, mekStore, encryptionService, logger)
 	})
 
 	// Edit document route - protected by authentication
 	router.GET("/edit-document", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleEditDocumentPage(c, signInManager, documentManager, tagManager, mekStore, encryptionService, logger)
+		handleEditDocumentPage(c, signInManager, documentServices.DocumentManager, documentServices.TagManager, mekStore, encryptionService, logger)
 	})
 	router.POST("/edit-document", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleEditDocumentSubmit(c, signInManager, documentManager, tagManager, mekStore, encryptionService, logger)
+		handleEditDocumentSubmit(c, signInManager, documentServices.DocumentManager, documentServices.TagManager, mekStore, encryptionService, logger)
 	})
 
 	// View document route - protected by authentication
 	router.GET("/view-document", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleViewDocumentPage(c, signInManager, documentManager, mekStore, encryptionService, logger)
+		handleViewDocumentPage(c, signInManager, documentServices.DocumentManager, mekStore, encryptionService, logger)
 	})
 
 	// API routes for document files - protected by authentication
 	router.GET("/api/documents/:documentId/files", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleGetDocumentFiles(c, signInManager, documentFileManager, mekStore, encryptionService, logger)
+		handleGetDocumentFiles(c, signInManager, documentServices.DocumentFileManager, mekStore, encryptionService, logger)
 	})
 	router.POST("/api/documents/:documentId/files", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleUploadDocumentFile(c, signInManager, documentFileManager, mekStore, encryptionService, logger)
+		handleUploadDocumentFile(c, signInManager, documentServices.DocumentFileManager, mekStore, encryptionService, logger)
 	})
 	router.DELETE("/api/documents/:documentId/files/:fileId", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleDeleteDocumentFile(c, signInManager, documentFileManager, logger)
+		handleDeleteDocumentFile(c, signInManager, documentServices.DocumentFileManager, logger)
 	})
 	router.GET("/api/documents/:documentId/files/:fileId/download", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleDownloadDocumentFile(c, signInManager, documentFileManager, mekStore, encryptionService, logger)
+		handleDownloadDocumentFile(c, signInManager, documentServices.DocumentFileManager, mekStore, encryptionService, logger)
 	})
 	router.GET("/api/documents/:documentId/files/:fileId/view", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleViewDocumentFile(c, signInManager, documentFileManager, mekStore, encryptionService, logger)
+		handleViewDocumentFile(c, signInManager, documentServices.DocumentFileManager, mekStore, encryptionService, logger)
 	})
 
 	// Delete document route - protected by authentication
 	router.DELETE("/documents/:id", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleDeleteDocument(c, signInManager, documentManager, logger)
+		handleDeleteDocument(c, signInManager, documentServices.DocumentManager, logger)
 	})
 }
 
 // handleDocumentsPage handles the documents management page with pagination, filtering, and sorting
-func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, documentManager documents.DocumentManager, tagManager documents.TagManager, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
+func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, documentListService documents.DocumentListService, tagManager documents.TagManager, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
 	// Get current user for display
 	user, err := signInManager.GetCurrentUser(c.Request)
 	if err != nil {
@@ -76,9 +84,19 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 
 	// Parse URL parameters
 	pageStr := c.DefaultQuery("page", "1")
-	sortBy := c.DefaultQuery("sortBy", "title")
-	sortAsc := c.DefaultQuery("sortAsc", "true") == "true"
+	searchTerm := strings.TrimSpace(c.Query("searchTerm"))
+
+	// Default sort: use relevance for search results, title for browsing
+	defaultSort := "title"
+	defaultSortAsc := "true"
+	if searchTerm != "" {
+		defaultSort = "relevance"
+		defaultSortAsc = "false" // relevance should be descending (most relevant first)
+	}
+	sortBy := c.DefaultQuery("sortBy", defaultSort)
+	sortAsc := c.DefaultQuery("sortAsc", defaultSortAsc) == "true"
 	tagFilterStr := c.Query("tagIds")
+	deepSearch := c.Query("deepSearch") == "true"
 
 	// Check for success messages
 	var successMessage string
@@ -127,17 +145,19 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 		TagIds: tagIds,
 	}
 
-	// Prepare request for document manager
-	getDocumentsRequest := documents.GetDocumentsRequest{
-		Filters:  filters,
-		Page:     page,
-		PageSize: 20, // Max 20 per page
-		SortBy:   sortBy,
-		SortAsc:  sortAsc,
+	// Prepare request for document list service
+	documentListRequest := documents.DocumentListRequest{
+		SearchTerm: searchTerm,
+		DeepSearch: deepSearch,
+		Filters:    filters,
+		Page:       page,
+		PageSize:   20, // Max 20 per page
+		SortBy:     sortBy,
+		SortAsc:    sortAsc,
 	}
 
-	// Get documents from document manager
-	paginatedResponse, err := documentManager.GetDocuments(c.Request.Context(), user.Id, getDocumentsRequest, dataProtector)
+	// Get documents from document list service
+	documentListResponse, err := documentListService.GetDocumentList(c.Request.Context(), user.Id, documentListRequest, dataProtector)
 	if err != nil {
 		logger.Error("Failed to get documents for user", "user_id", user.Id, "error", err)
 		if middleware.HandleError(c, err) {
@@ -155,8 +175,8 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 
 	// Calculate pagination info
 	totalPages := 1
-	if paginatedResponse.PageSize > 0 {
-		totalPages = (paginatedResponse.TotalCount + paginatedResponse.PageSize - 1) / paginatedResponse.PageSize
+	if documentListResponse.PageSize > 0 {
+		totalPages = (documentListResponse.TotalCount + documentListResponse.PageSize - 1) / documentListResponse.PageSize
 	}
 
 	// Prepare template data
@@ -164,11 +184,11 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 		"Title":          "Frozen Fortress - Documents",
 		"Username":       user.UserName,
 		"Version":        "1.0.0", // Could be passed via services
-		"Documents":      paginatedResponse.Documents,
-		"TotalCount":     paginatedResponse.TotalCount,
+		"Documents":      documentListResponse.Items,
+		"TotalCount":     documentListResponse.TotalCount,
 		"Page":           page,
 		"TotalPages":     totalPages,
-		"PageSize":       paginatedResponse.PageSize,
+		"PageSize":       documentListResponse.PageSize,
 		"SortBy":         sortBy,
 		"SortAsc":        sortAsc,
 		"TagIds":         tagIds,
@@ -176,6 +196,9 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 		"HasPrevious":    page > 1,
 		"HasNext":        page < totalPages,
 		"SuccessMessage": successMessage,
+		"SearchTerm":     searchTerm,
+		"DeepSearch":     deepSearch,
+		"IsSearchResult": searchTerm != "",
 	}
 
 	// Render the documents template

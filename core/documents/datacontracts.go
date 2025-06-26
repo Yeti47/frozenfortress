@@ -66,6 +66,7 @@ type DocumentSearchResult struct {
 	DocumentId      string
 	DocumentTitle   string // Decrypted
 	HighlightedText string // Decrypted snippet
+	FileCount       int    // Number of files in the document
 	OcrConfidence   float32
 	RelevanceScore  float64 // Calculated relevance score for sorting
 	CreatedAt       time.Time
@@ -156,4 +157,34 @@ type CreateFileRequest struct {
 // CreateDocumentResponse represents the response from creating a document
 type CreateDocumentResponse struct {
 	DocumentId string
+}
+
+// DocumentListRequest represents a unified request for both document listing and searching
+type DocumentListRequest struct {
+	SearchTerm string // If provided, perform search; if empty, perform regular listing
+	DeepSearch bool   // Only used when SearchTerm is provided
+	Filters    DocumentFilters
+	Page       int
+	PageSize   int
+	SortBy     string // "title", "created_at", "modified_at", "relevance" (relevance only valid for search)
+	SortAsc    bool
+}
+
+// DocumentListResponse represents a unified response for both regular listing and searching
+type DocumentListResponse struct {
+	Items      []*DocumentListItem
+	TotalCount int
+	Page       int
+	PageSize   int
+	TotalPages int
+}
+
+// DocumentListItem represents a document in a list context, supporting both regular listing and search results
+type DocumentListItem struct {
+	*DocumentDto             // Embed regular document fields
+	HighlightedText string   // Only populated for search results
+	RelevanceScore  float64  // Only populated for search results
+	OcrConfidence   float32  // Only populated for search results
+	MatchTypes      []string // Only populated for search results: "title", "description", "filename", "content"
+	IsSearchResult  bool     // Indicates whether this item came from search or regular listing
 }

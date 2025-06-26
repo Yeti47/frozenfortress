@@ -174,7 +174,6 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 20px;
-            flex: 1;
             overflow-y: auto;
             padding: 10px 0;
         }
@@ -188,7 +187,8 @@
             border: 1px solid #f1f3f4;
             display: flex;
             flex-direction: column;
-            height: 280px;
+            min-height: 280px; /* Minimum height for all cards */
+            max-height: 400px; /* Prevent excessive growth */
         }
 
         .document-card:hover {
@@ -224,7 +224,7 @@
 
         .document-info {
             padding: 16px;
-            flex: 1;
+            flex: 0 1 auto; /* Don't expand, just take needed space */
             display: flex;
             flex-direction: column;
         }
@@ -366,6 +366,126 @@
             border-radius: 12px;
             font-size: 11px;
             font-weight: 500;
+        }
+
+        /* Search Result Styles - Compact and lean */
+        .search-highlight {
+            margin: 4px 0 8px 0;
+            font-size: 12px;
+        }
+
+        .search-highlight-label {
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .search-highlight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+
+        .search-relevance-score {
+            font-size: 10px;
+            color: #95a5a6;
+            background-color: rgba(149, 165, 166, 0.1);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+        }
+
+        .search-highlight-text {
+            color: #34495e;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        /* Structured match display - Compact and lean */
+        .match-section {
+            margin-bottom: 2px;
+            display: inline-block;
+            margin-right: 12px;
+        }
+
+        .match-section:last-child {
+            margin-bottom: 0;
+            margin-right: 0;
+        }
+
+        .match-type-label {
+            font-weight: 600;
+            color: #95a5a6;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-right: 4px;
+        }
+
+        .match-content {
+            color: #34495e;
+            font-size: 12px;
+        }
+
+        .search-match {
+            font-weight: 700;
+            color: #2c3e50;
+            background: rgba(52, 152, 219, 0.1);
+            padding: 1px 2px;
+            border-radius: 2px;
+        }
+
+        .match-types {
+            display: flex;
+            gap: 6px;
+            margin: 4px 0;
+            flex-wrap: wrap;
+        }
+
+        /* Search Results Header */
+        .search-results-info {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .search-results-text {
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .search-term {
+            font-weight: 600;
+            color: #3498db;
+        }
+
+        .clear-search-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .clear-search-btn:hover {
+            background: #7f8c8d;
         }
 
         /* Pagination */
@@ -816,6 +936,9 @@
                         <div class="sorting-controls">
                             <label for="sortBy" style="font-size: 14px; color: #7f8c8d;">Sort by:</label>
                             <select id="sortBy" class="sort-select" onchange="updateSorting(this.value)">
+                                {{if .IsSearchResult}}
+                                <option value="relevance" {{if eq .SortBy "relevance"}}selected{{end}}>Relevance</option>
+                                {{end}}
                                 <option value="title" {{if eq .SortBy "title"}}selected{{end}}>Title</option>
                                 <option value="created_at" {{if eq .SortBy "created_at"}}selected{{end}}>Created</option>
                                 <option value="modified_at" {{if eq .SortBy "modified_at"}}selected{{end}}>Modified</option>
@@ -831,6 +954,18 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- Search Results Info -->
+                {{if .IsSearchResult}}
+                <div class="search-results-info">
+                    <div class="search-results-text">
+                        Search results for <span class="search-term">"{{.SearchTerm}}"</span>
+                        {{if .DeepSearch}}(deep search enabled){{end}}
+                        - {{.TotalCount}} document{{if ne .TotalCount 1}}s{{end}} found
+                    </div>
+                    <a href="/documents" class="clear-search-btn">Clear Search</a>
+                </div>
+                {{end}}
 
                 <!-- Filter Controls -->
                 <div class="filter-controls">
@@ -877,7 +1012,7 @@
                 {{if .Documents}}
                     <div class="documents-grid">
                         {{range .Documents}}
-                            <div class="document-card">
+                            <div class="document-card{{if .IsSearchResult}} search-result{{end}}">
                                 <div class="document-preview">
                                     {{if .Preview}}
                                         {{if eq .Preview.PreviewType "application/pdf"}}
@@ -907,6 +1042,17 @@
                                         </div>
                                     </div>
                                     <p class="document-description">{{.Description}}</p>
+                                    {{if .IsSearchResult}}
+                                        {{if .HighlightedText}}
+                                            <div class="search-highlight">
+                                                <div class="search-highlight-header">
+                                                    <div class="search-highlight-label">Match:</div>
+                                                    <div class="search-relevance-score" title="Relevance Score">{{printf "%.2f" .RelevanceScore}}</div>
+                                                </div>
+                                                <div class="search-highlight-text" data-highlight-text="{{.HighlightedText}}"></div>
+                                            </div>
+                                        {{end}}
+                                    {{end}}
                                     <div class="document-footer">
                                         <div class="document-meta">
                                             <span class="document-file-count">
@@ -1129,6 +1275,13 @@
             }
         }
 
+        // Helper function to clear success message parameters
+        function clearSuccessMessageParams(urlParams) {
+            urlParams.delete('created');
+            urlParams.delete('updated');
+            urlParams.delete('deleted');
+        }
+
         function applyTagFilters() {
             const urlParams = new URLSearchParams(window.location.search);
             
@@ -1138,6 +1291,7 @@
                 urlParams.delete('tagIds');
             }
             urlParams.set('page', '1'); // Reset to first page when filters change
+            clearSuccessMessageParams(urlParams); // Clear success messages
             window.location.search = urlParams.toString();
         }
 
@@ -1145,14 +1299,17 @@
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.set('sortBy', newSortBy);
             urlParams.set('page', '1'); // Reset to first page when sorting changes
+            clearSuccessMessageParams(urlParams); // Clear success messages
             window.location.search = urlParams.toString();
         }
 
         function toggleSortDirection() {
             const urlParams = new URLSearchParams(window.location.search);
-            const currentSortAsc = urlParams.get('sortAsc') !== 'false';
+            // Use the server-provided sort direction state instead of parsing URL
+            const currentSortAsc = {{.SortAsc}};
             urlParams.set('sortAsc', (!currentSortAsc).toString());
             urlParams.set('page', '1'); // Reset to first page when sorting changes
+            clearSuccessMessageParams(urlParams); // Clear success messages
             window.location.search = urlParams.toString();
         }
 
@@ -1160,6 +1317,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.delete('tagIds');
             urlParams.set('page', '1');
+            clearSuccessMessageParams(urlParams); // Clear success messages
             window.location.search = urlParams.toString();
         }
 
@@ -1272,6 +1430,74 @@
                 deleteButton.style.cursor = 'pointer';
             });
         }
+
+        // Function to render highlighted text from data attributes
+        function renderHighlightedText() {
+            const highlightElements = document.querySelectorAll('.search-highlight-text[data-highlight-text]');
+            
+            highlightElements.forEach(element => {
+                const highlightText = element.getAttribute('data-highlight-text');
+                if (highlightText && highlightText.trim()) {
+                    // Parse and structure the highlighted text by match types
+                    const structuredMatches = parseMatchTypes(highlightText);
+                    
+                    if (structuredMatches.length > 0) {
+                        element.innerHTML = structuredMatches.map(match => {
+                            const highlightedContent = match.content.replace(/\*\*([^*]+)\*\*/g, '<strong class="search-match">$1</strong>');
+                            return `<span class="match-section"><span class="match-type-label">${match.type}:</span> <span class="match-content">${highlightedContent}</span></span>`;
+                        }).join(' ');
+                    } else {
+                        // Fallback: just highlight the text without structure
+                        const highlighted = highlightText.replace(/\*\*([^*]+)\*\*/g, '<strong class="search-match">$1</strong>');
+                        element.innerHTML = highlighted;
+                    }
+                }
+            });
+        }
+        
+        // Function to parse match types from highlighted text
+        function parseMatchTypes(text) {
+            const matches = [];
+            // Split by pipe symbol to get individual match sections
+            const sections = text.split('|').map(s => s.trim()).filter(s => s);
+            
+            for (const section of sections) {
+                // Look for patterns like "Title: some text", "Description: some text", etc.
+                const match = section.match(/^([^:]+):\s*(.+)$/);
+                if (match) {
+                    matches.push({
+                        type: match[1].trim(),
+                        content: match[2].trim()
+                    });
+                } else if (section.trim()) {
+                    // If no type prefix, treat as generic content
+                    matches.push({
+                        type: 'Match',
+                        content: section.trim()
+                    });
+                }
+            }
+            
+            return matches;
+        }
+
+        // Initialize highlighting when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            renderHighlightedText();
+            
+            // Set search type to documents on the documents page
+            const searchTypeDropdown = document.getElementById('searchTypeDropdown');
+            if (searchTypeDropdown) {
+                searchTypeDropdown.value = 'documents';
+                // Trigger the change event to update icon and show deep search toggle
+                if (typeof updateDropdownIcon === 'function') {
+                    updateDropdownIcon();
+                }
+                if (typeof toggleDeepSearchToggle === 'function') {
+                    toggleDeepSearchToggle();
+                }
+            }
+        });
     </script>
 
 {{template "footer" .}}

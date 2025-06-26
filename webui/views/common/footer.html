@@ -78,6 +78,22 @@
             } else {
                 urlParams.delete('searchTerm');
             }
+            
+            // Handle deep search parameter for documents-deep search type
+            if (searchType === 'documents-deep') {
+                urlParams.set('deepSearch', 'true');
+                // Always set default sort for deep search to relevance descending (reset any existing sort)
+                urlParams.set('sortBy', 'relevance');
+                urlParams.set('sortAsc', 'false');
+            } else {
+                urlParams.delete('deepSearch');
+                // For regular document search, always set default sort to relevance descending if there's a search term
+                if ((searchType === 'documents') && searchTerm) {
+                    urlParams.set('sortBy', 'relevance');
+                    urlParams.set('sortAsc', 'false');
+                }
+            }
+            
             urlParams.set('page', '1'); // Reset to first page when searching
             
             // Remove success message parameters when searching
@@ -87,7 +103,7 @@
             
             // Determine target URL based on search type
             let targetUrl;
-            if (searchType === 'documents') {
+            if (searchType === 'documents' || searchType === 'documents-deep') {
                 targetUrl = `/documents?${urlParams.toString()}`;
             } else {
                 // Default to secrets search
@@ -109,12 +125,18 @@
             // Clear the input
             searchInput.value = '';
             
+            // Clear deep search toggle
+            if (typeof setDeepSearchState === 'function') {
+                setDeepSearchState(false);
+            }
+            
             // Hide the clear button
             clearButton.classList.remove('show');
             
-            // Remove search term from URL and redirect
+            // Remove search term and deep search from URL and redirect
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.delete('searchTerm');
+            urlParams.delete('deepSearch');
             urlParams.set('page', '1'); // Reset to first page
             
             // Remove success message parameters
@@ -155,6 +177,8 @@
             
             if (searchType === 'documents') {
                 searchInput.placeholder = 'Search documents...';
+            } else if (searchType === 'documents-deep') {
+                searchInput.placeholder = 'Deep search documents...';
             } else {
                 searchInput.placeholder = 'Search secrets...';
             }
@@ -163,16 +187,21 @@
         function initializeSearchType() {
             const searchTypeDropdown = document.getElementById('searchTypeDropdown');
             const currentPath = window.location.pathname;
+            const urlParams = new URLSearchParams(window.location.search);
+            const hasDeepSearch = urlParams.get('deepSearch') === 'true';
             
             // Check if URL contains "document" (ignoring query params)
             if (currentPath.includes('document')) {
-                searchTypeDropdown.value = 'documents';
+                // If deep search is enabled, use documents-deep, otherwise use documents
+                searchTypeDropdown.value = hasDeepSearch ? 'documents-deep' : 'documents';
             } else {
                 searchTypeDropdown.value = 'secrets';
             }
             
             // Update placeholder based on selection
             updateSearchPlaceholder();
+            // Update icon based on selection
+            updateDropdownIcon();
         }
 
         // Initialize clear button visibility and search type on page load
@@ -297,6 +326,17 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Restore deep search toggle state from URL parameters on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.get('deepSearch') === 'true' && typeof setDeepSearchState === 'function') {
+                setDeepSearchState(true);
+            }
+        });
+    </script>
 
 </body>
 </html>

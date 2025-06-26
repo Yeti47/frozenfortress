@@ -175,3 +175,13 @@ type DocumentFileProcessorFactory interface {
 	// Returns an error if no processor is available for the content type
 	GetProcessor(contentType string) (DocumentFileProcessor, error)
 }
+
+// DocumentListService provides a unified interface for listing documents with optional search functionality
+// This service acts as a facade over DocumentManager and DocumentSearchEngine, delegating to the appropriate
+// service based on whether a search term is provided
+type DocumentListService interface {
+	// GetDocumentList retrieves documents with optional search functionality
+	// If request.SearchTerm is empty, it delegates to DocumentManager for regular filtering/pagination
+	// If request.SearchTerm is provided, it delegates to DocumentSearchEngine for search functionality
+	GetDocumentList(ctx context.Context, userId string, request DocumentListRequest, dataProtector dataprotection.DataProtector) (*DocumentListResponse, error)
+}

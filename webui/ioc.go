@@ -27,6 +27,8 @@ type services struct {
 	TagManager              documents.TagManager
 	DocumentManager         documents.DocumentManager
 	DocumentFileManager     documents.DocumentFileManager
+	DocumentSearchEngine    documents.DocumentSearchEngine
+	DocumentListService     documents.DocumentListService
 }
 
 // configureServices configures the services used by the web UI.
@@ -128,6 +130,13 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 	// Create document file manager
 	documentFileManager := documents.NewDefaultDocumentFileManager(uowFactory, fileCreator, logger)
 
+	// Create document search engine
+	searchSorter := documents.NewSearchDocumentSorter()
+	documentSearchEngine := documents.NewDefaultDocumentSearchEngine(uowFactory, logger, searchSorter)
+
+	// Create document list service (facade)
+	documentListService := documents.NewDefaultDocumentListService(documentManager, documentSearchEngine, logger)
+
 	return services{
 		SignInManager:           signInManager,
 		EncryptionService:       encryptionService,
@@ -143,5 +152,7 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		TagManager:              tagManager,
 		DocumentManager:         documentManager,
 		DocumentFileManager:     documentFileManager,
+		DocumentSearchEngine:    documentSearchEngine,
+		DocumentListService:     documentListService,
 	}
 }
