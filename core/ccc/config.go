@@ -31,6 +31,7 @@ const (
 	EnvBackupIntervalDays   = "FF_BACKUP_INTERVAL_DAYS"
 	EnvBackupDirectory      = "FF_BACKUP_DIRECTORY"
 	EnvBackupMaxGenerations = "FF_BACKUP_MAX_GENERATIONS"
+	EnvOcrEnabled           = "FF_OCR_ENABLED"
 	EnvOCRLanguages         = "FF_OCR_LANGUAGES"
 )
 
@@ -44,6 +45,7 @@ type BackupConfig struct {
 
 // OCRConfig contains OCR-related configuration settings
 type OCRConfig struct {
+	Enabled   bool     // Enable/disable OCR functionality
 	Languages []string // OCR languages to use (e.g., ["eng", "deu"] for English and German)
 }
 
@@ -100,6 +102,7 @@ var DefaultConfig = AppConfig{
 		MaxGenerations: 10,                                         // Keep 10 backup generations
 	},
 	OCR: OCRConfig{
+		Enabled:   true,            // OCR is enabled by default
 		Languages: []string{"eng"}, // English by default
 	},
 }
@@ -187,6 +190,9 @@ func LoadConfigFromEnv() AppConfig {
 	}
 
 	// OCR configuration
+	if ocrEnabled := os.Getenv(EnvOcrEnabled); ocrEnabled != "" {
+		config.OCR.Enabled = ocrEnabled == "true"
+	}
 	if ocrLanguages := os.Getenv(EnvOCRLanguages); ocrLanguages != "" {
 		// Parse comma-separated languages (e.g., "eng,deu" or "eng+deu")
 		languages := strings.FieldsFunc(ocrLanguages, func(c rune) bool {

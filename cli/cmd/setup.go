@@ -200,6 +200,14 @@ func runSetup(readOnly bool) error {
 			Validation:   validatePositiveInt,
 		},
 		{
+			EnvVar:       ccc.EnvOcrEnabled,
+			Description:  "Enable OCR functionality (true/false)",
+			CurrentValue: strconv.FormatBool(currentConfig.OCR.Enabled),
+			DefaultValue: strconv.FormatBool(defaultConfig.OCR.Enabled),
+			Type:         "bool",
+			Validation:   validateBool,
+		},
+		{
 			EnvVar:       ccc.EnvOCRLanguages,
 			Description:  "OCR languages (comma-separated, e.g., 'eng,deu' for English and German)",
 			CurrentValue: strings.Join(currentConfig.OCR.Languages, ","),

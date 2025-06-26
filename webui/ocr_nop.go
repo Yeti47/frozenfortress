@@ -8,6 +8,9 @@ import (
 )
 
 // createOCRService creates a NopOCRService when the notesseract build tag is present
-func createOCRService(config ccc.AppConfig) documents.OCRService {
-	return documents.NewNopOCRService()
+func createOCRService(config ccc.AppConfig, logger ccc.Logger) documents.OCRService {
+	return documents.NewNopOCRService(
+		config.OCR,
+		logger,
+	)
 }

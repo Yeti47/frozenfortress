@@ -98,6 +98,7 @@ type DocumentUnitOfWorkFactory interface {
 
 // OCR Service interface
 type OCRService interface {
+	IsOcrEnabled() bool
 	ExtractText(ctx context.Context, imageData []byte) (text string, confidence float32, err error)
 }
 

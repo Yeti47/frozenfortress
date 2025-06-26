@@ -14,21 +14,31 @@ import (
 // This service is stateless but uses configurable languages for OCR processing
 type TesseractOCRService struct {
 	config ccc.OCRConfig // OCR configuration including languages
+	logger ccc.Logger    // Logger for logging errors and information
 }
 
 // NewTesseractOCRService creates a new TesseractOCRService with specified OCR configuration
-func NewTesseractOCRService(config ccc.OCRConfig) *TesseractOCRService {
+func NewTesseractOCRService(config ccc.OCRConfig, logger ccc.Logger) *TesseractOCRService {
+
+	if logger == nil {
+		logger = ccc.NopLogger
+	}
+
 	// Default to English if no languages specified
 	if len(config.Languages) == 0 {
 		config.Languages = []string{"eng"}
 	}
 	return &TesseractOCRService{
 		config: config,
+		logger: logger,
 	}
 }
 
 // ExtractText extracts text from image data using Tesseract OCR with sensible defaults
 func (s *TesseractOCRService) ExtractText(ctx context.Context, imageData []byte) (text string, confidence float32, err error) {
+
+	s.logger.Debug("Extracting text from image data using Tesseract OCR")
+
 	// Create a new Tesseract client for this operation
 	client := gosseract.NewClient()
 	defer client.Close()
@@ -75,4 +85,9 @@ func (s *TesseractOCRService) ExtractText(ctx context.Context, imageData []byte)
 	}
 
 	return text, confidence, nil
+}
+
+// IsOcrEnabled returns true if OCR is enabled in the configuration
+func (s *TesseractOCRService) IsOcrEnabled() bool {
+	return s.config.Enabled
 }

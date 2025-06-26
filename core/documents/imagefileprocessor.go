@@ -53,18 +53,26 @@ func (p *ImageFileProcessor) SupportsContentType(contentType string) bool {
 
 // ExtractText extracts text from image files using OCR
 func (p *ImageFileProcessor) ExtractText(ctx context.Context, fileData []byte) (text string, confidence float32, pageCount int, err error) {
+
+	// Images always have 1 page
+	const pageCount = 1
+
 	if p.ocrService == nil {
-		return "", 0.0, 0, fmt.Errorf("OCR service not configured")
+		return "", 0.0, pageCount, fmt.Errorf("OCR service not configured")
+	}
+
+	// Check if OCR is enabled
+	if !p.ocrService.IsOcrEnabled() {
+		return "", 0.0, pageCount, fmt.Errorf("OCR is not enabled")
 	}
 
 	// Use the OCR service to extract text from the image data
 	text, confidence, err = p.ocrService.ExtractText(ctx, fileData)
 	if err != nil {
-		return "", 0.0, 0, err
+		return "", 0.0, pageCount, err
 	}
 
-	// Images always have 1 page
-	return text, confidence, 1, nil
+	return text, confidence, pageCount, nil
 }
 
 // GeneratePreview creates a thumbnail/preview image from the original image
