@@ -101,7 +101,7 @@ func handleSecretsPage(c *gin.Context, signInManager auth.SignInManager, secretM
 	templateData := gin.H{
 		"Title":          "Frozen Fortress - Secrets",
 		"Username":       user.UserName,
-		"Version":        "1.0.0", // Could be passed via services
+		"Version":        middleware.AppVersion,
 		"Secrets":        paginatedResponse.Secrets,
 		"TotalCount":     paginatedResponse.TotalCount,
 		"Page":           page,
@@ -134,7 +134,7 @@ func handleEditSecretPage(c *gin.Context, signInManager auth.SignInManager, secr
 	templateData := gin.H{
 		"Title":    "Frozen Fortress - Edit Secret",
 		"Username": user.UserName,
-		"Version":  "1.0.0",
+		"Version":  middleware.AppVersion,
 	}
 
 	if secretId != "" {
@@ -184,7 +184,7 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 		templateData := gin.H{
 			"Title":       "Frozen Fortress - Edit Secret",
 			"Username":    user.UserName,
-			"Version":     "1.0.0",
+			"Version":     middleware.AppVersion,
 			"SecretId":    secretId,
 			"SecretName":  secretName,
 			"SecretValue": secretValue,
@@ -197,7 +197,7 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 		templateData := gin.H{
 			"Title":       "Frozen Fortress - Edit Secret",
 			"Username":    user.UserName,
-			"Version":     "1.0.0",
+			"Version":     middleware.AppVersion,
 			"SecretId":    secretId,
 			"SecretName":  secretName,
 			"SecretValue": secretValue,
@@ -229,7 +229,7 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 			templateData := gin.H{
 				"Title":       "Frozen Fortress - Edit Secret",
 				"Username":    user.UserName,
-				"Version":     "1.0.0",
+				"Version":     middleware.AppVersion,
 				"SecretId":    secretId,
 				"SecretName":  secretName,
 				"SecretValue": secretValue,
@@ -241,7 +241,7 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 			templateData := gin.H{
 				"Title":       "Frozen Fortress - Edit Secret",
 				"Username":    user.UserName,
-				"Version":     "1.0.0",
+				"Version":     middleware.AppVersion,
 				"SecretId":    secretId,
 				"SecretName":  secretName,
 				"SecretValue": secretValue,
@@ -265,7 +265,7 @@ func handleEditSecretSubmit(c *gin.Context, signInManager auth.SignInManager, se
 			templateData := gin.H{
 				"Title":       "Frozen Fortress - Edit Secret",
 				"Username":    user.UserName,
-				"Version":     "1.0.0",
+				"Version":     middleware.AppVersion,
 				"SecretId":    "",
 				"SecretName":  secretName,
 				"SecretValue": secretValue,

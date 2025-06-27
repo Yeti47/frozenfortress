@@ -74,6 +74,7 @@ func handleTagsPage(c *gin.Context, signInManager auth.SignInManager, tagManager
 		"Title":          "Frozen Fortress - Tags",
 		"Username":       user.UserName,
 		"User":           user,
+		"Version":        middleware.AppVersion,
 		"Tags":           tags,
 		"SuccessMessage": successMessage,
 	})
@@ -119,6 +120,7 @@ func handleEditTagPage(c *gin.Context, signInManager auth.SignInManager, tagMana
 	data := gin.H{
 		"Title":    "Frozen Fortress - Edit Tag",
 		"Username": user.UserName,
+		"Version":  middleware.AppVersion,
 	}
 
 	// If we have an ID, we're editing an existing tag

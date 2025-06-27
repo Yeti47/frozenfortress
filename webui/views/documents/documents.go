@@ -183,7 +183,7 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 	templateData := gin.H{
 		"Title":          "Frozen Fortress - Documents",
 		"Username":       user.UserName,
-		"Version":        "1.0.0", // Could be passed via services
+		"Version":        middleware.AppVersion,
 		"Documents":      documentListResponse.Items,
 		"TotalCount":     documentListResponse.TotalCount,
 		"Page":           page,
@@ -250,7 +250,7 @@ func handleEditDocumentPage(c *gin.Context, signInManager auth.SignInManager, do
 	templateData := gin.H{
 		"Title":        "Frozen Fortress - Edit Document",
 		"Username":     user.UserName,
-		"Version":      "1.0.0",
+		"Version":      middleware.AppVersion,
 		"Document":     document,
 		"AllTags":      allTags,
 		"DocumentTags": documentTags,
@@ -294,7 +294,7 @@ func handleViewDocumentPage(c *gin.Context, signInManager auth.SignInManager, do
 	templateData := gin.H{
 		"Title":    "Frozen Fortress - View Document",
 		"Username": user.UserName,
-		"Version":  "1.0.0",
+		"Version":  middleware.AppVersion,
 		"Document": document,
 	}
 
@@ -319,7 +319,7 @@ func handleCreateDocumentPage(c *gin.Context, signInManager auth.SignInManager, 
 	templateData := gin.H{
 		"Title":    "Frozen Fortress - Create Document",
 		"Username": user.UserName,
-		"Version":  "1.0.0",
+		"Version":  middleware.AppVersion,
 	}
 
 	// Render the create document template
@@ -345,7 +345,7 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 		templateData := gin.H{
 			"Title":         "Frozen Fortress - Create Document",
 			"Username":      user.UserName,
-			"Version":       "1.0.0",
+			"Version":       middleware.AppVersion,
 			"DocumentTitle": title,
 			"Description":   description,
 			"ErrorMessage":  "Document title is required.",
@@ -375,7 +375,7 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 		templateData := gin.H{
 			"Title":         "Frozen Fortress - Create Document",
 			"Username":      user.UserName,
-			"Version":       "1.0.0",
+			"Version":       middleware.AppVersion,
 			"DocumentTitle": title,
 			"Description":   description,
 			"ErrorMessage":  "Failed to process uploaded files.",
@@ -405,11 +405,10 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 				"filename", fileHeader.Filename,
 				"content_type", contentType,
 				"user_id", user.Id)
-
 			templateData := gin.H{
 				"Title":         "Frozen Fortress - Create Document",
 				"Username":      user.UserName,
-				"Version":       "1.0.0",
+				"Version":       middleware.AppVersion,
 				"ErrorMessage":  "File '" + fileHeader.Filename + "' has an unsupported format. Only PNG, JPG, JPEG, and PDF files are allowed.",
 				"DocumentTitle": title,
 				"Description":   description,
@@ -426,11 +425,10 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 				"size", fileHeader.Size,
 				"max_size", maxFileSize,
 				"user_id", user.Id)
-
 			templateData := gin.H{
 				"Title":         "Frozen Fortress - Create Document",
 				"Username":      user.UserName,
-				"Version":       "1.0.0",
+				"Version":       middleware.AppVersion,
 				"ErrorMessage":  "File '" + fileHeader.Filename + "' is too large. Maximum file size is 10MB.",
 				"DocumentTitle": title,
 				"Description":   description,
@@ -483,7 +481,7 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 		templateData := gin.H{
 			"Title":         "Frozen Fortress - Create Document",
 			"Username":      user.UserName,
-			"Version":       "1.0.0",
+			"Version":       middleware.AppVersion,
 			"DocumentTitle": title,
 			"Description":   description,
 		}

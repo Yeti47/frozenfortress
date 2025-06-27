@@ -19,8 +19,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const AppVersion = "1.0.0"
-
 func main() {
 
 	config := ccc.LoadConfigFromEnv()
