@@ -32,7 +32,7 @@ func NewNopOCRService(config ccc.OCRConfig, logger ccc.Logger) *NopOCRService {
 // It logs a warning that OCR functionality is not available
 func (s *NopOCRService) ExtractText(ctx context.Context, imageData []byte) (text string, confidence float32, err error) {
 
-	logger.Warn("OCR service is not available. Frozen Fortress was built without Tesseract. Text extraction will not work.")
+	s.logger.Warn("OCR service is not available. Frozen Fortress was built without Tesseract. Text extraction will not work.")
 	return "", 0.0, nil
 }
 
