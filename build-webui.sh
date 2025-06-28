@@ -2,12 +2,14 @@
 
 # Build script for Frozen Fortress WebUI
 # This script builds the webui application and places it in the bin directory
-# Usage: ./build-webui.sh [--debug]
+# Usage: ./build-webui.sh [--debug] [--notesseract]
 
 set -e  # Exit on any error
 
 DEBUG_MODE=false
+NO_TESSERACT=false
 BUILD_FLAGS=""
+BUILD_TAGS=""
 OUTPUT_BINARY="webui"
 
 # Parse command line arguments
@@ -19,9 +21,14 @@ while [[ $# -gt 0 ]]; do
             OUTPUT_BINARY="webui-debug"
             shift
             ;;
+        --notesseract)
+            NO_TESSERACT=true
+            BUILD_TAGS="notesseract"
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--debug]"
+            echo "Usage: $0 [--debug] [--notesseract]"
             exit 1
             ;;
     esac
@@ -34,16 +41,32 @@ else
     echo "Building Frozen Fortress WebUI (RELEASE MODE)..."
 fi
 
+if [ "$NO_TESSERACT" = true ]; then
+    echo "Building without Tesseract OCR support..."
+fi
+
 # Create bin directory if it doesn't exist
 mkdir -p bin
 
 # Build the webui application
 echo "Compiling webui application..."
-if [ "$DEBUG_MODE" = true ]; then
-    go build $BUILD_FLAGS -o bin/$OUTPUT_BINARY ./webui
-else
-    go build -o bin/$OUTPUT_BINARY ./webui
+
+# Construct the build command
+BUILD_CMD="go build"
+
+if [ -n "$BUILD_TAGS" ]; then
+    BUILD_CMD="$BUILD_CMD -tags $BUILD_TAGS"
 fi
+
+if [ "$DEBUG_MODE" = true ]; then
+    BUILD_CMD="$BUILD_CMD $BUILD_FLAGS"
+fi
+
+BUILD_CMD="$BUILD_CMD -o bin/$OUTPUT_BINARY ./webui"
+
+# Execute the build command
+echo "Running: $BUILD_CMD"
+eval $BUILD_CMD
 
 # Copy webui assets to bin directory
 echo "Copying webui assets..."
@@ -72,10 +95,10 @@ if [ -d "webui/views" ]; then
 fi
 
 echo "Build completed successfully!"
-echo "WebUI binary created at: bin/webui"
+echo "WebUI binary created at: bin/$OUTPUT_BINARY"
 echo ""
 echo "To run the application:"
-echo "  ./bin/webui"
+echo "  ./bin/$OUTPUT_BINARY"
 echo ""
 echo "Or use the run script:"
 echo "  ./run-webui.sh"
