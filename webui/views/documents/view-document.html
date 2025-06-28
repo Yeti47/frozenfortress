@@ -447,79 +447,37 @@
             overflow: hidden;
         }
 
-        .extracted-text-header {
-            background: #f8f9fa;
-            padding: 10px 15px;
-            border-bottom: 1px solid #e1e8ed;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .text-length {
-            font-size: 12px;
-            color: #6c757d;
-            font-weight: 500;
-        }
-
-        .expand-text-btn {
-            background: none;
-            border: none;
-            color: #3498db;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 14px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s ease;
-        }
-
-        .expand-text-btn:hover {
-            background: rgba(52, 152, 219, 0.1);
-        }
-
-        .expand-text-btn .material-icons {
-            font-size: 16px;
-            transition: transform 0.3s ease;
-        }
-
-        .expand-text-btn.expanded .material-icons {
-            transform: rotate(180deg);
-        }
-
         .extracted-text {
             background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
             padding: 15px;
             font-family: 'Segoe UI', sans-serif;
             line-height: 1.6;
             white-space: pre-wrap;
             word-wrap: break-word;
+            max-height: 300px;
             overflow-y: auto;
-            transition: max-height 0.3s ease;
+            min-height: 100px;
         }
 
-        .extracted-text.collapsed {
-            max-height: 120px;
-            overflow: hidden;
-            position: relative;
+        /* Remove old collapsible styles */
+        .extracted-text-container {
+            margin-top: 15px;
         }
 
-        .extracted-text.collapsed::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 30px;
-            background: linear-gradient(transparent, #f8f9fa);
-            pointer-events: none;
+        .extracted-text-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
-        .extracted-text.expanded {
-            max-height: 400px;
-            overflow-y: auto;
+        .extracted-text-header h4 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
         }
 
         .no-text-message {
@@ -543,119 +501,49 @@
 
         @media (max-width: 768px) {
             .file-modal-content {
-                margin: 10px;
-                padding: 15px;
-                max-height: 95vh;
-                width: calc(100% - 20px);
-                border-radius: 8px;
-            }
-            
-            .file-modal-header {
-                margin-bottom: 20px;
-                padding-bottom: 12px;
+                margin: 5px;
+                padding: 12px;
+                width: calc(100% - 10px);
+                height: 90vh;
+                max-height: 98vh;
+                border-radius: 6px;
+                display: flex;
                 flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
             }
-            
-            .modal-title {
-                font-size: 20px;
-                line-height: 1.3;
+            .file-modal-tabs {
+                margin-bottom: 10px;
+                margin-top: 10px;
             }
-            
-            .modal-close {
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                font-size: 20px;
-                padding: 8px;
+            .file-modal-tab-content {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                min-height: 0;
             }
-            
             .metadata-section {
-                margin-bottom: 20px;
+                /* allow info tab to scroll if needed */
+                overflow-y: auto;
+                flex-shrink: 0;
             }
-            
-            .metadata-section h3 {
-                font-size: 16px;
-                margin-bottom: 12px;
-            }
-            
-            .metadata-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-                background: #f8f9fa;
-                padding: 15px;
-                border-radius: 8px;
-            }
-            
-            .metadata-label {
-                font-size: 14px;
-                font-weight: 700;
-                color: #2c3e50;
-                margin-bottom: 4px;
-                padding-bottom: 4px;
-                border-bottom: 1px solid #e1e8ed;
-            }
-            
-            .metadata-value {
-                font-size: 14px;
-                margin-bottom: 12px;
-                padding-left: 8px;
-            }
-            
-            .metadata-value.code {
-                font-size: 12px;
-                padding: 8px 12px;
-                margin: 4px 0;
-                border-radius: 6px;
-            }
-            
-            .extracted-text {
-                font-size: 14px;
-                padding: 12px;
-                max-height: 150px;
-                border-radius: 6px;
-            }
-            
-            .confidence-bar {
-                height: 24px;
-                border-radius: 12px;
-            }
-            
-            .confidence-text {
-                font-size: 11px;
-            }
-            
-            /* Mobile extracted text optimizations */
-            .extracted-text-header {
-                padding: 8px 12px;
+            #file-tab-text .metadata-section {
+                flex: 0 0 auto;
+                display: flex;
                 flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
+                height: 100%;
+                min-height: 0;
             }
-            
-            .text-length {
-                text-align: center;
-                font-size: 11px;
+            #file-tab-text .extracted-text-container {
+                flex: 1 1 0;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
             }
-            
-            .expand-text-btn {
-                justify-content: center;
-                padding: 8px;
-                font-size: 13px;
-            }
-            
-            .extracted-text.collapsed {
-                max-height: 100px;
-            }
-            
-            .extracted-text.expanded {
-                max-height: 250px;
-            }
-            
-            .extracted-text {
-                font-size: 13px;
-                padding: 12px;
+            #file-tab-text .extracted-text {
+                flex: 1 1 0;
+                min-height: 0;
+                max-height: none;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
         }
 
@@ -674,6 +562,9 @@
             /* Force no blur with highest specificity */
             filter: none !important;
             backdrop-filter: none !important;
+            /* Ensure modal captures all mouse events and prevents background interaction */
+            pointer-events: auto;
+            overflow: hidden;
         }
 
         .file-modal-overlay.show {
@@ -691,6 +582,35 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
             transform: scale(0.8);
             transition: transform 0.3s ease;
+            position: relative;
+            pointer-events: auto;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            /* Ensure this content is always on top and interactive */
+            z-index: 9999;
+        }
+
+        /* Desktop modal size - larger on desktop screens */
+        @media (min-width: 768px) {
+            .file-modal-content {
+                max-width: 750px;
+                width: 85%;
+                height: 80vh;
+                overflow-y: auto;
+                max-height: 80vh;
+            }
+            
+            .file-modal-tab-content {
+                max-height: calc(80vh - 180px);
+                overflow-y: auto;
+            }
+            
+            .extracted-text {
+                max-height: 40vh !important;
+            }
+
         }
 
         .file-modal-overlay.show .file-modal-content {
@@ -711,6 +631,52 @@
             font-weight: 700;
             color: #2c3e50;
             margin: 0;
+        }
+
+        /* Tab system for file modal */
+        .file-modal-tabs {
+            display: flex;
+            border-bottom: 2px solid #e1e8ed;
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+
+        .file-modal-tab {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #7f8c8d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            flex: 1;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .file-modal-tab:hover {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .file-modal-tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+
+        .file-modal-tab-content {
+            display: none;
+            overflow-y: auto;
+            max-height: calc(80vh - 200px);
+        }
+
+        .file-modal-tab-content.active {
+            display: block;
         }
 
         .file-modal-close {
@@ -775,7 +741,7 @@
             padding: 15px;
             font-family: 'Segoe UI', sans-serif;
             line-height: 1.6;
-            max-height: 200px;
+            max-height: 280px;
             overflow-y: auto;
             white-space: pre-wrap;
         }
@@ -889,8 +855,11 @@
                 margin: 5px;
                 padding: 12px;
                 width: calc(100% - 10px);
+                height: 90vh;
                 max-height: 98vh;
                 border-radius: 6px;
+                display: flex;
+                flex-direction: column;
             }
             
             .file-modal-header {
@@ -932,7 +901,9 @@
             .extracted-text {
                 font-size: 13px;
                 padding: 10px;
-                max-height: 120px;
+                max-height: 200px;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
             
             .confidence-bar {
@@ -961,6 +932,40 @@
 
         #fileMetadataModal .file-modal-title {
             background: transparent !important;
+        }
+
+        /* Prevent background scrolling when modal is open */
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        /* Ensure modal content captures all events */
+        .file-modal-content {
+            position: relative;
+            pointer-events: auto;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            /* Ensure this content is always on top and interactive */
+            z-index: 9999;
+            overflow: visible;
+        }
+
+        /* Specifically ensure extracted text is selectable and scrollable */
+        .file-modal-content .extracted-text {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            pointer-events: auto !important;
+            overflow-y: auto !important;
+            cursor: text;
+        }
+
+        /* Ensure all modal content areas are interactive */
+        .file-modal-content * {
+            pointer-events: auto;
         }
     </style>
 
@@ -1253,7 +1258,8 @@
 
         function showFileMetadataModal(file) {
             const modal = document.getElementById('fileMetadataModal');
-            const content = document.getElementById('fileMetadataContent');
+            const infoContent = document.getElementById('file-tab-info');
+            const textContent = document.getElementById('file-tab-text');
             
             // Format dates
             const createdDate = new Date(file.CreatedAt).toLocaleString();
@@ -1265,8 +1271,8 @@
             // Calculate confidence percentage
             const confidencePercent = Math.round((file.Confidence || 0) * 100);
             
-            // Build the modal content
-            content.innerHTML = `
+            // Populate the Information tab
+            infoContent.innerHTML = `
                 <div class="metadata-section">
                     <h3><span class="material-icons">description</span>File Information</h3>
                     <div class="metadata-grid">
@@ -1300,8 +1306,11 @@
                         <div class="metadata-value">${modifiedDate}</div>
                     </div>
                 </div>
-                
-                ${file.ExtractedText && file.ExtractedText.trim() || file.Confidence !== undefined ? `
+            `;
+            
+            // Populate the Extracted Text tab
+            if (file.ExtractedText && file.ExtractedText.trim() || file.Confidence !== undefined) {
+                textContent.innerHTML = `
                 <div class="metadata-section">
                     <h3><span class="material-icons">text_fields</span>Extracted Text</h3>
                     ${file.Confidence !== undefined ? `
@@ -1317,14 +1326,7 @@
                     ` : ''}
                     ${file.ExtractedText && file.ExtractedText.trim() ? `
                     <div class="extracted-text-container">
-                        <div class="extracted-text-header">
-                            <span class="text-length">${file.ExtractedText.trim().length} characters</span>
-                            <button class="expand-text-btn" onclick="toggleExtractedText(this)">
-                                <span class="material-icons">expand_more</span>
-                                <span class="expand-text">Expand</span>
-                            </button>
-                        </div>
-                        <div class="extracted-text collapsed">${file.ExtractedText}</div>
+                        <div class="extracted-text">${file.ExtractedText}</div>
                     </div>
                     ` : `
                     <div class="no-text-message">
@@ -1333,12 +1335,41 @@
                     </div>
                     `}
                 </div>
-                ` : ''}
-            `;
+                `;
+            } else {
+                textContent.innerHTML = `
+                    <div class="metadata-section">
+                        <div class="no-text-message">
+                            <span class="material-icons">text_snippet</span>
+                            <p>No text was extracted from this file.</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Reset to the first tab
+            switchModalTab('info');
             
             // Show the modal using direct element manipulation instead of CSS classes
             modal.classList.add('show');
             document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
+            
+            // Add event handlers to prevent background interaction
+            modal.addEventListener('wheel', function(e) {
+                e.stopPropagation();
+            }, { passive: false });
+            
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeFileMetadataModal();
+                }
+                e.stopPropagation();
+            });
+            
+            // Prevent any interaction with background elements
+            document.addEventListener('wheel', preventBackgroundScroll, { passive: false });
+            document.addEventListener('touchmove', preventBackgroundScroll, { passive: false });
             
             // Apply blur directly to specific elements
             const elementsToBlur = [
@@ -1355,19 +1386,20 @@
                     element.style.transition = 'filter 0.3s ease';
                 }
             });
-            
-            // Add click outside to close
-            modal.onclick = function(e) {
-                if (e.target === modal) {
-                    closeFileMetadataModal();
-                }
-            };
         }
 
         function closeFileMetadataModal() {
             const modal = document.getElementById('fileMetadataModal');
             modal.classList.remove('show');
             document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
+            
+            // Remove event listeners
+            document.removeEventListener('wheel', preventBackgroundScroll);
+            document.removeEventListener('touchmove', preventBackgroundScroll);
+            
+            // Clear any modal-specific event listeners
+            modal.onclick = null;
             
             // Remove blur directly from specific elements
             const elementsToUnblur = [
@@ -1387,35 +1419,60 @@
             modal.onclick = null;
         }
 
-        function toggleExtractedText(button) {
-            const extractedText = button.closest('.extracted-text-container').querySelector('.extracted-text');
-            const expandText = button.querySelector('.expand-text');
-            const icon = button.querySelector('.material-icons');
+        function switchModalTab(tabName) {
+            // Remove active class from all tabs and tab contents
+            document.querySelectorAll('.file-modal-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.file-modal-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
             
-            if (extractedText.classList.contains('collapsed')) {
-                // Expand
-                extractedText.classList.remove('collapsed');
-                extractedText.classList.add('expanded');
-                button.classList.add('expanded');
-                expandText.textContent = 'Collapse';
-            } else {
-                // Collapse
-                extractedText.classList.remove('expanded');
-                extractedText.classList.add('collapsed');
-                button.classList.remove('expanded');
-                expandText.textContent = 'Expand';
+            // Add active class to selected tab and content
+            const tabButtons = document.querySelectorAll('.file-modal-tab');
+            const targetContent = document.getElementById(`file-tab-${tabName}`);
+            
+            // Find and activate the corresponding tab button
+            tabButtons.forEach(tab => {
+                if (tab.onclick.toString().includes(`'${tabName}'`)) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            // Activate the target content
+            if (targetContent) {
+                targetContent.classList.add('active');
             }
         }
 
-        // Add keyboard support for closing modal
+        // Add keyboard support for closing modal and tab switching
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const modal = document.getElementById('fileMetadataModal');
-                if (modal.classList.contains('active')) {
+            const modal = document.getElementById('fileMetadataModal');
+            if (modal.classList.contains('show')) {
+                if (e.key === 'Escape') {
                     closeFileMetadataModal();
+                } else if (e.key === '1' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    switchModalTab('info');
+                } else if (e.key === '2' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    switchModalTab('text');
                 }
             }
         });
+
+        // Function to prevent background scrolling when modal is open
+        function preventBackgroundScroll(e) {
+            const modal = document.getElementById('fileMetadataModal');
+            if (modal && modal.classList.contains('show')) {
+                // Only allow scrolling if the event target is within the modal
+                if (!modal.contains(e.target)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            }
+        }
 
         function showFilesError(message) {
             const filesContent = document.getElementById('files-content');
@@ -1453,8 +1510,21 @@
                     <span class="material-icons">close</span>
                 </button>
             </div>
-            <div id="fileMetadataContent">
-                <!-- Content will be populated by JavaScript -->
+            <div class="file-modal-tabs">
+                <button class="file-modal-tab active" onclick="switchModalTab('info')">
+                    <span class="material-icons">info</span>
+                    Information
+                </button>
+                <button class="file-modal-tab" onclick="switchModalTab('text')">
+                    <span class="material-icons">text_fields</span>
+                    Extracted Text
+                </button>
+            </div>
+            <div id="file-tab-info" class="file-modal-tab-content active">
+                <!-- File information and timestamps will be populated here -->
+            </div>
+            <div id="file-tab-text" class="file-modal-tab-content">
+                <!-- Extracted text content will be populated here -->
             </div>
         </div>
     </div>
