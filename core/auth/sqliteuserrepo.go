@@ -213,22 +213,73 @@ func (repo *SQLiteUserRepository) Add(user *User) (bool, error) {
 // Removes a user from the database
 func (repo *SQLiteUserRepository) Remove(id string) (bool, error) {
 
-	// Start a transaction to ensure both deletions succeed or both fail
+	// Start a transaction to ensure all deletions succeed or all fail
 	tx, err := repo.db.Begin()
 	if err != nil {
 		return false, fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer tx.Rollback() // Will be ignored if tx.Commit() succeeds
 
-	// First, delete all secrets belonging to this user
-	// This ensures cleanup even if foreign key constraints aren't working
+	// Delete all document-related entities belonging to this user
+	// We need to delete in the correct order to handle foreign key constraints
+
+	// 1. Delete DocumentFileMetadata for all files in documents owned by this user
+	deleteDocumentFileMetadataSql := `
+	DELETE FROM DocumentFileMetadata 
+	WHERE DocumentFileId IN (
+		SELECT df.Id FROM DocumentFile df 
+		INNER JOIN Document d ON df.DocumentId = d.Id 
+		WHERE d.UserId = ?
+	)`
+	_, err = tx.Exec(deleteDocumentFileMetadataSql, id)
+	if err != nil {
+		return false, fmt.Errorf("deleting document file metadata: %w", err)
+	}
+
+	// 2. Delete DocumentFiles for all documents owned by this user
+	deleteDocumentFilesSql := `
+	DELETE FROM DocumentFile 
+	WHERE DocumentId IN (
+		SELECT Id FROM Document WHERE UserId = ?
+	)`
+	_, err = tx.Exec(deleteDocumentFilesSql, id)
+	if err != nil {
+		return false, fmt.Errorf("deleting document files: %w", err)
+	}
+
+	// 3. Delete DocumentTag associations for documents owned by this user
+	deleteDocumentTagsSql := `
+	DELETE FROM DocumentTag 
+	WHERE DocumentId IN (
+		SELECT Id FROM Document WHERE UserId = ?
+	)`
+	_, err = tx.Exec(deleteDocumentTagsSql, id)
+	if err != nil {
+		return false, fmt.Errorf("deleting document tags: %w", err)
+	}
+
+	// 4. Delete all Documents owned by this user
+	deleteDocumentsSql := `DELETE FROM Document WHERE UserId = ?`
+	_, err = tx.Exec(deleteDocumentsSql, id)
+	if err != nil {
+		return false, fmt.Errorf("deleting documents: %w", err)
+	}
+
+	// 5. Delete all Tags owned by this user
+	deleteTagsSql := `DELETE FROM Tag WHERE UserId = ?`
+	_, err = tx.Exec(deleteTagsSql, id)
+	if err != nil {
+		return false, fmt.Errorf("deleting tags: %w", err)
+	}
+
+	// 6. Delete all secrets belonging to this user
 	deleteSecretsSql := `DELETE FROM Secret WHERE UserId = ?`
 	_, err = tx.Exec(deleteSecretsSql, id)
 	if err != nil {
 		return false, fmt.Errorf("deleting user secrets: %w", err)
 	}
 
-	// Then delete the user
+	// 7. Finally, delete the user
 	deleteUserSql := `DELETE FROM User WHERE Id = ?`
 	result, err := tx.Exec(deleteUserSql, id)
 	if err != nil {
