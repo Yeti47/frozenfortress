@@ -214,20 +214,50 @@
 
         /* Responsive design */
         @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
             .register-container {
-                padding: 30px 25px;
-                margin: 10px;
-                max-width: 90%;
+                padding: 20px 15px;
+                margin: 5px;
+                max-width: 100%;
             }
 
             .app-title {
-                font-size: 24px;
-                margin-bottom: 25px;
+                font-size: 22px;
+                margin-bottom: 20px;
             }
 
             .logo {
-                width: 80px;
-                height: 80px;
+                width: 70px;
+                height: 70px;
+                margin-bottom: 10px;
+            }
+        }
+        
+        /* Extra small screens */
+        @media (max-width: 400px) {
+            body {
+                padding: 5px;
+            }
+            
+            .register-container {
+                padding: 15px 10px;
+                margin: 0;
+                max-width: 100%;
+                border-radius: 15px;
+            }
+            
+            .app-title {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+            
+            .logo {
+                width: 60px;
+                height: 60px;
+                margin-bottom: 8px;
             }
         }
 
