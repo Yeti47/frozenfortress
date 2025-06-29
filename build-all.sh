@@ -2,7 +2,7 @@
 
 # Build script for all Frozen Fortress components
 # This script builds both the WebUI and CLI applications
-# Usage: ./build-all.sh [--debug] [--notesseract] [--version VERSION]
+# Usage: ./build-all.sh [--debug] [--notesseract] [--version VERSION] [--arch ARCHITECTURE] [--platform PLATFORM]
 
 set -e  # Exit on any error
 
@@ -11,6 +11,8 @@ NO_TESSERACT=false
 BUILD_FLAGS=""
 BUILD_TAGS=""
 VERSION=""
+ARCHITECTURE=""
+PLATFORM=""
 WEBUI_BINARY="webui"
 CLI_BINARY="ffcli"
 
@@ -35,13 +37,33 @@ while [[ $# -gt 0 ]]; do
                 shift 2
             else
                 echo "Error: --version requires a version string"
-                echo "Usage: $0 [--debug] [--notesseract] [--version VERSION]"
+                echo "Usage: $0 [--debug] [--notesseract] [--version VERSION] [--arch ARCHITECTURE] [--platform PLATFORM]"
+                exit 1
+            fi
+            ;;
+        --arch)
+            if [[ -n "$2" && "$2" != --* ]]; then
+                ARCHITECTURE="$2"
+                shift 2
+            else
+                echo "Error: --arch requires an architecture string (e.g., amd64, 386, arm64)"
+                echo "Usage: $0 [--debug] [--notesseract] [--version VERSION] [--arch ARCHITECTURE] [--platform PLATFORM]"
+                exit 1
+            fi
+            ;;
+        --platform)
+            if [[ -n "$2" && "$2" != --* ]]; then
+                PLATFORM="$2"
+                shift 2
+            else
+                echo "Error: --platform requires a platform string (e.g., linux, windows, darwin)"
+                echo "Usage: $0 [--debug] [--notesseract] [--version VERSION] [--arch ARCHITECTURE] [--platform PLATFORM]"
                 exit 1
             fi
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--debug] [--notesseract] [--version VERSION]"
+            echo "Usage: $0 [--debug] [--notesseract] [--version VERSION] [--arch ARCHITECTURE] [--platform PLATFORM]"
             exit 1
             ;;
     esac
@@ -61,11 +83,29 @@ if [ -n "$VERSION" ]; then
     echo "Building with version: $VERSION"
 fi
 
+if [ -n "$ARCHITECTURE" ]; then
+    echo "Building for architecture: $ARCHITECTURE"
+fi
+
+if [ -n "$PLATFORM" ]; then
+    echo "Building for platform: $PLATFORM"
+fi
+
 # Create bin directory if it doesn't exist
 mkdir -p bin
 
 # Construct the build command base
 BUILD_CMD_BASE="go build"
+
+# Set environment variables for cross-compilation if architecture is specified
+if [ -n "$ARCHITECTURE" ]; then
+    export GOARCH="$ARCHITECTURE"
+fi
+
+# Set environment variables for cross-compilation if platform is specified
+if [ -n "$PLATFORM" ]; then
+    export GOOS="$PLATFORM"
+fi
 
 if [ -n "$BUILD_TAGS" ]; then
     BUILD_CMD_BASE="$BUILD_CMD_BASE -tags $BUILD_TAGS"

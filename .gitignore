@@ -50,3 +50,6 @@ cli/bin/
 
 # Debug binary files
 __debug_bin*
+
+# Release files
+releases/
