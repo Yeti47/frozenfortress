@@ -1,10 +1,13 @@
-# FrozenFortress
+<div align="center" style="background-color: #8dbfd9; padding: 30px; margin-bottom: 30px; border-radius: 15px;">
+  <img src="resources/fflogo01.png" alt="Frozen Fortress Logo" width="200" height="200">
+  <h1 style="margin-top: 2px; margin-bottom: 2px; font-size: 2.5em; color: #2c3e50; text-shadow: 0 0 14px rgba(255, 255, 255, 0.9);">Frozen Fortress</h1>
+</div>
 
-FrozenFortress is a **lightweight secret and document manager** designed for local self-hosting. Built with **Go**, it provides a secure, simple, and pragmatic solution for storing and managing sensitive information like passwords, secrets, and documents in a local environment.
+Frozen Fortress is a **lightweight secret and document manager** designed for local self-hosting. Built with **Go**, it provides a secure, simple, and pragmatic solution for storing and managing sensitive information like passwords, secrets, and documents in a local environment.
 
-## 🎯 What is FrozenFortress?
+## 🎯 What is Frozen Fortress?
 
-FrozenFortress is designed to help individuals and small teams manage their sensitive data locally without relying on cloud services. It provides:
+Frozen Fortress is designed to help individuals and small teams manage their sensitive data locally without relying on cloud services. It provides:
 
 - **Secret Management**: Store and organize passwords, API keys, and other sensitive information
 - **Document Management**: Store and organize documents with OCR support for text extraction
@@ -16,7 +19,7 @@ FrozenFortress is designed to help individuals and small teams manage their sens
 
 ## 🏗️ Architecture & Tech Stack
 
-FrozenFortress is built with **simplicity and pragmatism** as core driving principles. The architecture prioritizes:
+Frozen Fortress is built with **simplicity and pragmatism** as core driving principles. The architecture prioritizes:
 
 - **Minimal Dependencies**: Uses SQLite for data storage, eliminating the need for complex database setups
 - **Self-Contained**: All components can run on a single machine
@@ -148,7 +151,7 @@ After building, binaries will be available in the `bin/` directory:
 
 ### Environment Variables
 
-FrozenFortress uses environment variables for configuration. All available variables:
+Frozen Fortress uses environment variables for configuration. All available variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -235,7 +238,7 @@ The WebUI provides a modern, intuitive interface for end-users to manage their s
 - **Recovery**: Account recovery functionality
 
 ### User Workflow
-FrozenFortress follows a secure user registration and activation workflow:
+Frozen Fortress follows a secure user registration and activation workflow:
 
 1. **User Registration**: New users can request access through the WebUI registration form
 2. **Admin Activation**: An administrator with server access uses the CLI to activate the new user account
@@ -245,7 +248,7 @@ Alternatively, administrators can create users directly via the CLI without requ
 
 ## 🌐 Deployment & Security Considerations
 
-FrozenFortress is specifically designed for **local self-hosting** environments. The application architecture prioritizes simplicity and ease of deployment while maintaining security best practices.
+Frozen Fortress is specifically designed for **local self-hosting** environments. The application architecture prioritizes simplicity and ease of deployment while maintaining security best practices.
 
 ### Network Security
 - **HTTP by Design**: The Go application runs on plain HTTP and does not include built-in HTTPS support
@@ -254,7 +257,7 @@ FrozenFortress is specifically designed for **local self-hosting** environments.
 
 ### Recommended Deployment Setup
 ```
-Local Network → nginx (HTTPS) → FrozenFortress WebUI (HTTP)
+Local Network → nginx (HTTPS) → Frozen Fortress WebUI (HTTP)
 ```
 
 ### Example nginx Configuration
