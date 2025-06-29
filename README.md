@@ -213,7 +213,7 @@ The web interface will be available at `http://localhost:8080` (or your configur
 ./bin/ffcli secret list
 ```
 
-## �️ Web User Interface (WebUI)
+## 👩🏻‍💻 Web User Interface (WebUI)
 
 The WebUI provides a modern, intuitive interface for end-users to manage their secrets and documents. It's designed for daily use and includes all the features needed for personal data management.
 
