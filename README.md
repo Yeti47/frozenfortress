@@ -407,11 +407,3 @@ We welcome contributions! Please feel free to submit issues, feature requests, o
 3. Build and test: `./build-all.sh`
 4. Run tests and verify functionality
 5. Submit a pull request
-
-## 📞 Support
-
-For questions, issues, or feature requests, please use the GitHub issue tracker.
-
----
-
-**FrozenFortress** - Your fortress for sensitive data, frozen in security. 🏰❄️
