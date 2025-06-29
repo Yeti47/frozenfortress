@@ -2,7 +2,7 @@
 
 # Build script for Frozen Fortress CLI
 # This script builds the CLI application and places it in the bin directory
-# Usage: ./build-cli.sh [--debug] [--notesseract]
+# Usage: ./build-cli.sh [--debug] [--notesseract] [--version VERSION]
 
 set -e  # Exit on any error
 
@@ -10,6 +10,7 @@ DEBUG_MODE=false
 NO_TESSERACT=false
 BUILD_FLAGS=""
 BUILD_TAGS=""
+VERSION=""
 OUTPUT_BINARY="ffcli"
 
 # Parse command line arguments
@@ -17,7 +18,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --debug)
             DEBUG_MODE=true
-            BUILD_FLAGS="-gcflags=all=-N -l"
+            BUILD_FLAGS="-gcflags=all=\"-N -l\""
             OUTPUT_BINARY="ffcli-debug"
             shift
             ;;
@@ -26,9 +27,19 @@ while [[ $# -gt 0 ]]; do
             BUILD_TAGS="notesseract"
             shift
             ;;
+        --version)
+            if [[ -n "$2" && "$2" != --* ]]; then
+                VERSION="$2"
+                shift 2
+            else
+                echo "Error: --version requires a version string"
+                echo "Usage: $0 [--debug] [--notesseract] [--version VERSION]"
+                exit 1
+            fi
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--debug] [--notesseract]"
+            echo "Usage: $0 [--debug] [--notesseract] [--version VERSION]"
             exit 1
             ;;
     esac
@@ -43,6 +54,10 @@ fi
 
 if [ "$NO_TESSERACT" = true ]; then
     echo "Building without Tesseract OCR support..."
+fi
+
+if [ -n "$VERSION" ]; then
+    echo "Building with version: $VERSION"
 fi
 
 # Create bin directory if it doesn't exist
@@ -60,6 +75,11 @@ fi
 
 if [ "$DEBUG_MODE" = true ]; then
     BUILD_CMD="$BUILD_CMD $BUILD_FLAGS"
+fi
+
+# Add ldflags for version if specified
+if [ -n "$VERSION" ]; then
+    BUILD_CMD="$BUILD_CMD -ldflags \"-X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=$VERSION\""
 fi
 
 BUILD_CMD="$BUILD_CMD -o bin/$OUTPUT_BINARY ./cli"

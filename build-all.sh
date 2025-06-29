@@ -2,7 +2,7 @@
 
 # Build script for all Frozen Fortress components
 # This script builds both the WebUI and CLI applications
-# Usage: ./build-all.sh [--debug] [--notesseract]
+# Usage: ./build-all.sh [--debug] [--notesseract] [--version VERSION]
 
 set -e  # Exit on any error
 
@@ -10,6 +10,7 @@ DEBUG_MODE=false
 NO_TESSERACT=false
 BUILD_FLAGS=""
 BUILD_TAGS=""
+VERSION=""
 WEBUI_BINARY="webui"
 CLI_BINARY="ffcli"
 
@@ -18,7 +19,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --debug)
             DEBUG_MODE=true
-            BUILD_FLAGS="-gcflags=all=-N -l"
+            BUILD_FLAGS="-gcflags=all=\"-N -l\""
             WEBUI_BINARY="webui-debug"
             CLI_BINARY="ffcli-debug"
             shift
@@ -28,9 +29,19 @@ while [[ $# -gt 0 ]]; do
             BUILD_TAGS="notesseract"
             shift
             ;;
+        --version)
+            if [[ -n "$2" && "$2" != --* ]]; then
+                VERSION="$2"
+                shift 2
+            else
+                echo "Error: --version requires a version string"
+                echo "Usage: $0 [--debug] [--notesseract] [--version VERSION]"
+                exit 1
+            fi
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--debug] [--notesseract]"
+            echo "Usage: $0 [--debug] [--notesseract] [--version VERSION]"
             exit 1
             ;;
     esac
@@ -46,6 +57,10 @@ if [ "$NO_TESSERACT" = true ]; then
     echo "Building without Tesseract OCR support..."
 fi
 
+if [ -n "$VERSION" ]; then
+    echo "Building with version: $VERSION"
+fi
+
 # Create bin directory if it doesn't exist
 mkdir -p bin
 
@@ -58,6 +73,11 @@ fi
 
 if [ "$DEBUG_MODE" = true ]; then
     BUILD_CMD_BASE="$BUILD_CMD_BASE $BUILD_FLAGS"
+fi
+
+# Add ldflags for version if specified
+if [ -n "$VERSION" ]; then
+    BUILD_CMD_BASE="$BUILD_CMD_BASE -ldflags \"-X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=$VERSION\""
 fi
 
 # Build WebUI

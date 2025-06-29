@@ -2,6 +2,7 @@ package login
 
 import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -11,7 +12,9 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 
 	// GET /login - Show login page
 	router.GET("/login", func(c *gin.Context) {
-		c.HTML(200, "login.html", gin.H{})
+		c.HTML(200, "login.html", gin.H{
+			"Version": ccc.AppVersion,
+		})
 	})
 
 	// POST /login - Handle login form submission
@@ -42,6 +45,7 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 			c.HTML(401, "login.html", gin.H{
 				"ErrorMessage": errorMessage,
 				"Username":     username, // Pre-fill username field
+				"Version":      ccc.AppVersion,
 			})
 			return
 		}
@@ -67,6 +71,7 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager) {
 		// Render login page with a success message
 		c.HTML(200, "login.html", gin.H{
 			"SuccessMessage": "You have been successfully logged out.",
+			"Version":        ccc.AppVersion,
 		})
 	})
 }
