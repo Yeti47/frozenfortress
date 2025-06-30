@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.3'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          tesseract-ocr \
+          libtesseract-dev \
+          libleptonica-dev \
+          tesseract-ocr-eng \
+          redis-server
+    
+    - name: Start Redis
+      run: |
+        sudo systemctl start redis-server
+        sudo systemctl enable redis-server
+    
+    - name: Verify dependencies
+      run: |
+        echo "Go version: $(go version)"
+        echo "Tesseract version: $(tesseract --version)"
+        echo "Redis status: $(redis-cli ping)"
+    
+    - name: Make scripts executable
+      run: |
+        chmod +x ./build-all.sh
+        chmod +x ./clean.sh
+    
+    - name: Run tests (if any)
+      run: |
+        if [ -n "$(find . -name '*_test.go')" ]; then
+          echo "Running Go tests..."
+          go test -v ./...
+        else
+          echo "No tests found, skipping test step"
+        fi
+    
+    - name: Build application
+      run: |
+        ./build-all.sh --arch amd64 --version "test-build-${{ github.sha }}"
+    
+    - name: Verify build outputs
+      run: |
+        echo "Checking build outputs..."
+        ls -la bin/
+        
+        # Test if binaries are executable
+        if [ -f "bin/ffcli" ]; then
+          echo "CLI binary found and executable: $(file bin/ffcli)"
+          ./bin/ffcli version || echo "CLI version command not available"
+        fi
+        
+        if [ -f "bin/ffwebui" ]; then
+          echo "WebUI binary found and executable: $(file bin/ffwebui)"
+        fi
+    
+    - name: Test build without Tesseract
+      run: |
+        ./clean.sh
+        ./build-all.sh --arch amd64 --notesseract --version "test-build-notesseract-${{ github.sha }}"
+        echo "Build without Tesseract completed successfully"
+        ls -la bin/
