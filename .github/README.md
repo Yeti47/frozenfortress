@@ -16,26 +16,35 @@ This directory contains GitHub Actions workflows for automated building, testing
 
 **Usage:**
 
-**Option 1: Via GitHub Web Interface (Recommended):**
+**Option 1: Via Command Line (Automated Release):**
+```bash
+# Create and push a new version tag - this triggers automatic release creation
+git tag v1.0.0
+git push origin v1.0.0
+```
+This will automatically build the application and create a GitHub release with the ZIP file.
+
+**Option 2: Via GitHub Web Interface (Manual Release):**
 1. Go to your repository on GitHub
 2. Click on "Releases" in the right sidebar
 3. Click "Create a new release"
 4. Choose "Create new tag" and enter version (e.g., `v1.0.0`)
 5. Make sure the target is set to `master` branch
 6. Add release title and description
-7. Click "Publish release"
+7. **Manually upload your release ZIP file** (created with `./release-linux.sh`)
+8. Click "Publish release"
 
-**Option 2: Via Command Line:**
-```bash
-# Create and push a new version tag
-git tag v1.0.0
-git push origin v1.0.0
-```
+**Note:** If you create a release via the web interface, the workflow will detect this and skip automatic release creation to avoid duplicates.
 
 **Requirements:**
 - Tag must start with `v` (e.g., `v1.0.0`, `v2.1.3`)
-- Tag must be pushed to the master branch
 - Repository must have GitHub Actions enabled
+- For automatic releases: Push tags via command line
+- For manual releases: Create via GitHub web interface and upload files manually
+
+**How it works:**
+- **Tag pushed via command line** → Workflow builds and creates release automatically
+- **Release created via web interface** → Workflow detects existing release and skips to avoid duplicates
 
 **Output:**
 - Creates a GitHub release at: `https://github.com/your-repo/releases`
