@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Extract version from tag
+      id: extract_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.3'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          tesseract-ocr \
+          libtesseract-dev \
+          libleptonica-dev \
+          tesseract-ocr-eng \
+          redis-server \
+          zip
+    
+    - name: Start Redis
+      run: |
+        sudo systemctl start redis-server
+        sudo systemctl enable redis-server
+    
+    - name: Verify dependencies
+      run: |
+        echo "Go version: $(go version)"
+        echo "Tesseract version: $(tesseract --version)"
+        echo "Redis status: $(redis-cli ping)"
+        echo "Available Tesseract languages: $(tesseract --list-langs)"
+    
+    - name: Make scripts executable
+      run: |
+        chmod +x ./build-all.sh
+        chmod +x ./clean.sh
+        chmod +x ./release-linux.sh
+        chmod +x ./ff-setup.sh
+    
+    - name: Create release
+      run: |
+        ./release-linux.sh --arch amd64 --version ${{ steps.extract_version.outputs.version }}
+    
+    - name: Find release files
+      id: find_files
+      run: |
+        # Find the main release zip file
+        RELEASE_ZIP=$(find releases/ -name "frozenfortress-release-linux-amd64-v${{ steps.extract_version.outputs.version }}.zip" | head -1)
+        if [ -z "$RELEASE_ZIP" ]; then
+          echo "Error: Release ZIP file not found"
+          ls -la releases/
+          exit 1
+        fi
+        echo "release_zip=$RELEASE_ZIP" >> $GITHUB_OUTPUT
+        echo "release_name=$(basename $RELEASE_ZIP .zip)" >> $GITHUB_OUTPUT
+        echo "Found release file: $RELEASE_ZIP"
+    
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Frozen Fortress v${{ steps.extract_version.outputs.version }}
+        draft: false
+        prerelease: false
+        body: |
+          ## Frozen Fortress v${{ steps.extract_version.outputs.version }}
+          
+          **Release Information:**
+          - **Platform:** Linux
+          - **Architecture:** AMD64
+          - **Build Date:** ${{ github.event.head_commit.timestamp }}
+          - **Commit:** ${{ github.sha }}
+          
+          **Features:**
+          - ✅ Tesseract OCR support enabled
+          - ✅ Redis/Valkey support
+          - ✅ CLI and WebUI applications
+          - ✅ Automated setup script included
+          
+          **Installation:**
+          1. Download and extract the release archive
+          2. Run the setup script: `./ff-setup.sh`
+          3. Or manually install dependencies and run `./ffcli setup`
+          
+          **Contents:**
+          - `frozenfortress-linux-amd64-v${{ steps.extract_version.outputs.version }}.zip` - Application binaries and assets
+          - `ff-setup.sh` - Automated setup script
+          - `README.txt` - Installation and usage instructions
+          
+          **Requirements:**
+          - Linux AMD64 system
+          - Tesseract OCR (installed automatically by setup script)
+          - Redis server (installed automatically by setup script)
+          
+          For more information, visit the [project repository](https://github.com/${{ github.repository }}).
+    
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ steps.find_files.outputs.release_zip }}
+        asset_name: ${{ steps.find_files.outputs.release_name }}.zip
+        asset_content_type: application/zip
+    
+    - name: Upload Release Info
+      run: |
+        echo "Release created successfully!"
+        echo "Release URL: ${{ steps.create_release.outputs.html_url }}"
+        echo "Release file: ${{ steps.find_files.outputs.release_zip }}"
+        echo "File size: $(du -h ${{ steps.find_files.outputs.release_zip }} | cut -f1)"
