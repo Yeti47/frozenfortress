@@ -1,41 +1,41 @@
 #!/bin/bash
 
-# Stop script for Frozen Fortress WebUI
-# This script terminates all running webui processes
+# Stop script for Frozen Fortress ffwebui
+# This script terminates all running ffwebui processes
 
 echo "Stopping Frozen Fortress WebUI..."
 
-# Function to find webui processes (excluding this script)
+# Function to find ffwebui processes (excluding this script)
 find_webui_processes() {
     # Look for different patterns, but exclude this script
     local all_pids=""
     
-    # Check for bin/webui processes (run from project root)
-    local bin_pids=$(pgrep -f "bin/webui" 2>/dev/null || true)
+    # Check for bin/ffwebui processes (run from project root)
+    local bin_pids=$(pgrep -f "bin/ffwebui" 2>/dev/null || true)
     if [ -n "$bin_pids" ]; then
         all_pids="$all_pids $bin_pids"
     fi
     
-    # Check for bin/webui-debug processes (debug build from project root)
-    local bin_debug_pids=$(pgrep -f "bin/webui-debug" 2>/dev/null || true)
+    # Check for bin/ffwebui-debug processes (debug build from project root)
+    local bin_debug_pids=$(pgrep -f "bin/ffwebui-debug" 2>/dev/null || true)
     if [ -n "$bin_debug_pids" ]; then
         all_pids="$all_pids $bin_debug_pids"
     fi
     
-    # Check for ./webui processes (run from bin directory)
-    local local_pids=$(pgrep -f "./webui" 2>/dev/null || true)
+    # Check for ./ffwebui processes (run from bin directory)
+    local local_pids=$(pgrep -f "./ffwebui" 2>/dev/null || true)
     if [ -n "$local_pids" ]; then
         all_pids="$all_pids $local_pids"
     fi
     
-    # Check for ./webui-debug processes (debug build from bin directory)
-    local local_debug_pids=$(pgrep -f "./webui-debug" 2>/dev/null || true)
+    # Check for ./ffwebui-debug processes (debug build from bin directory)
+    local local_debug_pids=$(pgrep -f "./ffwebui-debug" 2>/dev/null || true)
     if [ -n "$local_debug_pids" ]; then
         all_pids="$all_pids $local_debug_pids"
     fi
     
-    # Check for go-build webui processes (temporary builds)  
-    local exe_pids=$(pgrep -f "exe/webui" 2>/dev/null || true)
+    # Check for go-build ffwebui processes (temporary builds)  
+    local exe_pids=$(pgrep -f "exe/ffwebui" 2>/dev/null || true)
     if [ -n "$exe_pids" ]; then
         all_pids="$all_pids $exe_pids"
     fi
@@ -56,12 +56,12 @@ find_webui_processes() {
 }
 
 echo ""
-echo "Looking for running webui processes..."
+echo "Looking for running ffwebui processes..."
 
 webui_pids=$(find_webui_processes)
 
 if [ -n "$webui_pids" ]; then
-    echo "Found webui processes: $webui_pids"
+    echo "Found ffwebui processes: $webui_pids"
     echo ""
     echo "Attempting graceful shutdown (SIGTERM)..."
     
@@ -94,13 +94,13 @@ if [ -n "$webui_pids" ]; then
         sleep 2
     fi
     
-    # Final verification - check if any webui processes are still running
+    # Final verification - check if any ffwebui processes are still running
     final_remaining=$(find_webui_processes)
     
     if [ -z "$final_remaining" ]; then
         echo "✓ All Frozen Fortress WebUI processes have been terminated successfully!"
     else
-        echo "⚠ Warning: Some webui processes may still be running:"
+        echo "⚠ Warning: Some ffwebui processes may still be running:"
         for pid in $final_remaining; do
             ps -p "$pid" -o pid,ppid,cmd --no-headers 2>/dev/null || true
         done

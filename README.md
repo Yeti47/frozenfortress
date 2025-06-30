@@ -116,7 +116,7 @@ These scripts will install:
 ```
 
 After building, binaries will be available in the `bin/` directory:
-- `bin/webui` - Web server
+- `bin/ffwebui` - Web server
 - `bin/ffcli` - Command-line interface
 
 ## ⚙️ Configuration & Setup
@@ -189,7 +189,7 @@ Use `./bin/ffcli setup --read` to view current configuration values.
 ./run-webui.sh
 
 # Or run directly
-./bin/webui
+./bin/ffwebui
 ```
 
 The web interface will be available at `http://localhost:8080` (or your configured port).
@@ -223,7 +223,7 @@ The WebUI provides a modern, intuitive interface for end-users to manage their s
 ### Key Features
 - **User Authentication**: Secure login with session management
 - **Secret Management**: Create, edit, view, and organize secrets
-- **Document Management**: Upload, view, and organize documents with OCR support
+- **Document Management**: Upload, view, and manage documents with OCR support
 - **Search & Filter**: Advanced search capabilities across secrets and documents
 - **Tag System**: Organize content with customizable tags
 - **Account Management**: User profile and account settings
@@ -367,7 +367,7 @@ The CLI is designed for system administrators and provides comprehensive user ma
 ./bin/ffcli backup --help
 ```
 
-## �🔧 Additional Scripts
+## 🔧 Additional Scripts
 
 - `./run-webui.sh` - Build and run the web UI
 - `./stop-webui.sh` - Stop running web UI processes
@@ -395,6 +395,89 @@ The CLI is designed for system administrators and provides comprehensive user ma
 - **Password Hashing**: Secure password hashing with salts
 - **Account Lockout**: Protection against brute force attacks
 - **Recovery Codes**: Secure account recovery mechanism
+
+## 📦 Creating Releases
+
+Frozen Fortress includes an automated release system that creates distribution-ready packages with setup scripts.
+
+### Release Structure
+
+The release script creates a comprehensive package that includes both the application binaries and an automated setup script:
+
+```
+releases/
+└── frozenfortress-release-linux-amd64-v1.0.0.zip  # Main distribution file
+```
+
+**Archive contents:**
+```
+frozenfortress-release-linux-amd64-v1.0.0/
+├── README.txt                              # Main documentation
+├── ff-setup.sh                            # Automated setup script
+└── frozenfortress-linux-amd64-v1.0.0.zip  # Application binaries
+```
+
+### Creating a Release
+
+```bash
+# Create a release for a specific architecture and version
+./release-linux.sh --arch amd64 --version 1.0.0
+
+# Create a debug release
+./release-linux.sh --arch amd64 --version 1.0.0 --debug
+
+# Create a release without Tesseract OCR support
+./release-linux.sh --arch amd64 --version 1.0.0 --notesseract
+```
+
+**Supported architectures**: `amd64`, `386`, `arm64`, `arm`
+
+**Output:** Single zip file ready for distribution (e.g., `frozenfortress-release-linux-amd64-v1.0.0.zip`)
+
+### Setup Script Features
+
+The included `ff-setup.sh` script provides a complete automated installation experience:
+
+**Dependency Management:**
+- Auto-detects package manager (apt, yum, dnf, pacman)
+- Installs core dependencies: tesseract-ocr, leptonica, redis-server
+- Manages Redis service startup and enablement
+
+**Tesseract Language Support:**
+- Installs English language pack by default
+- Interactive prompt for additional languages (German, French, Spanish, Italian, Portuguese, Russian, Chinese Simplified, Japanese, Arabic)
+
+**Application Installation:**
+- User-configurable installation directory (default: `~/frozenfortress`)
+- Creates symlinks in `~/.local/bin` if available
+- Makes binaries executable
+- Provides clear file locations
+
+**Nginx Reverse Proxy (Optional):**
+- Auto-installs nginx and OpenSSL if needed
+- Generates self-signed SSL certificates
+- Configurable HTTPS port (default: 8443)
+- Long-lived certificates (default: 10 years)
+- Security headers and proper proxy configuration
+- WebSocket support for real-time features
+
+**Security Features:**
+- Refuses to run as root for security
+- Secure SSL configuration
+- Restricted file permissions on private keys
+- Security headers in nginx configuration
+
+### End User Installation
+
+For end users, installation is straightforward:
+
+1. Download the release archive (e.g., `frozenfortress-release-linux-amd64-v1.0.0.zip`)
+2. Extract the archive: `unzip frozenfortress-release-linux-amd64-v1.0.0.zip`
+3. Navigate to the extracted directory: `cd frozenfortress-release-linux-amd64-v1.0.0/`
+4. Run the setup script: `./ff-setup.sh`
+5. Follow the interactive prompts
+
+The setup script handles all dependencies, installation, and optional nginx configuration automatically.
 
 ## 📄 License
 

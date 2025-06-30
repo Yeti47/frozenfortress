@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Build script for Frozen Fortress WebUI
-# This script builds the webui application and places it in the bin directory
-# Usage: ./build-webui.sh [--debug] [--notesseract] [--version VERSION]
+# Build script for Frozen Fortress ffwebui
+# This script builds the ffwebui application and places it in the bin directory
+# Usage: ./build-ffwebui.sh [--debug] [--notesseract] [--version VERSION]
 
 set -e  # Exit on any error
 
@@ -11,7 +11,7 @@ NO_TESSERACT=false
 BUILD_FLAGS=""
 BUILD_TAGS=""
 VERSION=""
-OUTPUT_BINARY="webui"
+OUTPUT_BINARY="ffwebui"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -19,7 +19,7 @@ while [[ $# -gt 0 ]]; do
         --debug)
             DEBUG_MODE=true
             BUILD_FLAGS="-gcflags=all=\"-N -l\""
-            OUTPUT_BINARY="webui-debug"
+            OUTPUT_BINARY="ffwebui-debug"
             shift
             ;;
         --notesseract)

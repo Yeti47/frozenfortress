@@ -13,7 +13,7 @@ BUILD_TAGS=""
 VERSION=""
 ARCHITECTURE=""
 PLATFORM=""
-WEBUI_BINARY="webui"
+WEBUI_BINARY="ffwebui"
 CLI_BINARY="ffcli"
 
 # Parse command line arguments
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
         --debug)
             DEBUG_MODE=true
             BUILD_FLAGS="-gcflags=all=\"-N -l\""
-            WEBUI_BINARY="webui-debug"
+            WEBUI_BINARY="ffwebui-debug"
             CLI_BINARY="ffcli-debug"
             shift
             ;;

@@ -7,14 +7,14 @@
 set -e  # Exit on any error
 
 DEBUG_MODE=false
-BINARY_NAME="webui"
+BINARY_NAME="ffwebui"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --debug)
             DEBUG_MODE=true
-            BINARY_NAME="webui-debug"
+            BINARY_NAME="ffwebui-debug"
             shift
             ;;
         *)
@@ -32,11 +32,11 @@ else
     echo "Starting Frozen Fortress WebUI..."
 fi
 
-# First, stop any existing webui processes
+# First, stop any existing ffwebui processes
 echo ""
-echo "Checking for existing webui processes..."
-if command -v ./stop-webui.sh >/dev/null 2>&1; then
-    ./stop-webui.sh
+echo "Checking for existing ffwebui processes..."
+if command -v ./stop-ffwebui.sh >/dev/null 2>&1; then
+    ./stop-ffwebui.sh
 else
     echo "Warning: stop-webui.sh not found, proceeding without cleanup"
 fi
@@ -53,7 +53,7 @@ fi
 
 echo ""
 if [ "$DEBUG_MODE" = true ]; then
-    echo "Starting WebUI server in DEBUG mode..."
+    echo "Starting ffwebui server in DEBUG mode..."
     echo "Debug logging enabled, debug symbols included"
 else
     echo "Starting WebUI server..."

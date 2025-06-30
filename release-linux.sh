@@ -120,7 +120,7 @@ echo "No Tesseract: $NO_TESSERACT"
 echo "=========================================="
 
 # Create release directory structure
-RELEASE_NAME="frozenfortress-linux-${ARCHITECTURE}-v${VERSION}"
+RELEASE_NAME="frozenfortress-release-linux-${ARCHITECTURE}-v${VERSION}"
 if [ "$DEBUG_MODE" = true ]; then
     RELEASE_NAME="${RELEASE_NAME}-debug"
 fi
@@ -128,9 +128,14 @@ if [ "$NO_TESSERACT" = true ]; then
     RELEASE_NAME="${RELEASE_NAME}-notesseract"
 fi
 
-TARGET_DIR="${RELEASE_DIR}/${RELEASE_NAME}"
+# Create the main release directory
+RELEASE_ROOT_DIR="${RELEASE_DIR}/${RELEASE_NAME}"
+# Create subdirectory for the actual binaries (keep original naming for the zip content)
+BINARIES_DIR_NAME="frozenfortress-linux-${ARCHITECTURE}-v${VERSION}"
+TARGET_DIR="${RELEASE_ROOT_DIR}/${BINARIES_DIR_NAME}"
 
-echo "Creating release directory: ${TARGET_DIR}"
+echo "Creating release directory: ${RELEASE_ROOT_DIR}"
+mkdir -p "${RELEASE_ROOT_DIR}"
 mkdir -p "${TARGET_DIR}"
 
 # Step 1: Clean previous builds
@@ -160,7 +165,7 @@ if [ ! -f "bin/ffcli" ] && [ ! -f "bin/ffcli-debug" ]; then
     exit 1
 fi
 
-if [ ! -f "bin/webui" ] && [ ! -f "bin/webui-debug" ]; then
+if [ ! -f "bin/ffwebui" ] && [ ! -f "bin/ffwebui-debug" ]; then
     echo "Error: WebUI binary not found in bin/ directory"
     exit 1
 fi
@@ -171,26 +176,71 @@ echo "Binaries verified successfully"
 echo ""
 echo "Step 4: Creating release package..."
 
-# Copy bin directory contents to release directory
+# Copy bin directory contents to binaries directory
 cp -r bin/* "${TARGET_DIR}/"
 
-# Create additional release files
-echo "Creating README for release..."
-cat > "${TARGET_DIR}/README.txt" << EOF
+# Copy setup script to the main release directory
+echo "Copying setup script..."
+cp ff-setup.sh "${RELEASE_ROOT_DIR}/"
+chmod +x "${RELEASE_ROOT_DIR}/ff-setup.sh"
+
+# Create README for the main release directory
+echo "Creating main README for release..."
+cat > "${RELEASE_ROOT_DIR}/README.txt" << EOF
 Frozen Fortress v${VERSION} - linux ${ARCHITECTURE}
 
-This package contains the Frozen Fortress application binaries for linux ${ARCHITECTURE}.
+This package contains the Frozen Fortress application release for linux ${ARCHITECTURE}.
+
+Contents:
+- ${BINARIES_DIR_NAME}.zip: Application binaries and assets
+- ff-setup.sh: Automated setup script
+- README.txt: This file
+
+Quick Start:
+1. Run the setup script: ./ff-setup.sh
+   This will install dependencies, extract the application, and optionally configure nginx.
+
+Manual Installation:
+1. Unzip ${BINARIES_DIR_NAME}.zip to your preferred location
+2. Install dependencies: tesseract-ocr, leptonica, redis-server
+3. Run ./ffcli setup to configure the application
+4. Start with ./ffwebui
+
+For more information, visit: https://github.com/Yeti47/frozenfortress
+
+Build Information:
+- Version: ${VERSION}
+- Platform: linux
+- Architecture: ${ARCHITECTURE}
+- Build Date: $(date)
+- Debug Mode: ${DEBUG_MODE}
+- Tesseract OCR: $([ "$NO_TESSERACT" = true ] && echo "Disabled" || echo "Enabled")
+EOF
+
+# Create detailed README for the binaries directory
+echo "Creating detailed README for binaries..."
+cat > "${TARGET_DIR}/README.txt" << EOF
+Frozen Fortress v${VERSION} - Application Binaries
 
 Contents:
 - ffcli / ffcli-debug: Command Line Interface
-- webui / webui-debug: Web User Interface
+- ffwebui / ffwebui-debug: Web User Interface
 - img/: Image assets
 - views/: Web UI templates
 - static/: Static web assets (if present)
 
 Usage:
-1. Web UI: ./webui
+1. Web UI: ./ffwebui
 2. CLI: ./ffcli --help
+
+Configuration:
+Run './ffcli setup' to configure the application before first use.
+
+Important Directories (created after first run):
+- Database: ~/.config/frozenfortress/
+- Logs: ~/.config/frozenfortress/logs/
+- Backups: ~/.config/frozenfortress/backups/
+- Session keys: ~/.config/frozenfortress/ (or custom FF_KEY_DIR)
 
 For more information, visit: https://github.com/Yeti47/frozenfortress
 
@@ -207,17 +257,49 @@ EOF
 echo ""
 echo "Step 5: Creating ZIP archive..."
 cd "${RELEASE_DIR}"
-ZIP_NAME="${RELEASE_NAME}.zip"
+
+# Create ZIP of the binaries directory first
+BINARIES_ZIP_NAME="${BINARIES_DIR_NAME}.zip"
 
 if command -v zip > /dev/null 2>&1; then
-    echo "Creating ${ZIP_NAME}..."
-    zip -r "${ZIP_NAME}" "${RELEASE_NAME}/"
-    echo "ZIP archive created: ${RELEASE_DIR}/${ZIP_NAME}"
+    echo "Creating ${BINARIES_ZIP_NAME}..."
+    cd "${RELEASE_NAME}"
+    zip -r "${BINARIES_ZIP_NAME}" "${BINARIES_DIR_NAME}/"
+    cd ..
+    echo "Binaries ZIP archive created: ${RELEASE_ROOT_DIR}/${BINARIES_ZIP_NAME}"
+    
+    # Remove the unzipped binaries directory since we now have the zip
+    rm -rf "${RELEASE_NAME}/${BINARIES_DIR_NAME}/"
+    
+    # Now create the main release zip (same name as the folder)
+    RELEASE_ZIP_NAME="${RELEASE_NAME}.zip"
+    
+    echo "Creating main release archive: ${RELEASE_ZIP_NAME}..."
+    zip -r "${RELEASE_ZIP_NAME}" "${RELEASE_NAME}/"
+    echo "Release ZIP archive created: ${RELEASE_DIR}/${RELEASE_ZIP_NAME}"
+    
+    # Remove the release folder since we only need the zip for distribution
+    rm -rf "${RELEASE_NAME}/"
 else
     echo "Warning: 'zip' command not found. Creating tar.gz instead..."
-    TAR_NAME="${RELEASE_NAME}.tar.gz"
-    tar -czf "${TAR_NAME}" "${RELEASE_NAME}/"
-    echo "TAR archive created: ${RELEASE_DIR}/${TAR_NAME}"
+    BINARIES_TAR_NAME="${BINARIES_DIR_NAME}.tar.gz"
+    cd "${RELEASE_NAME}"
+    tar -czf "${BINARIES_TAR_NAME}" "${BINARIES_DIR_NAME}/"
+    cd ..
+    echo "Binaries TAR archive created: ${RELEASE_ROOT_DIR}/${BINARIES_TAR_NAME}"
+    
+    # Remove the unzipped binaries directory since we now have the tar
+    rm -rf "${RELEASE_NAME}/${BINARIES_DIR_NAME}/"
+    
+    # Now create the main release tar (same name as the folder)
+    RELEASE_TAR_NAME="${RELEASE_NAME}.tar.gz"
+    
+    echo "Creating main release archive: ${RELEASE_TAR_NAME}..."
+    tar -czf "${RELEASE_TAR_NAME}" "${RELEASE_NAME}/"
+    echo "Release TAR archive created: ${RELEASE_DIR}/${RELEASE_TAR_NAME}"
+    
+    # Remove the release folder since we only need the tar for distribution
+    rm -rf "${RELEASE_NAME}/"
 fi
 
 cd "${SCRIPT_DIR}"
@@ -228,16 +310,32 @@ echo "=========================================="
 echo "Release Creation Complete!"
 echo "=========================================="
 echo "Release name: ${RELEASE_NAME}"
-echo "Release directory: ${TARGET_DIR}"
+
 if command -v zip > /dev/null 2>&1; then
-    echo "Archive: ${RELEASE_DIR}/${ZIP_NAME}"
-    echo "Archive size: $(du -h "${RELEASE_DIR}/${ZIP_NAME}" | cut -f1)"
+    echo "Main release archive: ${RELEASE_DIR}/${RELEASE_ZIP_NAME}"
+    echo "Archive size: $(du -h "${RELEASE_DIR}/${RELEASE_ZIP_NAME}" | cut -f1)"
 else
-    echo "Archive: ${RELEASE_DIR}/${TAR_NAME}"
-    echo "Archive size: $(du -h "${RELEASE_DIR}/${TAR_NAME}" | cut -f1)"
+    echo "Main release archive: ${RELEASE_DIR}/${RELEASE_TAR_NAME}"
+    echo "Archive size: $(du -h "${RELEASE_DIR}/${RELEASE_TAR_NAME}" | cut -f1)"
+fi
+
+echo ""
+echo "Release structure inside archive:"
+echo "${RELEASE_NAME}/"
+echo "├── README.txt"
+echo "├── ff-setup.sh"
+if command -v zip > /dev/null 2>&1; then
+    echo "└── ${BINARIES_ZIP_NAME}"
+else
+    echo "└── ${BINARIES_TAR_NAME}"
 fi
 echo ""
-echo "Files in release:"
-ls -la "${TARGET_DIR}/"
+if command -v zip > /dev/null 2>&1; then
+    echo "To distribute: Share ${RELEASE_ZIP_NAME}"
+    echo "Users extract and run: cd ${RELEASE_NAME} && ./ff-setup.sh"
+else
+    echo "To distribute: Share ${RELEASE_TAR_NAME}"
+    echo "Users extract and run: cd ${RELEASE_NAME} && ./ff-setup.sh"
+fi
 echo ""
 echo "Release ready for distribution!"
