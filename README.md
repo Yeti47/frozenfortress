@@ -493,3 +493,8 @@ We welcome contributions! Please feel free to submit issues, feature requests, o
 3. Build and test: `./build-all.sh`
 4. Run tests and verify functionality
 5. Submit a pull request
+
+------
+
+© 2025 Yetibyte
+
