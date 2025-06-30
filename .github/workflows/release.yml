@@ -4,13 +4,24 @@ on:
   push:
     tags:
       - 'v*'
-    branches:
-      - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      tag_name:
+        description: 'Tag name (e.g., v1.0.0)'
+        required: true
+        type: string
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout code
@@ -19,9 +30,17 @@ jobs:
     - name: Extract version from tag
       id: extract_version
       run: |
-        VERSION=${GITHUB_REF#refs/tags/v}
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+          TAG_NAME="${{ github.event.inputs.tag_name }}"
+        else
+          VERSION=${GITHUB_REF#refs/tags/v}
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+        fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
+        echo "Tag: $TAG_NAME"
     
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -58,11 +77,29 @@ jobs:
         chmod +x ./release-linux.sh
         chmod +x ./ff-setup.sh
     
+    - name: Check if release already exists
+      id: check_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Check if a release already exists for this tag
+        if gh release view "${{ steps.extract_version.outputs.tag_name }}" > /dev/null 2>&1; then
+          echo "Release already exists for tag ${{ steps.extract_version.outputs.tag_name }}"
+          echo "This probably means the release was created via GitHub web interface."
+          echo "Skipping automatic release creation."
+          echo "skip_release=true" >> $GITHUB_OUTPUT
+        else
+          echo "No existing release found. Proceeding with automatic release creation."
+          echo "skip_release=false" >> $GITHUB_OUTPUT
+        fi
+    
     - name: Create release
+      if: steps.check_release.outputs.skip_release == 'false'
       run: |
         ./release-linux.sh --arch amd64 --version ${{ steps.extract_version.outputs.version }}
     
     - name: Find release files
+      if: steps.check_release.outputs.skip_release == 'false'
       id: find_files
       run: |
         # Find the main release zip file
@@ -77,60 +114,51 @@ jobs:
         echo "Found release file: $RELEASE_ZIP"
     
     - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
+      if: steps.check_release.outputs.skip_release == 'false'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Frozen Fortress v${{ steps.extract_version.outputs.version }}
-        draft: false
-        prerelease: false
-        body: |
-          ## Frozen Fortress v${{ steps.extract_version.outputs.version }}
-          
-          **Release Information:**
-          - **Platform:** Linux
-          - **Architecture:** AMD64
-          - **Build Date:** ${{ github.event.head_commit.timestamp }}
-          - **Commit:** ${{ github.sha }}
-          
-          **Features:**
-          - ✅ Tesseract OCR support enabled
-          - ✅ Redis/Valkey support
-          - ✅ CLI and WebUI applications
-          - ✅ Automated setup script included
-          
-          **Installation:**
-          1. Download and extract the release archive
-          2. Run the setup script: `./ff-setup.sh`
-          3. Or manually install dependencies and run `./ffcli setup`
-          
-          **Contents:**
-          - `frozenfortress-linux-amd64-v${{ steps.extract_version.outputs.version }}.zip` - Application binaries and assets
-          - `ff-setup.sh` - Automated setup script
-          - `README.txt` - Installation and usage instructions
-          
-          **Requirements:**
-          - Linux AMD64 system
-          - Tesseract OCR (installed automatically by setup script)
-          - Redis server (installed automatically by setup script)
-          
-          For more information, visit the [project repository](https://github.com/${{ github.repository }}).
-    
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ steps.find_files.outputs.release_zip }}
-        asset_name: ${{ steps.find_files.outputs.release_name }}.zip
-        asset_content_type: application/zip
-    
-    - name: Upload Release Info
       run: |
+        # Create release notes
+        cat > release_notes.md << 'EOF'
+        ## Frozen Fortress v${{ steps.extract_version.outputs.version }}
+        
+        **Release Information:**
+        - **Platform:** Linux
+        - **Architecture:** AMD64
+        - **Build Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        - **Commit:** ${{ github.sha }}
+        
+        **Features:**
+        - ✅ Tesseract OCR support enabled
+        - ✅ Redis/Valkey support
+        - ✅ CLI and WebUI applications
+        - ✅ Automated setup script included
+        
+        **Installation:**
+        1. Download and extract the release archive
+        2. Run the setup script: `./ff-setup.sh`
+        3. Or manually install dependencies and run `./ffcli setup`
+        
+        **Contents:**
+        - `frozenfortress-linux-amd64-v${{ steps.extract_version.outputs.version }}.zip` - Application binaries and assets
+        - `ff-setup.sh` - Automated setup script
+        - `README.txt` - Installation and usage instructions
+        
+        **Requirements:**
+        - Linux AMD64 system
+        - Tesseract OCR (installed automatically by setup script)
+        - Redis server (installed automatically by setup script)
+        
+        For more information, visit the [project repository](https://github.com/${{ github.repository }}).
+        EOF
+        
+        # Create release using GitHub CLI
+        gh release create "${{ steps.extract_version.outputs.tag_name }}" \
+          "${{ steps.find_files.outputs.release_zip }}" \
+          --title "Frozen Fortress v${{ steps.extract_version.outputs.version }}" \
+          --notes-file release_notes.md
+        
         echo "Release created successfully!"
-        echo "Release URL: ${{ steps.create_release.outputs.html_url }}"
+        echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract_version.outputs.tag_name }}"
         echo "Release file: ${{ steps.find_files.outputs.release_zip }}"
         echo "File size: $(du -h ${{ steps.find_files.outputs.release_zip }} | cut -f1)"
