@@ -125,7 +125,6 @@ jobs:
         **Release Information:**
         - **Platform:** Linux
         - **Architecture:** AMD64
-        - **Build Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
         - **Commit:** ${{ github.sha }}
         
         **Features:**
