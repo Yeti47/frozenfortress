@@ -238,7 +238,26 @@ install_frozenfortress() {
     fi
     
     print_info "Extracting $zip_file to $install_dir"
-    unzip -o "$zip_file" -d "$install_dir"
+    
+    # Extract to a temporary directory first
+    temp_extract_dir=$(mktemp -d)
+    unzip -o "$zip_file" -d "$temp_extract_dir"
+    
+    # Find the extracted folder (should be something like frozenfortress-*)
+    extracted_folder=$(find "$temp_extract_dir" -maxdepth 1 -type d -name "frozenfortress-*" | head -n 1)
+    
+    if [[ -n "$extracted_folder" ]]; then
+        # Move contents from extracted folder to install directory
+        print_info "Moving contents from extracted folder to $install_dir"
+        cp -r "$extracted_folder"/* "$install_dir"/
+    else
+        # Fallback: move everything from temp directory
+        print_warning "Could not find expected folder structure, copying all contents"
+        cp -r "$temp_extract_dir"/* "$install_dir"/
+    fi
+    
+    # Cleanup temporary directory
+    rm -rf "$temp_extract_dir"
     
     # Make binaries executable
     chmod +x "$install_dir"/{ffcli,ffwebui,ffcli-debug,ffwebui-debug} 2>/dev/null || true
@@ -390,19 +409,6 @@ server {
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-    }
-    
-    # Static files (if served directly)
-    location /static {
-        alias $install_dir/static;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-    
-    location /img {
-        alias $install_dir/img;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
     }
 }
 EOF
