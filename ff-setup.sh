@@ -116,10 +116,64 @@ install_dependencies() {
     
     install_packages "$pkg_manager" "${packages[@]}"
     
-    # Start and enable redis
+    # Start and enable redis - check for different init systems
     print_info "Starting Redis service..."
-    sudo systemctl start redis
-    sudo systemctl enable redis
+    
+    # Check if systemd is available
+    if command -v systemctl &> /dev/null && systemctl --version &> /dev/null; then
+        # systemd system
+        if systemctl list-unit-files 2>/dev/null | grep -q "redis-server.service"; then
+            sudo systemctl start redis-server
+            sudo systemctl enable redis-server
+            print_success "Redis service (redis-server) started and enabled via systemd!"
+        elif systemctl list-unit-files 2>/dev/null | grep -q "redis.service"; then
+            sudo systemctl start redis
+            sudo systemctl enable redis
+            print_success "Redis service (redis) started and enabled via systemd!"
+        else
+            print_warning "Could not find redis service in systemd. Please start it manually."
+        fi
+    elif command -v service &> /dev/null; then
+        # SysV init system
+        if [[ -f "/etc/init.d/redis-server" ]]; then
+            sudo service redis-server start
+            # Try to enable on boot (varies by system)
+            if command -v update-rc.d &> /dev/null; then
+                sudo update-rc.d redis-server enable 2>/dev/null || true
+            elif command -v chkconfig &> /dev/null; then
+                sudo chkconfig redis-server on 2>/dev/null || true
+            fi
+            print_success "Redis service (redis-server) started via SysV init!"
+        elif [[ -f "/etc/init.d/redis" ]]; then
+            sudo service redis start
+            # Try to enable on boot (varies by system)
+            if command -v update-rc.d &> /dev/null; then
+                sudo update-rc.d redis enable 2>/dev/null || true
+            elif command -v chkconfig &> /dev/null; then
+                sudo chkconfig redis on 2>/dev/null || true
+            fi
+            print_success "Redis service (redis) started via SysV init!"
+        else
+            print_warning "Could not find redis service in /etc/init.d/. Please start it manually."
+        fi
+    else
+        print_warning "Could not detect init system. Please start Redis manually:"
+        print_info "Try one of these commands:"
+        print_info "  sudo systemctl start redis-server"
+        print_info "  sudo systemctl start redis"
+        print_info "  sudo service redis-server start"
+        print_info "  sudo service redis start"
+        print_info "  redis-server &"
+    fi
+    
+    # Verify Redis is running
+    if command -v redis-cli &> /dev/null; then
+        if redis-cli ping &> /dev/null; then
+            print_success "Redis is running and responding to ping!"
+        else
+            print_warning "Redis may not be running. Please check manually with: redis-cli ping"
+        fi
+    fi
     
     print_success "Dependencies installed successfully!"
 }
@@ -362,9 +416,31 @@ EOF
     
     # Start and enable nginx
     print_info "Starting nginx service..."
-    sudo systemctl start nginx
-    sudo systemctl enable nginx
-    sudo systemctl reload nginx
+    
+    # Check if systemd is available
+    if command -v systemctl &> /dev/null && systemctl --version &> /dev/null; then
+        # systemd system
+        sudo systemctl start nginx
+        sudo systemctl enable nginx
+        sudo systemctl reload nginx
+        print_success "nginx started and enabled via systemd!"
+    elif command -v service &> /dev/null; then
+        # SysV init system
+        sudo service nginx start
+        # Try to enable on boot (varies by system)
+        if command -v update-rc.d &> /dev/null; then
+            sudo update-rc.d nginx enable 2>/dev/null || true
+        elif command -v chkconfig &> /dev/null; then
+            sudo chkconfig nginx on 2>/dev/null || true
+        fi
+        # Reload configuration
+        sudo service nginx reload 2>/dev/null || sudo service nginx restart
+        print_success "nginx started via SysV init!"
+    else
+        print_warning "Could not detect init system. Please start nginx manually:"
+        print_info "Try: sudo service nginx start"
+        print_info "Or start nginx directly: sudo nginx"
+    fi
     
     print_success "nginx configured successfully!"
     print_info "Frozen Fortress will be available at: https://$cert_domain:$nginx_port"
