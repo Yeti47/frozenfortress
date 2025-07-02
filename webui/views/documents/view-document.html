@@ -1419,21 +1419,24 @@
             document.addEventListener('wheel', preventBackgroundScroll, { passive: false });
             document.addEventListener('touchmove', preventBackgroundScroll, { passive: false });
             
-            // Apply blur directly to specific elements
-            const elementsToBlur = [
-                document.querySelector('.header'),
-                document.querySelector('.main-nav'),
-                document.querySelector('.footer'),
-                document.querySelector('.content-container')
-            ];
-            
-            elementsToBlur.forEach(element => {
-                if (element) {
-                    element.style.filter = 'blur(3px)';
-                    element.style.pointerEvents = 'none';
-                    element.style.transition = 'filter 0.3s ease';
-                }
-            });
+            // Apply blur only on desktop to avoid mobile issues
+            if (window.innerWidth > 768) {
+                const elementsToBlur = [
+                    document.querySelector('.header'),
+                    document.querySelector('.main-nav'),
+                    document.querySelector('.footer'),
+                    document.querySelector('.view-document-container')
+                ];
+                
+                elementsToBlur.forEach(element => {
+                    if (element) {
+                        element.style.filter = 'blur(3px)';
+                        element.style.pointerEvents = 'none';
+                        element.style.transition = 'filter 0.3s ease';
+                        element.setAttribute('data-modal-blurred', 'true');
+                    }
+                });
+            }
         }
 
         function closeFileMetadataModal() {
@@ -1449,19 +1452,13 @@
             // Clear any modal-specific event listeners
             modal.onclick = null;
             
-            // Remove blur directly from specific elements
-            const elementsToUnblur = [
-                document.querySelector('.header'),
-                document.querySelector('.main-nav'),
-                document.querySelector('.footer'),
-                document.querySelector('.content-container')
-            ];
-            
+            // Remove blur only if it was applied (desktop only)
+            const elementsToUnblur = document.querySelectorAll('[data-modal-blurred="true"]');
             elementsToUnblur.forEach(element => {
-                if (element) {
-                    element.style.filter = '';
-                    element.style.pointerEvents = '';
-                }
+                element.style.filter = '';
+                element.style.pointerEvents = '';
+                element.style.transition = '';
+                element.removeAttribute('data-modal-blurred');
             });
             
             modal.onclick = null;
