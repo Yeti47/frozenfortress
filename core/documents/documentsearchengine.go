@@ -177,8 +177,13 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 		allResults = append(allResults, result)
 	}
 
+	// Calculate relevance scores for all results (needed for UI display and sorting)
+	for _, result := range allResults {
+		result.RelevanceScore = s.calculateRelevanceScore(result, searchTerms)
+	}
+
 	// Sort results by specified criteria or default to relevance
-	s.sortSearchResults(allResults, searchTerms, request.SortBy, request.SortAsc)
+	s.sortSearchResults(allResults, request.SortBy, request.SortAsc)
 
 	// Apply pagination
 	totalCount := len(allResults)
@@ -640,14 +645,10 @@ func (s *DefaultDocumentSearchEngine) highlightMatchesForTerms(text string, matc
 }
 
 // sortSearchResults sorts search results by the specified criteria
-func (s *DefaultDocumentSearchEngine) sortSearchResults(results []*DocumentSearchResult, searchTerms []string, sortBy string, sortAsc bool) {
+func (s *DefaultDocumentSearchEngine) sortSearchResults(results []*DocumentSearchResult, sortBy string, sortAsc bool) {
+	// Only sort if we have more than one result
 	if len(results) <= 1 {
 		return
-	}
-
-	// Calculate relevance scores for all results (needed for relevance sorting)
-	for _, result := range results {
-		result.RelevanceScore = s.calculateRelevanceScore(result, searchTerms)
 	}
 
 	// Let the sorter handle all sorting logic, including relevance
