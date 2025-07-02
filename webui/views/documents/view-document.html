@@ -456,7 +456,7 @@
             line-height: 1.6;
             white-space: pre-wrap;
             word-wrap: break-word;
-            max-height: 300px;
+            /* max-height: 300px; */
             overflow-y: auto;
             min-height: 100px;
         }
@@ -501,47 +501,44 @@
 
         @media (max-width: 768px) {
             .file-modal-content {
-                margin: 5px;
-                padding: 12px;
-                width: calc(100% - 10px);
-                height: 90vh;
-                max-height: 98vh;
-                border-radius: 6px;
+                margin: 10px;
+                padding: 20px;
+                width: calc(100% - 20px);
+                height: 85vh;
+                max-height: 85vh;
+                border-radius: 8px;
                 display: flex;
                 flex-direction: column;
+                overflow: hidden;
             }
             .file-modal-tabs {
-                margin-bottom: 10px;
-                margin-top: 10px;
-            }
-            .file-modal-tab-content {
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-                min-height: 0;
-            }
-            .metadata-section {
-                /* allow info tab to scroll if needed */
-                overflow-y: auto;
+                margin-bottom: 15px;
+                margin-top: 15px;
                 flex-shrink: 0;
             }
-            #file-tab-text .metadata-section {
-                flex: 0 0 auto;
+            .file-modal-tab-content {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .file-modal-tab-content.active {
                 display: flex;
                 flex-direction: column;
-                height: 100%;
-                min-height: 0;
             }
-            #file-tab-text .extracted-text-container {
-                flex: 1 1 0;
+            .metadata-section {
+                margin-bottom: 20px;
+                flex-shrink: 0;
+            }
+            .metadata-section:last-child {
+                margin-bottom: 0;
+                flex: 1;
                 display: flex;
                 flex-direction: column;
-                min-height: 0;
             }
-            #file-tab-text .extracted-text {
-                flex: 1 1 0;
-                min-height: 0;
-                max-height: none;
+            .extracted-text {
+                flex: 1;
+                min-height: 150px;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
             }
@@ -577,8 +574,10 @@
             padding: 30px;
             max-width: 600px;
             width: 90%;
+            height: 80vh;
             max-height: 80vh;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
             transform: scale(0.8);
             transition: transform 0.3s ease;
@@ -590,6 +589,7 @@
             -ms-user-select: text;
             /* Ensure this content is always on top and interactive */
             z-index: 9999;
+            overflow: hidden;
         }
 
         /* Desktop modal size - larger on desktop screens */
@@ -598,19 +598,8 @@
                 max-width: 750px;
                 width: 85%;
                 height: 80vh;
-                overflow-y: auto;
                 max-height: 80vh;
             }
-            
-            .file-modal-tab-content {
-                max-height: calc(80vh - 180px);
-                overflow-y: auto;
-            }
-            
-            .extracted-text {
-                max-height: 40vh !important;
-            }
-
         }
 
         .file-modal-overlay.show .file-modal-content {
@@ -624,6 +613,7 @@
             margin-bottom: 25px;
             padding-bottom: 15px;
             border-bottom: 2px solid #e1e8ed;
+            flex-shrink: 0;
         }
 
         .file-modal-title {
@@ -639,6 +629,7 @@
             border-bottom: 2px solid #e1e8ed;
             margin-bottom: 20px;
             margin-top: 20px;
+            flex-shrink: 0;
         }
 
         .file-modal-tab {
@@ -671,12 +662,15 @@
 
         .file-modal-tab-content {
             display: none;
+            flex: 1;
             overflow-y: auto;
-            max-height: calc(80vh - 200px);
+            -webkit-overflow-scrolling: touch;
+            min-height: 0;
         }
 
         .file-modal-tab-content.active {
-            display: block;
+            display: flex;
+            flex-direction: column;
         }
 
         .file-modal-close {
@@ -697,6 +691,14 @@
 
         .metadata-section {
             margin-bottom: 25px;
+            flex-shrink: 0;
+        }
+
+        .metadata-section:last-child {
+            margin-bottom: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .metadata-section h3 {
@@ -736,14 +738,23 @@
 
         .extracted-text {
             background: #f8f9fa;
-            border: 1px solid #e1e8ed;
+            border: none;
             border-radius: 8px;
             padding: 15px;
             font-family: 'Segoe UI', sans-serif;
             line-height: 1.6;
-            max-height: 280px;
+            flex: 1;
             overflow-y: auto;
             white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 200px;
+        }
+
+        .extracted-text-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
         }
 
         .confidence-bar {
@@ -852,19 +863,21 @@
             
             /* Extra small screen file modal optimizations */
             .file-modal-content {
-                margin: 5px;
-                padding: 12px;
-                width: calc(100% - 10px);
-                height: 90vh;
-                max-height: 98vh;
+                margin: 8px;
+                padding: 16px;
+                width: calc(100% - 16px);
+                height: 88vh;
+                max-height: 88vh;
                 border-radius: 6px;
                 display: flex;
                 flex-direction: column;
+                overflow: hidden;
             }
             
             .file-modal-header {
-                margin-bottom: 15px;
-                padding-bottom: 10px;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                flex-shrink: 0;
             }
             
             .file-modal-title {
@@ -873,10 +886,38 @@
             }
             
             .file-modal-close {
-                top: 12px;
-                right: 12px;
                 font-size: 18px;
                 padding: 6px;
+            }
+            
+            .file-modal-tabs {
+                flex-shrink: 0;
+                margin-bottom: 12px;
+                margin-top: 8px;
+            }
+            
+            .file-modal-tab-content {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .file-modal-tab-content.active {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .metadata-section {
+                margin-bottom: 15px;
+                flex-shrink: 0;
+            }
+            
+            .metadata-section:last-child {
+                margin-bottom: 0;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
             }
             
             .metadata-section h3 {
@@ -885,8 +926,7 @@
             }
             
             .metadata-grid {
-                padding: 12px;
-                gap: 10px;
+                gap: 8px 15px;
             }
             
             .metadata-label {
@@ -895,19 +935,26 @@
             
             .metadata-value {
                 font-size: 13px;
-                margin-bottom: 10px;
             }
             
             .extracted-text {
                 font-size: 13px;
-                padding: 10px;
-                max-height: 200px;
+                padding: 12px;
+                flex: 1;
+                min-height: 120px;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
             }
             
+            .extracted-text-container {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
+            
             .confidence-bar {
-                height: 20px;
+                height: 18px;
             }
             
             .confidence-text {
