@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -47,6 +48,7 @@ func (s *services) showAccountSettings(c *gin.Context) {
 	c.HTML(http.StatusOK, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
+		"Version":  ccc.AppVersion,
 	})
 }
 
@@ -73,6 +75,7 @@ func (s *services) changePassword(c *gin.Context) {
 			"Title":         "Account Settings",
 			"Username":      user.UserName,
 			"passwordError": "All password fields are required",
+			"Version":       ccc.AppVersion,
 		})
 		return
 	}
@@ -82,6 +85,7 @@ func (s *services) changePassword(c *gin.Context) {
 			"Title":         "Account Settings",
 			"Username":      user.UserName,
 			"passwordError": "New passwords do not match",
+			"Version":       ccc.AppVersion,
 		})
 		return
 	}
@@ -97,6 +101,7 @@ func (s *services) changePassword(c *gin.Context) {
 	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
+		"Version":  ccc.AppVersion,
 	}, "passwordError") {
 		return
 	}
@@ -106,6 +111,7 @@ func (s *services) changePassword(c *gin.Context) {
 			"Title":         "Account Settings",
 			"Username":      user.UserName,
 			"passwordError": "Password change failed",
+			"Version":       ccc.AppVersion,
 		})
 		return
 	}
@@ -114,6 +120,7 @@ func (s *services) changePassword(c *gin.Context) {
 		"Title":           "Account Settings",
 		"Username":        user.UserName,
 		"passwordSuccess": "Password changed successfully",
+		"Version":         ccc.AppVersion,
 	})
 }
 
@@ -136,6 +143,7 @@ func (s *services) generateRecoveryCode(c *gin.Context) {
 			"Title":         "Account Settings",
 			"Username":      user.UserName,
 			"RecoveryError": "Password is required to generate recovery code",
+			"Version":       ccc.AppVersion,
 		})
 		return
 	}
@@ -150,6 +158,7 @@ func (s *services) generateRecoveryCode(c *gin.Context) {
 	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
+		"Version":  ccc.AppVersion,
 	}, "RecoveryError") {
 		return
 	}
@@ -160,6 +169,7 @@ func (s *services) generateRecoveryCode(c *gin.Context) {
 		"RecoveryCode":    response.RecoveryCode,
 		"RecoveryContext": "account",
 		"RecoverySuccess": "Recovery code generated successfully. Please save it in a secure location.",
+		"Version":         ccc.AppVersion,
 	})
 }
 
@@ -182,6 +192,7 @@ func (s *services) deactivateAccount(c *gin.Context) {
 			"Title":           "Account Settings",
 			"Username":        user.UserName,
 			"DeactivateError": "Password is required to deactivate account",
+			"Version":         ccc.AppVersion,
 		})
 		return
 	}
@@ -191,6 +202,7 @@ func (s *services) deactivateAccount(c *gin.Context) {
 	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
+		"Version":  ccc.AppVersion,
 	}, "DeactivateError") {
 		return
 	}
@@ -200,6 +212,7 @@ func (s *services) deactivateAccount(c *gin.Context) {
 			"Title":           "Account Settings",
 			"Username":        user.UserName,
 			"DeactivateError": "Invalid password",
+			"Version":         ccc.AppVersion,
 		})
 		return
 	}
@@ -209,6 +222,7 @@ func (s *services) deactivateAccount(c *gin.Context) {
 	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
+		"Version":  ccc.AppVersion,
 	}, "DeactivateError") {
 		return
 	}
@@ -218,6 +232,7 @@ func (s *services) deactivateAccount(c *gin.Context) {
 			"Title":           "Account Settings",
 			"Username":        user.UserName,
 			"DeactivateError": "Failed to deactivate account",
+			"Version":         ccc.AppVersion,
 		})
 		return
 	}
@@ -247,6 +262,7 @@ func (s *services) deleteAccount(c *gin.Context) {
 			"Title":       "Account Settings",
 			"Username":    user.UserName,
 			"DeleteError": "Password is required to delete account",
+			"Version":     ccc.AppVersion,
 		})
 		return
 	}
@@ -256,6 +272,7 @@ func (s *services) deleteAccount(c *gin.Context) {
 			"Title":       "Account Settings",
 			"Username":    user.UserName,
 			"DeleteError": "Please type 'DELETE' to confirm account deletion",
+			"Version":     ccc.AppVersion,
 		})
 		return
 	}
@@ -265,6 +282,7 @@ func (s *services) deleteAccount(c *gin.Context) {
 	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
+		"Version":  ccc.AppVersion,
 	}, "DeleteError") {
 		return
 	}
@@ -274,6 +292,7 @@ func (s *services) deleteAccount(c *gin.Context) {
 			"Title":       "Account Settings",
 			"Username":    user.UserName,
 			"DeleteError": "Invalid password",
+			"Version":     ccc.AppVersion,
 		})
 		return
 	}
@@ -283,6 +302,7 @@ func (s *services) deleteAccount(c *gin.Context) {
 	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
+		"Version":  ccc.AppVersion,
 	}, "DeleteError") {
 		return
 	}
@@ -292,6 +312,7 @@ func (s *services) deleteAccount(c *gin.Context) {
 			"Title":       "Account Settings",
 			"Username":    user.UserName,
 			"DeleteError": "Failed to delete account",
+			"Version":     ccc.AppVersion,
 		})
 		return
 	}

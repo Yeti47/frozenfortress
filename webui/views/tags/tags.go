@@ -126,7 +126,7 @@ func handleEditTagPage(c *gin.Context, signInManager auth.SignInManager, tagMana
 	// If we have an ID, we're editing an existing tag
 	if tagId != "" {
 		tag, err := tagManager.GetTag(context.Background(), user.Id, tagId)
-		if middleware.HandleErrorOnPage(c, err, "edit-tag.html", gin.H{}, "ErrorMessage") {
+		if middleware.HandleErrorOnPage(c, err, "edit-tag.html", gin.H{"Version": ccc.AppVersion}, "ErrorMessage") {
 			return
 		}
 
@@ -175,6 +175,7 @@ func handleEditTagSubmit(c *gin.Context, signInManager auth.SignInManager, tagMa
 			"TagId":    tagId,
 			"TagName":  tagName,
 			"TagColor": tagColor,
+			"Version":  ccc.AppVersion,
 		}, "ErrorMessage") {
 			return
 		}
@@ -192,6 +193,7 @@ func handleEditTagSubmit(c *gin.Context, signInManager auth.SignInManager, tagMa
 		if middleware.HandleErrorOnPage(c, err, "edit-tag.html", gin.H{
 			"TagName":  tagName,
 			"TagColor": tagColor,
+			"Version":  ccc.AppVersion,
 		}, "ErrorMessage") {
 			return
 		}

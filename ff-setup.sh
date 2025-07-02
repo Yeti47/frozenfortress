@@ -384,6 +384,11 @@ server {
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
     
+    # File upload configuration
+    client_max_body_size 250M;
+    client_body_timeout 120s;
+    client_header_timeout 120s;
+    
     # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;

@@ -719,12 +719,14 @@
                         </div>
 
                         <div class="upload-area" id="uploadArea">
-                            <input type="file" id="fileInput" class="file-input" multiple>
+                            <input type="file" id="fileInput" class="file-input" multiple accept="image/png,image/jpeg,image/jpg,application/pdf">
                             <div class="upload-icon">
                                 <span class="material-icons">cloud_upload</span>
                             </div>
                             <div class="upload-text">Click to select files or drag & drop</div>
-                            <div class="upload-hint">Supports PDF, images, and documents</div>
+                            <div class="upload-hint">Supported formats: PNG, JPG, JPEG, PDF (Max {{.MaxFileSizeText}} each)<br>
+                                <small>On mobile devices, you can also take photos directly</small>
+                            </div>
                         </div>
 
                         <div class="current-files">
@@ -807,7 +809,23 @@
                 return;
             }
             
+            // Define allowed content types and file size limit
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+            const maxSize = {{.MaxFileSize}}; // From Go template
+            
             files.forEach(file => {
+                // Validate file type
+                if (!allowedTypes.includes(file.type)) {
+                    alert(`File type ${file.type} is not supported. Please select PNG, JPG, JPEG, or PDF files.`);
+                    return;
+                }
+                
+                // Validate file size
+                if (file.size > maxSize) {
+                    alert(`File ${file.name} is too large. Maximum file size is {{.MaxFileSizeText}}.`);
+                    return;
+                }
+                
                 uploadFile(file, documentId);
             });
         }
@@ -1162,6 +1180,27 @@
         document.addEventListener('DOMContentLoaded', function() {
             updateCharCount('title', 'titleCount', 50);
             updateCharCount('description', 'descriptionCount', 200);
+            
+            // Set up file upload event listeners
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            if (uploadArea && fileInput) {
+                // Click upload area to open file picker
+                uploadArea.addEventListener('click', function(e) {
+                    if (e.target !== fileInput) {
+                        fileInput.click();
+                    }
+                });
+                
+                // File input change handler
+                fileInput.addEventListener('change', handleFileSelect);
+                
+                // Drag and drop handlers
+                uploadArea.addEventListener('dragover', handleDragOver);
+                uploadArea.addEventListener('dragleave', handleDragLeave);
+                uploadArea.addEventListener('drop', handleDrop);
+            }
             
             // Pre-populate tag picker with document's current tags
             const documentTags = [

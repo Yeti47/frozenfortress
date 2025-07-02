@@ -224,29 +224,25 @@
 
         .document-info {
             padding: 16px;
-            flex: 0 1 auto; /* Don't expand, just take needed space */
+            flex: 1; /* Take all available space */
             display: flex;
             flex-direction: column;
         }
 
         .document-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
             margin-bottom: 8px;
-            gap: 10px;
         }
 
         .document-title-section {
-            flex: 1;
-            min-width: 0;
+            width: 100%;
         }
 
         .document-actions {
             display: flex;
             gap: 6px;
-            align-items: flex-start;
-            flex-shrink: 0;
+            align-items: center;
+            justify-content: flex-end;
+            margin-top: 8px;
         }
 
         .document-btn {
@@ -330,7 +326,6 @@
             -webkit-line-clamp: 2;
             line-clamp: 2;
             -webkit-box-orient: vertical;
-            flex: 1;
         }
 
         .document-meta {
@@ -679,15 +674,33 @@
             .pagination-controls {
                 flex-wrap: wrap;
             }
+            
+            /* Improve touch accessibility for tablets */
+            .document-actions {
+                gap: 8px;
+            }
+
+            .document-btn {
+                width: 36px;
+                height: 36px;
+                padding: 8px;
+                min-width: 36px;
+                min-height: 36px;
+            }
+
+            .document-btn .material-icons {
+                font-size: 16px;
+            }
         }
 
         @media (max-width: 480px) {
             .document-card {
-                height: 260px;
+                height: 360px; /* Large enough for better mobile preview */
+                max-height: none; /* Override global max-height constraint */
             }
 
             .document-preview {
-                height: 120px;
+                height: 200px; /* Much larger preview for mobile visibility */
             }
 
             .pagination-btn {
@@ -703,18 +716,25 @@
                 display: none;
             }
 
-            .document-actions {
-                gap: 4px;
+            /* No need for complex header layout since buttons are moved to footer */
+            .document-title {
+                font-size: 15px; /* Slightly larger since no space competition */
+                line-height: 1.3;
+                -webkit-line-clamp: 2;
+                line-clamp: 2;
             }
 
+            /* Action buttons sized for mobile touch accessibility */
             .document-btn {
-                width: 24px;
-                height: 24px;
-                padding: 4px;
+                width: 40px;
+                height: 40px;
+                padding: 10px;
+                min-width: 40px;
+                min-height: 40px;
             }
 
             .document-btn .material-icons {
-                font-size: 14px;
+                font-size: 18px;
             }
         }
 
@@ -1029,17 +1049,6 @@
                                         <div class="document-title-section">
                                             <h3 class="document-title">{{.Title}}</h3>
                                         </div>
-                                        <div class="document-actions">
-                                            <a href="/view-document?id={{.Id}}" class="document-btn view-btn" title="View Document">
-                                                <span class="material-icons">visibility</span>
-                                            </a>
-                                            <a href="/edit-document?id={{.Id}}&returnTo=documents" class="document-btn edit-btn" title="Edit Document">
-                                                <span class="material-icons">edit</span>
-                                            </a>
-                                            <button class="document-btn delete-btn" onclick="deleteDocument('{{.Id}}', '{{.Title}}')" title="Delete Document">
-                                                <span class="material-icons">delete</span>
-                                            </button>
-                                        </div>
                                     </div>
                                     <p class="document-description">{{.Description}}</p>
                                     {{if .IsSearchResult}}
@@ -1065,6 +1074,17 @@
                                             {{range .Tags}}
                                                 <span class="document-tag" style="background-color: {{.Color}}20; color: {{.Color}};">{{.Name}}</span>
                                             {{end}}
+                                        </div>
+                                        <div class="document-actions">
+                                            <a href="/view-document?id={{.Id}}" class="document-btn view-btn" title="View Document">
+                                                <span class="material-icons">visibility</span>
+                                            </a>
+                                            <a href="/edit-document?id={{.Id}}&returnTo=documents" class="document-btn edit-btn" title="Edit Document">
+                                                <span class="material-icons">edit</span>
+                                            </a>
+                                            <button class="document-btn delete-btn" onclick="deleteDocument('{{.Id}}', '{{.Title}}')" title="Delete Document">
+                                                <span class="material-icons">delete</span>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

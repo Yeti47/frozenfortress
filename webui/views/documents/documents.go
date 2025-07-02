@@ -2,6 +2,7 @@ package documents
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,18 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/middleware"
 	"github.com/gin-gonic/gin"
 )
+
+const (
+	// MaxFileSizeMB defines the maximum allowed file size in MB for document uploads
+	MaxFileSizeMB = 30
+	// MaxFileSize defines the maximum allowed file size in bytes for document uploads
+	MaxFileSize = MaxFileSizeMB * 1024 * 1024 // Convert MB to bytes
+)
+
+// getMaxFileSizeMB returns the maximum file size in MB as a string for display
+func getMaxFileSizeMB() string {
+	return fmt.Sprintf("%dMB", MaxFileSizeMB)
+}
 
 // DocumentServices aggregates document-related services for cleaner function signatures
 type DocumentServices struct {
@@ -248,12 +261,14 @@ func handleEditDocumentPage(c *gin.Context, signInManager auth.SignInManager, do
 	documentTags := document.Tags // Assuming the document has tags loaded
 
 	templateData := gin.H{
-		"Title":        "Frozen Fortress - Edit Document",
-		"Username":     user.UserName,
-		"Version":      ccc.AppVersion,
-		"Document":     document,
-		"AllTags":      allTags,
-		"DocumentTags": documentTags,
+		"Title":           "Frozen Fortress - Edit Document",
+		"Username":        user.UserName,
+		"Version":         ccc.AppVersion,
+		"Document":        document,
+		"AllTags":         allTags,
+		"DocumentTags":    documentTags,
+		"MaxFileSize":     MaxFileSize,
+		"MaxFileSizeText": getMaxFileSizeMB(),
 	}
 
 	// Render the edit document template
@@ -317,9 +332,11 @@ func handleCreateDocumentPage(c *gin.Context, signInManager auth.SignInManager, 
 	}
 
 	templateData := gin.H{
-		"Title":    "Frozen Fortress - Create Document",
-		"Username": user.UserName,
-		"Version":  ccc.AppVersion,
+		"Title":           "Frozen Fortress - Create Document",
+		"Username":        user.UserName,
+		"Version":         ccc.AppVersion,
+		"MaxFileSize":     MaxFileSize,
+		"MaxFileSizeText": getMaxFileSizeMB(),
 	}
 
 	// Render the create document template
@@ -343,12 +360,14 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 	// Validate title (required)
 	if title == "" {
 		templateData := gin.H{
-			"Title":         "Frozen Fortress - Create Document",
-			"Username":      user.UserName,
-			"Version":       ccc.AppVersion,
-			"DocumentTitle": title,
-			"Description":   description,
-			"ErrorMessage":  "Document title is required.",
+			"Title":           "Frozen Fortress - Create Document",
+			"Username":        user.UserName,
+			"Version":         ccc.AppVersion,
+			"DocumentTitle":   title,
+			"Description":     description,
+			"ErrorMessage":    "Document title is required.",
+			"MaxFileSize":     MaxFileSize,
+			"MaxFileSizeText": getMaxFileSizeMB(),
 		}
 		c.HTML(400, "create-document.html", templateData)
 		return
@@ -373,12 +392,14 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 	if err != nil {
 		logger.Error("Failed to parse multipart form", "error", err)
 		templateData := gin.H{
-			"Title":         "Frozen Fortress - Create Document",
-			"Username":      user.UserName,
-			"Version":       ccc.AppVersion,
-			"DocumentTitle": title,
-			"Description":   description,
-			"ErrorMessage":  "Failed to process uploaded files.",
+			"Title":           "Frozen Fortress - Create Document",
+			"Username":        user.UserName,
+			"Version":         ccc.AppVersion,
+			"DocumentTitle":   title,
+			"Description":     description,
+			"ErrorMessage":    "Failed to process uploaded files.",
+			"MaxFileSize":     MaxFileSize,
+			"MaxFileSizeText": getMaxFileSizeMB(),
 		}
 		c.HTML(400, "create-document.html", templateData)
 		return
@@ -406,32 +427,35 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 				"content_type", contentType,
 				"user_id", user.Id)
 			templateData := gin.H{
-				"Title":         "Frozen Fortress - Create Document",
-				"Username":      user.UserName,
-				"Version":       ccc.AppVersion,
-				"ErrorMessage":  "File '" + fileHeader.Filename + "' has an unsupported format. Only PNG, JPG, JPEG, and PDF files are allowed.",
-				"DocumentTitle": title,
-				"Description":   description,
+				"Title":           "Frozen Fortress - Create Document",
+				"Username":        user.UserName,
+				"Version":         ccc.AppVersion,
+				"ErrorMessage":    "File '" + fileHeader.Filename + "' has an unsupported format. Only PNG, JPG, JPEG, and PDF files are allowed.",
+				"DocumentTitle":   title,
+				"Description":     description,
+				"MaxFileSize":     MaxFileSize,
+				"MaxFileSizeText": getMaxFileSizeMB(),
 			}
 			c.HTML(400, "create-document.html", templateData)
 			return
 		}
 
-		// Check file size (10MB limit)
-		const maxFileSize = 10 * 1024 * 1024 // 10MB
-		if fileHeader.Size > maxFileSize {
+		// Check file size limit
+		if fileHeader.Size > MaxFileSize {
 			logger.Warn("Rejected file that exceeds size limit",
 				"filename", fileHeader.Filename,
 				"size", fileHeader.Size,
-				"max_size", maxFileSize,
+				"max_size", MaxFileSize,
 				"user_id", user.Id)
 			templateData := gin.H{
-				"Title":         "Frozen Fortress - Create Document",
-				"Username":      user.UserName,
-				"Version":       ccc.AppVersion,
-				"ErrorMessage":  "File '" + fileHeader.Filename + "' is too large. Maximum file size is 10MB.",
-				"DocumentTitle": title,
-				"Description":   description,
+				"Title":           "Frozen Fortress - Create Document",
+				"Username":        user.UserName,
+				"Version":         ccc.AppVersion,
+				"ErrorMessage":    "File '" + fileHeader.Filename + "' is too large. Maximum file size is " + getMaxFileSizeMB() + ".",
+				"DocumentTitle":   title,
+				"Description":     description,
+				"MaxFileSize":     MaxFileSize,
+				"MaxFileSizeText": getMaxFileSizeMB(),
 			}
 			c.HTML(400, "create-document.html", templateData)
 			return
@@ -479,11 +503,13 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 		logger.Error("Failed to create document", "user_id", user.Id, "title", title, "error", err)
 
 		templateData := gin.H{
-			"Title":         "Frozen Fortress - Create Document",
-			"Username":      user.UserName,
-			"Version":       ccc.AppVersion,
-			"DocumentTitle": title,
-			"Description":   description,
+			"Title":           "Frozen Fortress - Create Document",
+			"Username":        user.UserName,
+			"Version":         ccc.AppVersion,
+			"DocumentTitle":   title,
+			"Description":     description,
+			"MaxFileSize":     MaxFileSize,
+			"MaxFileSizeText": getMaxFileSizeMB(),
 		}
 
 		if middleware.HandleErrorOnPage(c, err, "create-document.html", templateData, "ErrorMessage") {
@@ -750,15 +776,14 @@ func handleUploadDocumentFile(c *gin.Context, signInManager auth.SignInManager, 
 		return
 	}
 
-	// Check file size (10MB limit)
-	const maxFileSize = 10 * 1024 * 1024 // 10MB
-	if fileHeader.Size > maxFileSize {
+	// Check file size limit
+	if fileHeader.Size > MaxFileSize {
 		logger.Warn("Rejected file that exceeds size limit",
 			"filename", fileHeader.Filename,
 			"size", fileHeader.Size,
-			"max_size", maxFileSize,
+			"max_size", MaxFileSize,
 			"user_id", user.Id)
-		c.JSON(400, gin.H{"success": false, "error": "File is too large. Maximum file size is 10MB"})
+		c.JSON(400, gin.H{"success": false, "error": "File is too large. Maximum file size is " + getMaxFileSizeMB()})
 		return
 	}
 

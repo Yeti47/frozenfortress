@@ -210,15 +210,6 @@
             box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
         }
 
-        .upload-btn.camera {
-            background: #27ae60;
-        }
-
-        .upload-btn.camera:hover {
-            background: #229954;
-            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-        }
-
         .selected-files {
             margin-top: 20px;
         }
@@ -377,11 +368,6 @@
                 flex-direction: column;
             }
             
-            .upload-btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
             .form-actions {
                 flex-direction: column;
             }
@@ -389,6 +375,46 @@
             .btn {
                 width: 100%;
                 justify-content: center;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 10px 8px !important;
+            }
+            
+            .content-container {
+                padding: 15px !important;
+                margin: 0 !important;
+                min-height: calc(100vh - 100px);
+                border-radius: 15px;
+            }
+            
+            .form-container {
+                padding: 15px;
+            }
+            
+            .create-document-header {
+                margin-bottom: 20px;
+                gap: 10px;
+            }
+            
+            .create-document-title {
+                font-size: 22px;
+            }
+            
+            .form-group {
+                margin-bottom: 20px;
+            }
+            
+            .file-upload-section {
+                padding: 15px;
+            }
+            
+            .form-actions {
+                margin-top: 20px;
+                padding-top: 15px;
             }
         }
     </style>
@@ -461,18 +487,14 @@
                                 <span class="material-icons">cloud_upload</span>
                             </div>
                             <div class="file-upload-text">Drop files here or click to browse</div>
-                            <div class="file-upload-hint">Supported formats: PNG, JPG, JPEG, PDF (Max 10MB each)</div>
+                            <div class="file-upload-hint">Supported formats: PNG, JPG, JPEG, PDF (Max {{.MaxFileSizeText}} each)<br>
+                                <small>On mobile devices, you can also take photos directly</small>
+                            </div>
                             
                             <div class="upload-buttons">
                                 <button type="button" class="upload-btn" onclick="document.getElementById('file-input').click()">
                                     <span class="material-icons">attach_file</span>
                                     Choose Files
-                                </button>
-                                
-                                {{/* Camera button for mobile */}}
-                                <button type="button" class="upload-btn camera" id="camera-btn" onclick="openCamera()">
-                                    <span class="material-icons">camera_alt</span>
-                                    Take Photo
                                 </button>
                             </div>
                             
@@ -481,7 +503,7 @@
                                    name="files" 
                                    class="file-input"
                                    multiple 
-                                   accept=".png,.jpg,.jpeg,.pdf">
+                                   accept="image/png,image/jpeg,image/jpg,application/pdf">
                         </div>
                         
                         <div class="selected-files" id="selected-files">
@@ -515,7 +537,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('file-input');
     const selectedFilesContainer = document.getElementById('selected-files');
     const submitBtn = document.getElementById('submit-btn');
-    const cameraBtn = document.getElementById('camera-btn');
     
     let selectedFiles = [];
     
@@ -544,16 +565,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCharCount(titleInput, titleCounter, 50);
     updateCharCount(descriptionInput, descriptionCounter, 128);
     
-    // Hide camera button on desktop
-    if (!isMobileDevice()) {
-        cameraBtn.style.display = 'none';
-    }
-    
     // File handling
-    function isMobileDevice() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
-    
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 B';
         const k = 1024;
@@ -578,7 +590,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function validateFile(file) {
         const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = {{.MaxFileSize}}; // From Go template
         
         if (!allowedTypes.includes(file.type)) {
             alert(`File type ${file.type} is not supported. Please select PNG, JPG, JPEG, or PDF files.`);
@@ -586,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (file.size > maxSize) {
-            alert(`File ${file.name} is too large. Maximum file size is 10MB.`);
+            alert(`File ${file.name} is too large. Maximum file size is {{.MaxFileSizeText}}.`);
             return false;
         }
         
@@ -661,24 +673,6 @@ document.addEventListener('DOMContentLoaded', function() {
         fileUploadArea.classList.remove('dragover');
         addFiles(e.dataTransfer.files);
     });
-    
-    // Camera functionality
-    window.openCamera = function() {
-        // Create a camera input
-        const cameraInput = document.createElement('input');
-        cameraInput.type = 'file';
-        cameraInput.accept = 'image/*';
-        cameraInput.capture = 'environment'; // Use rear camera
-        cameraInput.style.display = 'none';
-        
-        cameraInput.addEventListener('change', (e) => {
-            addFiles(e.target.files);
-            document.body.removeChild(cameraInput);
-        });
-        
-        document.body.appendChild(cameraInput);
-        cameraInput.click();
-    };
     
     // Global function for file removal
     window.removeFile = removeFile;
