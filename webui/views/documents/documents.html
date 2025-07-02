@@ -953,6 +953,110 @@
                 border-radius: 14px;
             }
         }
+
+        /* Mobile-specific filter layout for very small screens */
+        @media (max-width: 480px) {
+            .filter-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+                padding: 10px;
+                margin-bottom: 2px;
+            }
+
+            .filter-title {
+                font-size: 15px;
+                justify-content: center;
+                text-align: center;
+                gap: 6px;
+            }
+
+            .filter-collapse-icon {
+                margin-left: 4px;
+                font-size: 18px;
+            }
+
+            .filter-status {
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                gap: 8px;
+                text-align: center;
+                font-size: 13px;
+                flex-wrap: wrap;
+            }
+
+            .clear-filters-btn {
+                padding: 6px 12px;
+                font-size: 11px;
+                border-radius: 14px;
+                margin-left: 0;
+                margin-top: 4px;
+            }
+
+            .filter-controls {
+                padding: 12px;
+                margin-bottom: 20px;
+            }
+
+            .filter-content {
+                margin-top: 5px;
+            }
+
+            .tags-filter-container {
+                justify-content: center;
+                gap: 6px;
+            }
+
+            .filter-tag {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+
+            .tag-color-dot {
+                width: 6px;
+                height: 6px;
+            }
+        }
+
+        /* Extra small mobile screens */
+        @media (max-width: 360px) {
+            .filter-header {
+                margin-bottom: 5px;
+            }
+
+            .filter-status {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .filter-status span {
+                font-size: 12px;
+            }
+
+            .clear-filters-btn {
+                margin-top: 6px;
+                padding: 5px 10px;
+                font-size: 10px;
+            }
+
+            .filter-title {
+                font-size: 14px;
+            }
+
+            .filter-controls {
+                padding: 10px;
+            }
+
+            .tags-filter-container {
+                gap: 4px;
+            }
+
+            .filter-tag {
+                font-size: 11px;
+                padding: 5px 8px;
+            }
+        }
     </style>
 
     <div class="documents-container">

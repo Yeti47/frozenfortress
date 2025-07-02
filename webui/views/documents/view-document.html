@@ -1287,6 +1287,22 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
+        function formatTimestamp(timestamp) {
+            // Format timestamp to match the consistent application format "2006-01-02 15:04"
+            if (!timestamp) return 'N/A';
+            
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) return 'Invalid Date';
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            
+            return `${year}-${month}-${day} ${hours}:${minutes}`;
+        }
+
         function showFileMetadata(fileId) {
             // Find the file data from the already loaded files
             const filesContent = document.getElementById('files-content');
@@ -1309,9 +1325,9 @@
             const infoContent = document.getElementById('file-tab-info');
             const textContent = document.getElementById('file-tab-text');
             
-            // Format dates
-            const createdDate = new Date(file.CreatedAt).toLocaleString();
-            const modifiedDate = new Date(file.ModifiedAt).toLocaleString();
+            // Format dates using the consistent application format "2006-01-02 15:04"
+            const createdDate = formatTimestamp(file.CreatedAt);
+            const modifiedDate = formatTimestamp(file.ModifiedAt);
             
             // Format file size
             const sizeFormatted = formatFileSize(file.FileSize);

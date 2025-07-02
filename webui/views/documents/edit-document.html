@@ -411,6 +411,10 @@
             margin-top: 20px;
         }
 
+        .current-files>h4{
+            margin-bottom: 4px;
+        }
+
         .file-list {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -423,6 +427,8 @@
             border-radius: 12px;
             padding: 16px;
             transition: all 0.3s ease;
+            min-width: 0; /* Allow flex items to shrink below content size */
+            overflow: hidden; /* Prevent content from overflowing the container */
         }
 
         .file-item:hover {
@@ -448,6 +454,8 @@
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 12px;
+            min-height: fit-content;
+            gap: 10px;
         }
 
         .file-name {
@@ -456,11 +464,18 @@
             font-size: 14px;
             flex: 1;
             margin-right: 10px;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            hyphens: auto;
+            line-height: 1.4;
+            min-width: 0;
         }
 
         .file-actions {
             display: flex;
             gap: 5px;
+            flex-shrink: 0;
+            align-self: flex-start;
         }
 
         .file-btn {
@@ -631,6 +646,12 @@
 
             .tag-selector {
                 padding: 12px;
+            }
+            
+            .files-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
             }
         }
     </style>
@@ -1012,9 +1033,22 @@
                 return;
             }
             
-            if (confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
-                deleteFile(fileId, documentId);
-            }
+            // Find the file name for the confirmation modal
+            const file = currentFiles.find(f => f.Id === fileId);
+            const fileName = file ? file.FileName : 'this file';
+            
+            // Show custom confirmation modal
+            showConfirmModal(
+                'Confirm File Deletion',
+                'Are you sure you want to delete this file?',
+                fileName,
+                function() {
+                    // User confirmed - proceed with deletion
+                    deleteFile(fileId, documentId);
+                },
+                'Delete File', // Custom confirm button text
+                'This action cannot be undone.' // Warning text
+            );
         }
 
         function deleteFile(fileId, documentId) {
