@@ -54,6 +54,8 @@
             gap: 10px;
             align-items: center;
             justify-content: flex-end;
+            flex-wrap: wrap;
+            min-width: 0;
         }
 
         /* Only use horizontal layout on large screens */
@@ -297,7 +299,7 @@
         }
 
         .selected-tags {
-            margin-top: 15px;
+            /* margin-top: 15px; */
         }
 
         .selected-tags h4 {
@@ -540,13 +542,25 @@
 
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
+            .main-content {
+                padding: 10px 8px !important;
+            }
+            
             .content-container {
-                padding: 20px;
-                margin: 10px;
+                padding: 12px !important;
+                margin: 5px;
+                min-height: calc(100vh - 180px);
             }
 
             .document-header {
                 gap: 15px;
+            }
+            
+            .document-actions {
+                flex-wrap: wrap;
+                gap: 8px;
+                width: 100%;
+                justify-content: flex-start;
             }
 
             .page-title {
@@ -574,10 +588,35 @@
             .action-btn {
                 padding: 8px 12px;
                 font-size: 13px;
+                flex: 0 0 auto;
+                min-width: 0;
             }
         }
 
         @media (max-width: 480px) {
+            .main-content {
+                padding: 8px 5px !important;
+            }
+            
+            .content-container {
+                padding: 8px !important;
+                margin: 2px;
+                min-height: calc(100vh - 160px);
+            }
+            
+            .document-actions {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .action-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+
             .upload-area {
                 padding: 30px 15px;
             }
@@ -619,8 +658,8 @@
                         <span class="material-icons" style="margin-right: 10px; vertical-align: middle;">edit</span>
                         {{if .Document}}
                             {{$title := .Document.Title}}
-                            {{if gt (len $title) 25}}
-                                Edit: {{slice $title 0 25}}...
+                            {{if gt (len $title) 22}}
+                                Edit: {{slice $title 0 22}}...
                             {{else}}
                                 Edit: {{$title}}
                             {{end}}
@@ -719,12 +758,14 @@
                         </div>
 
                         <div class="upload-area" id="uploadArea">
-                            <input type="file" id="fileInput" class="file-input" multiple>
+                            <input type="file" id="fileInput" class="file-input" multiple accept="image/png,image/jpeg,image/jpg,application/pdf">
                             <div class="upload-icon">
                                 <span class="material-icons">cloud_upload</span>
                             </div>
                             <div class="upload-text">Click to select files or drag & drop</div>
-                            <div class="upload-hint">Supports PDF, images, and documents</div>
+                            <div class="upload-hint">Supported formats: PNG, JPG, JPEG, PDF (Max {{.MaxFileSizeText}} each)<br>
+                                <small>On mobile devices, you can also take photos directly</small>
+                            </div>
                         </div>
 
                         <div class="current-files">
@@ -807,7 +848,23 @@
                 return;
             }
             
+            // Define allowed content types and file size limit
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+            const maxSize = {{.MaxFileSize}}; // From Go template
+            
             files.forEach(file => {
+                // Validate file type
+                if (!allowedTypes.includes(file.type)) {
+                    alert(`File type ${file.type} is not supported. Please select PNG, JPG, JPEG, or PDF files.`);
+                    return;
+                }
+                
+                // Validate file size
+                if (file.size > maxSize) {
+                    alert(`File ${file.name} is too large. Maximum file size is {{.MaxFileSizeText}}.`);
+                    return;
+                }
+                
                 uploadFile(file, documentId);
             });
         }
@@ -1162,6 +1219,27 @@
         document.addEventListener('DOMContentLoaded', function() {
             updateCharCount('title', 'titleCount', 50);
             updateCharCount('description', 'descriptionCount', 200);
+            
+            // Set up file upload event listeners
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            if (uploadArea && fileInput) {
+                // Click upload area to open file picker
+                uploadArea.addEventListener('click', function(e) {
+                    if (e.target !== fileInput) {
+                        fileInput.click();
+                    }
+                });
+                
+                // File input change handler
+                fileInput.addEventListener('change', handleFileSelect);
+                
+                // Drag and drop handlers
+                uploadArea.addEventListener('dragover', handleDragOver);
+                uploadArea.addEventListener('dragleave', handleDragLeave);
+                uploadArea.addEventListener('drop', handleDrop);
+            }
             
             // Pre-populate tag picker with document's current tags
             const documentTags = [
