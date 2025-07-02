@@ -187,8 +187,8 @@
             border: 1px solid #f1f3f4;
             display: flex;
             flex-direction: column;
-            min-height: 280px; /* Minimum height for all cards */
-            max-height: 400px; /* Prevent excessive growth */
+            min-height: 340px; /* Slightly taller to accommodate search highlights */
+            max-height: 480px; 
         }
 
         .document-card:hover {
@@ -198,6 +198,8 @@
 
         .document-preview {
             height: 140px;
+            min-height: 140px; /* Ensure preview never shrinks below this */
+            flex-shrink: 0; /* Prevent the preview from shrinking */
             background: #f8f9fa;
             display: flex;
             align-items: center;
@@ -227,6 +229,7 @@
             flex: 1; /* Take all available space */
             display: flex;
             flex-direction: column;
+            overflow: hidden; /* Ensure content doesn't overflow the card */
         }
 
         .document-header {
@@ -367,6 +370,8 @@
         .search-highlight {
             margin: 4px 0 8px 0;
             font-size: 12px;
+            max-height: 90px; 
+            overflow: hidden; /* Hide excess content */
         }
 
         .search-highlight-label {
@@ -399,6 +404,12 @@
             color: #34495e;
             line-height: 1.4;
             word-break: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 4; /* Allow up to 4 lines instead of 3 */
+            line-clamp: 4;
+            -webkit-box-orient: vertical;
         }
 
         /* Structured match display - Compact and lean */
@@ -695,12 +706,14 @@
 
         @media (max-width: 480px) {
             .document-card {
-                height: 360px; /* Large enough for better mobile preview */
-                max-height: none; /* Override global max-height constraint */
+                min-height: 400px; /* More space for mobile search results */
+                max-height: 520px; /* Allow extra room for search highlights on mobile */
             }
 
             .document-preview {
-                height: 200px; /* Much larger preview for mobile visibility */
+                height: 160px; /* Consistent preview size for mobile */
+                min-height: 160px; /* Ensure preview never shrinks */
+                flex-shrink: 0; /* Prevent shrinking */
             }
 
             .pagination-btn {
@@ -1482,8 +1495,9 @@
             const sections = text.split('|').map(s => s.trim()).filter(s => s);
             
             for (const section of sections) {
+                console.log('Processing section:', section);
                 // Look for patterns like "Title: some text", "Description: some text", etc.
-                const match = section.match(/^([^:]+):\s*(.+)$/);
+                const match = section.match(/^([^:]+):\s*(.+)/s);
                 if (match) {
                     matches.push({
                         type: match[1].trim(),

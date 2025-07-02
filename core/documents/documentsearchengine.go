@@ -468,28 +468,6 @@ func (s *DefaultDocumentSearchEngine) parseSearchTerms(searchTerm string) []stri
 	return cleanTerms
 }
 
-// findMatches finds all occurrences of searchTerm in text (case-insensitive)
-func (s *DefaultDocumentSearchEngine) findMatches(text, searchTerm string) []int {
-	if text == "" || searchTerm == "" {
-		return nil
-	}
-
-	lowerText := strings.ToLower(text)
-	var matches []int
-
-	start := 0
-	for {
-		index := strings.Index(lowerText[start:], searchTerm)
-		if index == -1 {
-			break
-		}
-		matches = append(matches, start+index)
-		start = start + index + 1
-	}
-
-	return matches
-}
-
 // findMatchesForTerms finds matches for multiple search terms (AND logic)
 func (s *DefaultDocumentSearchEngine) findMatchesForTerms(text string, searchTerms []string) []int {
 	if text == "" || len(searchTerms) == 0 {
@@ -618,28 +596,6 @@ func (s *DefaultDocumentSearchEngine) createSnippet(text string, matchPos int, s
 	}
 
 	return snippet
-}
-
-// highlightMatches adds highlighting markers around matches
-func (s *DefaultDocumentSearchEngine) highlightMatches(text string, matches []int, searchTerm string) string {
-	if len(matches) == 0 {
-		return text
-	}
-
-	// Build result with highlights, working backwards to preserve indices
-	result := text
-	for i := len(matches) - 1; i >= 0; i-- {
-		pos := matches[i]
-		if pos >= 0 && pos+len(searchTerm) <= len(result) {
-			// Add highlighting markers (using **text** format)
-			before := result[:pos]
-			match := result[pos : pos+len(searchTerm)]
-			after := result[pos+len(searchTerm):]
-			result = before + "**" + match + "**" + after
-		}
-	}
-
-	return result
 }
 
 // highlightMatchesForTerms adds highlighting markers for multiple search terms
