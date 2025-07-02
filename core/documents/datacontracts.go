@@ -86,6 +86,19 @@ type UpdateTagRequest struct {
 	Color string
 }
 
+// Note-related data contracts
+type CreateNoteRequest struct {
+	UserId     string
+	DocumentId string
+	Content    string
+}
+
+type UpdateNoteRequest struct {
+	UserId  string
+	NoteId  string
+	Content string
+}
+
 // DTOs for API responses (with decrypted data)
 type DocumentDto struct {
 	Id          string
@@ -132,6 +145,15 @@ type TagDto struct {
 	Id         string
 	Name       string
 	Color      string
+	CreatedAt  time.Time
+	ModifiedAt time.Time
+}
+
+// NoteDto represents a note with decrypted content for API responses
+type NoteDto struct {
+	Id         string
+	DocumentId string
+	Content    string // Decrypted
 	CreatedAt  time.Time
 	ModifiedAt time.Time
 }

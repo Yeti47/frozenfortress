@@ -43,6 +43,16 @@ type DocumentTag struct {
 	TagId      string
 }
 
+// Note represents a free text note attached to a document
+type Note struct {
+	Id         string
+	DocumentId string
+	UserId     string
+	Content    string // Encrypted note content
+	CreatedAt  time.Time
+	ModifiedAt time.Time
+}
+
 // DocumentFilePreview represents preview/thumbnail data for a document file
 type DocumentFilePreview struct {
 	DocumentFileId string
