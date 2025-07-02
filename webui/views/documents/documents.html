@@ -1495,8 +1495,9 @@
             const sections = text.split('|').map(s => s.trim()).filter(s => s);
             
             for (const section of sections) {
+                console.log('Processing section:', section);
                 // Look for patterns like "Title: some text", "Description: some text", etc.
-                const match = section.match(/^([^:]+):\s*(.+)$/);
+                const match = section.match(/^([^:]+):\s*(.+)/s);
                 if (match) {
                     matches.push({
                         type: match[1].trim(),
