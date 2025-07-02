@@ -1033,9 +1033,22 @@
                 return;
             }
             
-            if (confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
-                deleteFile(fileId, documentId);
-            }
+            // Find the file name for the confirmation modal
+            const file = currentFiles.find(f => f.Id === fileId);
+            const fileName = file ? file.FileName : 'this file';
+            
+            // Show custom confirmation modal
+            showConfirmModal(
+                'Confirm File Deletion',
+                'Are you sure you want to delete this file?',
+                fileName,
+                function() {
+                    // User confirmed - proceed with deletion
+                    deleteFile(fileId, documentId);
+                },
+                'Delete File', // Custom confirm button text
+                'This action cannot be undone.' // Warning text
+            );
         }
 
         function deleteFile(fileId, documentId) {
