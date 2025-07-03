@@ -20,6 +20,23 @@ func AuthMiddleware(signInManager auth.SignInManager) gin.HandlerFunc {
 			return
 		}
 
+		// Additional security checks
+		if !user.IsActive {
+			// User is deactivated, so log them out
+			_ = signInManager.SignOut(c.Writer, c.Request)
+			c.Redirect(http.StatusSeeOther, "/login?error=account_deactivated")
+			c.Abort()
+			return
+		}
+
+		if user.IsLocked {
+			// User is locked, so log them out
+			_ = signInManager.SignOut(c.Writer, c.Request)
+			c.Redirect(http.StatusSeeOther, "/login?error=account_locked")
+			c.Abort()
+			return
+		}
+
 		// Set security headers for authenticated pages to prevent caching
 		// This helps ensure sensitive content doesn't remain in browser history/cache
 		c.Header("Cache-Control", "no-cache, no-store, must-revalidate, private")
