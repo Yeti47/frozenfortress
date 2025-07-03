@@ -32,7 +32,7 @@ func NewDefaultNoteManager(uowFactory DocumentUnitOfWorkFactory, idGenerator Not
 
 // validateNoteInput validates the note content according to business rules.
 func validateNoteInput(content string) error {
-	const maxContentLength = 1000
+	const maxContentLength = 250
 
 	if content == "" {
 		return ccc.NewInvalidInputErrorWithMessage(

@@ -78,7 +78,7 @@ func (r *SQLiteNoteRepository) FindById(ctx context.Context, noteId string) (*No
 
 // FindByDocumentId finds all notes for a document.
 func (r *SQLiteNoteRepository) FindByDocumentId(ctx context.Context, documentId string) ([]*Note, error) {
-	query := `SELECT ` + noteFieldList + ` FROM Note WHERE DocumentId = ? ORDER BY CreatedAt ASC`
+	query := `SELECT ` + noteFieldList + ` FROM Note WHERE DocumentId = ? ORDER BY CreatedAt DESC`
 	rows, err := r.db.QueryContext(ctx, query, documentId)
 	if err != nil {
 		return nil, err

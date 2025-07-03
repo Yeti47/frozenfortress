@@ -588,7 +588,9 @@
 
             .tab-button {
                 white-space: nowrap;
-                min-width: 120px;
+                min-width: 90px;
+                padding: 12px 16px;
+                font-size: 14px;
             }
 
             .file-list {
@@ -649,6 +651,269 @@
             }
             
             .files-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        }
+
+        /* Notes Section */
+        .notes-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f3f4;
+        }
+
+        .notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 20px;
+        }
+
+        .notes-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .notes-header-subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .add-note-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e1e8ed;
+        }
+
+        .add-note-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .note-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .note-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .note-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .note-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .note-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #1f618d);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+
+        .note-btn.save {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .note-btn.save:hover {
+            background: linear-gradient(135deg, #229954, #1e8449);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+
+        .note-btn.danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .note-btn.danger:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+
+        .note-btn.secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .note-btn.secondary:hover {
+            background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+        }
+
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .note-item {
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .note-item:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .note-item.editing {
+            border-color: #3498db;
+            background: #f8fbff;
+        }
+
+        .note-item.editing .note-meta {
+            display: none;
+        }
+
+        .note-header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .note-meta {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 15px;
+        }
+
+        .note-meta div {
+            line-height: 1.4;
+        }
+
+        .note-actions-buttons {
+            display: flex;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+
+        .note-action-btn {
+            background: none;
+            border: 1px solid #e1e8ed;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #6c757d;
+        }
+
+        .note-action-btn:hover {
+            background: #f8f9fa;
+            border-color: #3498db;
+            color: #3498db;
+        }
+
+        .note-action-btn.danger {
+            color: #e74c3c;
+            border-color: #f5c6cb;
+        }
+
+        .note-action-btn.danger:hover {
+            background: #f8d7da;
+            border-color: #e74c3c;
+        }
+
+        .note-content {
+            color: #2c3e50;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .note-edit-form {
+            display: none;
+        }
+
+        .note-edit-form.active {
+            display: block;
+        }
+
+        .no-notes {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+        }
+
+        .no-notes .material-icons {
+            font-size: 48px;
+            color: #bdc3c7;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .note-actions {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+
+            .note-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .add-note-section {
+                padding: 15px;
+            }
+
+            .notes-section {
+                padding: 20px;
+            }
+
+            .note-item {
+                padding: 15px;
+            }
+
+            .note-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .note-actions-buttons {
+                align-self: flex-end;
+            }
+
+            .notes-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 8px;
@@ -719,6 +984,10 @@
                     <button type="button" class="tab-button" onclick="switchEditTab('files')">
                         <span class="material-icons" style="margin-right: 6px; font-size: 18px;">attach_file</span>
                         Files
+                    </button>
+                    <button type="button" class="tab-button" onclick="switchEditTab('notes')">
+                        <span class="material-icons" style="margin-right: 6px; font-size: 18px;">sticky_note_2</span>
+                        Notes
                     </button>
                 </div>
 
@@ -800,6 +1069,49 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Notes Tab -->
+                <div id="notes-tab" class="tab-content">
+                    <div class="notes-section">
+                        <div class="notes-header">
+                            <h3>
+                                <span class="material-icons">sticky_note_2</span>
+                                Document Notes
+                            </h3>
+                            <span class="notes-header-subtitle">
+                                Add and manage notes for this document.
+                            </span>
+                        </div>
+
+                        <div class="add-note-section">
+                            <div class="add-note-form">
+                                <textarea 
+                                    id="newNoteContent" 
+                                    class="note-textarea" 
+                                    placeholder="Write a note about this document..."
+                                    maxlength="250"
+                                    oninput="updateNoteCharCount()"
+                                ></textarea>
+                                <div class="note-actions">
+                                    <div class="char-count">
+                                        <span id="noteCharCount">0</span> / 250 characters
+                                    </div>
+                                    <button type="button" class="note-btn save" onclick="addNote()">
+                                        <span class="material-icons">add</span>
+                                        Add Note
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="notes-list" id="notesList">
+                            <div class="no-notes" id="noNotesMessage">
+                                <span class="material-icons">note_add</span>
+                                <p>No notes yet. Add your first note above!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </form>
     </div>
@@ -835,6 +1147,11 @@
             // Load files when Files tab is clicked for the first time
             if (tabName === 'files' && currentFiles.length === 0) {
                 loadCurrentFiles();
+            }
+            
+            // Load notes when Notes tab is clicked for the first time
+            if (tabName === 'notes' && !notesLoaded) {
+                loadNotes();
             }
         }
 
@@ -1085,14 +1402,7 @@
             window.open(`/api/documents/${documentId}/files/${fileId}/view`, '_blank');
         }
 
-        function formatFileSize(bytes) {
-            if (bytes == null || isNaN(bytes) || bytes < 0) return '0 B';
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
+
 
         function showClientError(message) {
             const container = document.querySelector('.edit-document-container');
@@ -1172,6 +1482,340 @@
                 showClientError(`A network error occurred: ${error.toString()}`);
                 deleteButton.innerHTML = originalButtonContent;
                 deleteButton.disabled = false;
+            });
+        }
+
+        // Notes Management
+        let notesLoaded = false;
+        let currentNotes = [];
+        let editingNoteId = null;
+
+        function updateNoteCharCount() {
+            const textarea = document.getElementById('newNoteContent');
+            const count = document.getElementById('noteCharCount');
+            count.textContent = textarea.value.length;
+            
+            if (textarea.value.length > 225) {
+                count.style.color = '#e74c3c';
+            } else if (textarea.value.length > 200) {
+                count.style.color = '#f39c12';
+            } else {
+                count.style.color = '#7f8c8d';
+            }
+        }
+
+        function loadNotes() {
+            const documentId = '{{if .Document}}{{.Document.Id}}{{end}}';
+            if (!documentId) return;
+            
+            notesLoaded = true;
+            
+            fetch(`/api/documents/${documentId}/notes`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                })
+                .then(data => {
+                    currentNotes = data.notes || [];
+                    displayNotes();
+                })
+                .catch(error => {
+                    console.error('Error loading notes:', error);
+                    showClientError('Failed to load notes: ' + error.message);
+                });
+        }
+
+        function displayNotes() {
+            const notesList = document.getElementById('notesList');
+            let noNotesMessage = document.getElementById('noNotesMessage');
+            
+            if (currentNotes.length === 0) {
+                // Clear the notes list
+                notesList.innerHTML = '';
+                
+                // Create the no notes message if it doesn't exist
+                if (!noNotesMessage) {
+                    noNotesMessage = document.createElement('div');
+                    noNotesMessage.className = 'no-notes';
+                    noNotesMessage.id = 'noNotesMessage';
+                    noNotesMessage.innerHTML = `
+                        <span class="material-icons">note_add</span>
+                        <p>No notes yet. Add your first note above!</p>
+                    `;
+                }
+                
+                noNotesMessage.style.display = 'block';
+                notesList.appendChild(noNotesMessage);
+                return;
+            }
+            
+            // Hide no notes message if it exists
+            if (noNotesMessage) {
+                noNotesMessage.style.display = 'none';
+            }
+            
+            // Clear the notes list and add all notes
+            notesList.innerHTML = '';
+            
+            currentNotes.forEach(note => {
+                const noteElement = createNoteElement(note);
+                notesList.appendChild(noteElement);
+            });
+        }
+
+        function createNoteElement(note) {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'note-item';
+            noteDiv.dataset.noteId = note.Id;
+            
+            const createdDate = formatDateTime(note.CreatedAt);
+            const modifiedDate = formatDateTime(note.ModifiedAt);
+            const isModified = note.CreatedAt !== note.ModifiedAt;
+            
+            noteDiv.innerHTML = `
+                <div class="note-header">
+                    <div class="note-actions-buttons">
+                        <button type="button" class="note-action-btn" onclick="editNote('${note.Id}')">
+                            <span class="material-icons" style="font-size: 14px;">edit</span>
+                        </button>
+                        <button type="button" class="note-action-btn danger" onclick="deleteNote('${note.Id}')">
+                            <span class="material-icons" style="font-size: 14px;">delete</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="note-content" id="noteContent-${note.Id}">${escapeHtml(note.Content)}</div>
+                <div class="note-meta">
+                    <div>Created: ${createdDate}</div>
+                    ${isModified ? `<div>Modified: ${modifiedDate}</div>` : ''}
+                </div>
+                <div class="note-edit-form" id="noteEditForm-${note.Id}">
+                    <textarea 
+                        class="note-textarea" 
+                        id="editNoteContent-${note.Id}" 
+                        maxlength="250"
+                        oninput="updateEditNoteCharCount('${note.Id}')"
+                    >${escapeHtml(note.Content)}</textarea>
+                    <div class="note-actions">
+                        <div class="char-count">
+                            <span id="editNoteCharCount-${note.Id}">${note.Content.length}</span> / 250 characters
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" class="note-btn secondary" onclick="cancelEditNote('${note.Id}')">
+                                <span class="material-icons">cancel</span>
+                                Cancel
+                            </button>
+                            <button type="button" class="note-btn save" onclick="saveNote('${note.Id}')">
+                                <span class="material-icons">save</span>
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return noteDiv;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+
+
+        function updateEditNoteCharCount(noteId) {
+            const textarea = document.getElementById(`editNoteContent-${noteId}`);
+            const count = document.getElementById(`editNoteCharCount-${noteId}`);
+            count.textContent = textarea.value.length;
+            
+            if (textarea.value.length > 225) {
+                count.style.color = '#e74c3c';
+            } else if (textarea.value.length > 200) {
+                count.style.color = '#f39c12';
+            } else {
+                count.style.color = '#7f8c8d';
+            }
+        }
+
+        function addNote() {
+            const content = document.getElementById('newNoteContent').value.trim();
+            if (!content) {
+                showClientError('Please enter note content.');
+                return;
+            }
+            
+            const documentId = '{{if .Document}}{{.Document.Id}}{{end}}';
+            if (!documentId) {
+                showClientError('Document ID is missing.');
+                return;
+            }
+            
+            const addButton = document.querySelector('.note-btn.save');
+            const originalContent = addButton.innerHTML;
+            addButton.innerHTML = '<span class="material-icons rotating">hourglass_empty</span> Adding...';
+            addButton.disabled = true;
+            
+            fetch(`/api/documents/${documentId}/notes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: content
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            })
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('newNoteContent').value = '';
+                    updateNoteCharCount();
+                    loadNotes(); // Reload notes to show the new one
+                } else {
+                    showClientError(data.error || 'Failed to add note.');
+                }
+            })
+            .catch(error => {
+                showClientError('Error adding note: ' + error.message);
+            })
+            .finally(() => {
+                addButton.innerHTML = originalContent;
+                addButton.disabled = false;
+            });
+        }
+
+        function editNote(noteId) {
+            if (editingNoteId && editingNoteId !== noteId) {
+                cancelEditNote(editingNoteId);
+            }
+            
+            editingNoteId = noteId;
+            const noteItem = document.querySelector(`[data-note-id="${noteId}"]`);
+            noteItem.classList.add('editing');
+            
+            document.getElementById(`noteContent-${noteId}`).style.display = 'none';
+            document.getElementById(`noteEditForm-${noteId}`).classList.add('active');
+            
+            // Focus on the textarea
+            document.getElementById(`editNoteContent-${noteId}`).focus();
+        }
+
+        function cancelEditNote(noteId) {
+            editingNoteId = null;
+            const noteItem = document.querySelector(`[data-note-id="${noteId}"]`);
+            noteItem.classList.remove('editing');
+            
+            document.getElementById(`noteContent-${noteId}`).style.display = 'block';
+            document.getElementById(`noteEditForm-${noteId}`).classList.remove('active');
+            
+            // Reset the textarea content
+            const originalNote = currentNotes.find(note => note.Id === noteId);
+            if (originalNote) {
+                document.getElementById(`editNoteContent-${noteId}`).value = originalNote.Content;
+                updateEditNoteCharCount(noteId);
+            }
+        }
+
+        function saveNote(noteId) {
+            const content = document.getElementById(`editNoteContent-${noteId}`).value.trim();
+            if (!content) {
+                showClientError('Note content cannot be empty.');
+                return;
+            }
+            
+            const documentId = '{{if .Document}}{{.Document.Id}}{{end}}';
+            if (!documentId) {
+                showClientError('Document ID is missing.');
+                return;
+            }
+            
+            const saveButton = document.querySelector(`#noteEditForm-${noteId} .note-btn.save`);
+            const originalContent = saveButton.innerHTML;
+            saveButton.innerHTML = '<span class="material-icons rotating">hourglass_empty</span> Saving...';
+            saveButton.disabled = true;
+            
+            fetch(`/api/documents/${documentId}/notes/${noteId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: content
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            })
+            .then(data => {
+                if (data.success) {
+                    cancelEditNote(noteId);
+                    loadNotes(); // Reload notes to show the updated content
+                } else {
+                    showClientError(data.error || 'Failed to save note.');
+                }
+            })
+            .catch(error => {
+                showClientError('Error saving note: ' + error.message);
+            })
+            .finally(() => {
+                saveButton.innerHTML = originalContent;
+                saveButton.disabled = false;
+            });
+        }
+
+        function deleteNote(noteId) {
+            const note = currentNotes.find(n => n.Id === noteId);
+            const notePreview = note ? note.Content.substring(0, 50) + (note.Content.length > 50 ? '...' : '') : 'this note';
+            
+            // Show custom confirmation modal
+            showConfirmModal(
+                'Confirm Note Deletion',
+                'Are you sure you want to delete this note?',
+                notePreview, // Show note preview in the modal
+                function() {
+                    // User confirmed - proceed with deletion
+                    performNoteDelete(noteId);
+                },
+                'Delete Note', // Custom confirm button text
+                'This action cannot be undone.' // Warning text
+            );
+        }
+
+        function performNoteDelete(noteId) {
+            const documentId = '{{if .Document}}{{.Document.Id}}{{end}}';
+            if (!documentId) {
+                showClientError('Document ID is missing.');
+                return;
+            }
+            
+            fetch(`/api/documents/${documentId}/notes/${noteId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            })
+            .then(data => {
+                if (data.success) {
+                    loadNotes(); // Reload notes to remove the deleted one
+                } else {
+                    showClientError(data.error || 'Failed to delete note.');
+                }
+            })
+            .catch(error => {
+                showClientError('Error deleting note: ' + error.message);
             });
         }
 

@@ -464,7 +464,18 @@ func (m *DefaultSecretManager) UpdateSecret(userId string, secretId string, requ
 func (m *DefaultSecretManager) DeleteSecret(userId string, secretId string) (bool, error) {
 	m.logger.Info("Deleting secret", "user_id", userId, "secret_id", secretId)
 
-	// Delete the secret from the repository
+	// Verify that the secret exists and belongs to the user before deletion
+	existingSecret, err := m.secretRepository.FindByIdForUser(userId, secretId)
+	if err != nil {
+		m.logger.Error("Failed to find secret for deletion", "user_id", userId, "secret_id", secretId, "error", err)
+		return false, ccc.NewDatabaseError("find secret for deletion", err)
+	}
+	if existingSecret == nil {
+		m.logger.Debug("Secret not found for deletion (idempotent behavior)", "user_id", userId, "secret_id", secretId)
+		return false, ccc.NewResourceNotFoundError(secretId, "Secret")
+	}
+
+	// Now proceed with deletion knowing the secret belongs to the user
 	success, err := m.secretRepository.Remove(secretId)
 	if err != nil {
 		m.logger.Error("Failed to delete secret from repository", "user_id", userId, "secret_id", secretId, "error", err)
@@ -474,10 +485,8 @@ func (m *DefaultSecretManager) DeleteSecret(userId string, secretId string) (boo
 	if success {
 		m.logger.Info("Secret deleted successfully", "user_id", userId, "secret_id", secretId)
 	} else {
-		m.logger.Debug("Secret deletion was idempotent (secret may not have existed)", "user_id", userId, "secret_id", secretId)
+		m.logger.Warn("Secret deletion returned false despite ownership verification", "user_id", userId, "secret_id", secretId)
 	}
 
-	// Secret deletion is idempotent. We indicate success, but never return an error if the secret doesn't exist.
-	// We simply return the success status.
 	return success, nil
 }

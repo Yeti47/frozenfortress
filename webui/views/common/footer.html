@@ -15,6 +15,37 @@
     </footer>
 
     <script>
+        // Global utility function for timestamp formatting
+        function formatTimestamp(timestamp) {
+            // Format timestamp to match the consistent application format "2006-01-02 15:04:05"
+            if (!timestamp) return 'N/A';
+            
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) return 'Invalid Date';
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // Global utility function for file size formatting
+        function formatFileSize(bytes) {
+            if (bytes == null || isNaN(bytes) || bytes < 0) return '0 B';
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // Alias for backward compatibility
+        window.formatDateTime = formatTimestamp;
+
         function toggleUserMenu() {
             const menu = document.getElementById('user-menu');
             menu.classList.toggle('show');

@@ -113,6 +113,7 @@ func registerRoutes(router *gin.Engine, svc services) {
 		DocumentFileManager: svc.DocumentFileManager,
 		DocumentListService: svc.DocumentListService,
 		TagManager:          svc.TagManager,
+		NoteManager:         svc.NoteManager,
 	}
 	documentsview.RegisterRoutes(router, svc.SignInManager, docServices, svc.MekStore, svc.EncryptionService, svc.Logger)
 
