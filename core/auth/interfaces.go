@@ -34,7 +34,7 @@ type UserManager interface {
 	IsValidUsername(userName string) bool
 	IsValidPassword(password string) (bool, error)
 	DeleteUser(id string) (bool, error)
-	VerifyPassword(userId string, password string) (bool, error)
+	VerifyPassword(userId string, password string) error
 	GenerateRecoveryCode(request GenerateRecoveryCodeRequest) (GenerateRecoveryCodeResponse, error)
 }
 
