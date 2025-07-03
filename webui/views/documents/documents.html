@@ -1150,17 +1150,19 @@
                     <div class="documents-grid">
                         {{range .Documents}}
                             <div class="document-card{{if .IsSearchResult}} search-result{{end}}">
-                                <div class="document-preview">
-                                    {{if .Preview}}
-                                        {{if eq .Preview.PreviewType "application/pdf"}}
-                                            <span class="material-icons pdf-icon">picture_as_pdf</span>
+                                <a href="/view-document?id={{.Id}}" style="text-decoration: none; color: inherit;">
+                                    <div class="document-preview">
+                                        {{if .Preview}}
+                                            {{if eq .Preview.PreviewType "application/pdf"}}
+                                                <span class="material-icons pdf-icon">picture_as_pdf</span>
+                                            {{else}}
+                                                <img src="data:{{.Preview.PreviewType}};base64,{{base64 .Preview.PreviewData}}" alt="Document preview">
+                                            {{end}}
                                         {{else}}
-                                            <img src="data:{{.Preview.PreviewType}};base64,{{base64 .Preview.PreviewData}}" alt="Document preview">
+                                            <span class="material-icons generic-icon">description</span>
                                         {{end}}
-                                    {{else}}
-                                        <span class="material-icons generic-icon">description</span>
-                                    {{end}}
-                                </div>
+                                    </div>
+                                </a>
                                 <div class="document-info">
                                     <div class="document-header">
                                         <div class="document-title-section">
