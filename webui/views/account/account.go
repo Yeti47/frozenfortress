@@ -198,22 +198,12 @@ func (s *services) deactivateAccount(c *gin.Context) {
 	}
 
 	// Verify password before deactivating
-	isValid, err := s.UserManager.VerifyPassword(user.Id, password)
+	err = s.UserManager.VerifyPassword(user.Id, password)
 	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
 		"Version":  ccc.AppVersion,
 	}, "DeactivateError") {
-		return
-	}
-
-	if !isValid {
-		c.HTML(http.StatusBadRequest, "account.html", gin.H{
-			"Title":           "Account Settings",
-			"Username":        user.UserName,
-			"DeactivateError": "Invalid password",
-			"Version":         ccc.AppVersion,
-		})
 		return
 	}
 
@@ -278,22 +268,12 @@ func (s *services) deleteAccount(c *gin.Context) {
 	}
 
 	// Verify password before deleting
-	isValid, err := s.UserManager.VerifyPassword(user.Id, password)
+	err = s.UserManager.VerifyPassword(user.Id, password)
 	if middleware.HandleErrorOnPage(c, err, "account.html", gin.H{
 		"Title":    "Account Settings",
 		"Username": user.UserName,
 		"Version":  ccc.AppVersion,
 	}, "DeleteError") {
-		return
-	}
-
-	if !isValid {
-		c.HTML(http.StatusBadRequest, "account.html", gin.H{
-			"Title":       "Account Settings",
-			"Username":    user.UserName,
-			"DeleteError": "Invalid password",
-			"Version":     ccc.AppVersion,
-		})
 		return
 	}
 

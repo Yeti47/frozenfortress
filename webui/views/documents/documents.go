@@ -33,6 +33,7 @@ type DocumentServices struct {
 	DocumentFileManager documents.DocumentFileManager
 	DocumentListService documents.DocumentListService
 	TagManager          documents.TagManager
+	NoteManager         documents.NoteManager
 }
 
 // RegisterRoutes registers the documents routes with the provided Gin router.
@@ -78,6 +79,20 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, docume
 	})
 	router.GET("/api/documents/:documentId/files/:fileId/view", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
 		handleViewDocumentFile(c, signInManager, documentServices.DocumentFileManager, mekStore, encryptionService, logger)
+	})
+
+	// API routes for document notes - protected by authentication
+	router.GET("/api/documents/:documentId/notes", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
+		handleGetDocumentNotes(c, signInManager, documentServices.NoteManager, mekStore, encryptionService, logger)
+	})
+	router.POST("/api/documents/:documentId/notes", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
+		handleCreateDocumentNote(c, signInManager, documentServices.NoteManager, mekStore, encryptionService, logger)
+	})
+	router.PUT("/api/documents/:documentId/notes/:noteId", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
+		handleUpdateDocumentNote(c, signInManager, documentServices.NoteManager, mekStore, encryptionService, logger)
+	})
+	router.DELETE("/api/documents/:documentId/notes/:noteId", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
+		handleDeleteDocumentNote(c, signInManager, documentServices.NoteManager, logger)
 	})
 
 	// Delete document route - protected by authentication
@@ -891,5 +906,200 @@ func handleDeleteDocumentFile(c *gin.Context, signInManager auth.SignInManager, 
 	c.JSON(200, gin.H{
 		"success": true,
 		"message": "File deleted successfully",
+	})
+}
+
+// handleGetDocumentNotes handles GET requests to retrieve document notes
+func handleGetDocumentNotes(c *gin.Context, signInManager auth.SignInManager, noteManager documents.NoteManager, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
+	// Get current user
+	user, err := signInManager.GetCurrentUser(c.Request)
+	if err != nil {
+		c.JSON(401, gin.H{"success": false, "error": "Authentication required"})
+		return
+	}
+
+	documentId := c.Param("documentId")
+	if documentId == "" {
+		c.JSON(400, gin.H{"success": false, "error": "Document ID is required"})
+		return
+	}
+
+	// Create data protector
+	dataProtector := dataprotection.CreateMekDataProtectorForRequest(
+		mekStore,
+		encryptionService,
+		c.Request,
+	)
+
+	// Get document notes
+	notes, err := noteManager.GetDocumentNotes(c.Request.Context(), user.Id, documentId, dataProtector)
+	if err != nil {
+		logger.Error("Failed to get document notes", "user_id", user.Id, "document_id", documentId, "error", err)
+		if middleware.HandleErrorWithJson(c, err, "Failed to get document notes") {
+			return
+		}
+	}
+
+	// Respond with notes data
+	c.JSON(200, gin.H{"success": true, "notes": notes})
+}
+
+// handleCreateDocumentNote handles POST requests to create a new note for a document
+func handleCreateDocumentNote(c *gin.Context, signInManager auth.SignInManager, noteManager documents.NoteManager, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
+	// Get current user
+	user, err := signInManager.GetCurrentUser(c.Request)
+	if err != nil {
+		c.JSON(401, gin.H{"success": false, "error": "Authentication required"})
+		return
+	}
+
+	documentId := c.Param("documentId")
+	if documentId == "" {
+		c.JSON(400, gin.H{"success": false, "error": "Document ID is required"})
+		return
+	}
+
+	// Parse request body
+	var requestBody struct {
+		Content string `json:"content"`
+	}
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid request body"})
+		return
+	}
+
+	// Validate content
+	if strings.TrimSpace(requestBody.Content) == "" {
+		c.JSON(400, gin.H{"success": false, "error": "Note content is required"})
+		return
+	}
+
+	// Create data protector
+	dataProtector := dataprotection.CreateMekDataProtectorForRequest(
+		mekStore,
+		encryptionService,
+		c.Request,
+	)
+
+	// Create note request
+	createRequest := documents.CreateNoteRequest{
+		UserId:     user.Id,
+		DocumentId: documentId,
+		Content:    strings.TrimSpace(requestBody.Content),
+	}
+
+	// Create note
+	response, err := noteManager.CreateNote(c.Request.Context(), createRequest, dataProtector)
+	if err != nil {
+		logger.Error("Failed to create note", "user_id", user.Id, "document_id", documentId, "error", err)
+		if middleware.HandleErrorWithJson(c, err, "Failed to create note") {
+			return
+		}
+	}
+
+	logger.Info("Note created successfully", "user_id", user.Id, "document_id", documentId, "note_id", response.NoteId)
+
+	// Return success response with note info
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "Note created successfully",
+		"note":    response,
+	})
+}
+
+// handleUpdateDocumentNote handles PUT requests to update an existing note
+func handleUpdateDocumentNote(c *gin.Context, signInManager auth.SignInManager, noteManager documents.NoteManager, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
+	// Get current user
+	user, err := signInManager.GetCurrentUser(c.Request)
+	if err != nil {
+		c.JSON(401, gin.H{"success": false, "error": "Authentication required"})
+		return
+	}
+
+	documentId := c.Param("documentId")
+	noteId := c.Param("noteId")
+	if documentId == "" || noteId == "" {
+		c.JSON(400, gin.H{"success": false, "error": "Document ID and Note ID are required"})
+		return
+	}
+
+	// Parse request body
+	var requestBody struct {
+		Content string `json:"content"`
+	}
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(400, gin.H{"success": false, "error": "Invalid request body"})
+		return
+	}
+
+	// Validate content
+	if strings.TrimSpace(requestBody.Content) == "" {
+		c.JSON(400, gin.H{"success": false, "error": "Note content is required"})
+		return
+	}
+
+	// Create data protector
+	dataProtector := dataprotection.CreateMekDataProtectorForRequest(
+		mekStore,
+		encryptionService,
+		c.Request,
+	)
+
+	// Update note request
+	updateRequest := documents.UpdateNoteRequest{
+		UserId:  user.Id,
+		NoteId:  noteId,
+		Content: strings.TrimSpace(requestBody.Content),
+	}
+
+	// Update note
+	err = noteManager.UpdateNote(c.Request.Context(), updateRequest, dataProtector)
+	if err != nil {
+		logger.Error("Failed to update note", "user_id", user.Id, "document_id", documentId, "note_id", noteId, "error", err)
+		if middleware.HandleErrorWithJson(c, err, "Failed to update note") {
+			return
+		}
+	}
+
+	logger.Info("Note updated successfully", "user_id", user.Id, "document_id", documentId, "note_id", noteId)
+
+	// Return success response
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "Note updated successfully",
+	})
+}
+
+// handleDeleteDocumentNote handles DELETE requests to remove a note from a document
+func handleDeleteDocumentNote(c *gin.Context, signInManager auth.SignInManager, noteManager documents.NoteManager, logger ccc.Logger) {
+	// Get current user
+	user, err := signInManager.GetCurrentUser(c.Request)
+	if err != nil {
+		c.JSON(401, gin.H{"success": false, "error": "Authentication required"})
+		return
+	}
+
+	documentId := c.Param("documentId")
+	noteId := c.Param("noteId")
+	if documentId == "" || noteId == "" {
+		c.JSON(400, gin.H{"success": false, "error": "Document ID and Note ID are required"})
+		return
+	}
+
+	// Delete the note
+	err = noteManager.DeleteNote(c.Request.Context(), user.Id, noteId)
+	if err != nil {
+		logger.Error("Failed to delete note", "user_id", user.Id, "document_id", documentId, "note_id", noteId, "error", err)
+		if middleware.HandleErrorWithJson(c, err, "Failed to delete note") {
+			return
+		}
+	}
+
+	logger.Info("Note deleted successfully", "user_id", user.Id, "document_id", documentId, "note_id", noteId)
+
+	// Return success response
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "Note deleted successfully",
 	})
 }

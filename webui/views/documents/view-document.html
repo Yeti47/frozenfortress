@@ -236,6 +236,43 @@
             font-weight: 700;
             color: #3498db;
             margin-bottom: 5px;
+            position: relative;
+        }
+
+        .stat-value.clickable {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin: -4px -8px 1px -8px;
+        }
+
+        .stat-value.clickable:hover {
+            background: rgba(52, 152, 219, 0.1);
+            transform: scale(1.05);
+            color: #2980b9;
+        }
+
+        .stat-value.clickable .material-icons {
+            animation: pulse 2s infinite;
+        }
+
+        .stat-value.clickable:hover .material-icons {
+            animation: spin 1s linear infinite;
+        }
+
+        .stat-value .material-icons {
+            font-size: 24px;
+            vertical-align: middle;
+        }
+
+        .stat-value.loading .sync-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         .stat-label {
@@ -388,6 +425,85 @@
         }
 
         .files-empty p {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        /* Notes Tab Styles */
+        .notes-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .notes-count {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .note-item {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f3f4;
+            transition: all 0.3s ease;
+        }
+
+        .note-item:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .note-content {
+            color: #2c3e50;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .note-timestamp {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .note-timestamp div {
+            line-height: 1.4;
+        }
+
+        .notes-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .notes-empty .material-icons {
+            font-size: 64px;
+            color: #bdc3c7;
+            margin-bottom: 20px;
+        }
+
+        .notes-empty h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+
+        .notes-empty p {
             margin: 0;
             font-size: 16px;
         }
@@ -807,17 +923,27 @@
             to { transform: rotate(360deg); }
         }
 
+
+
         /* Mobile Responsiveness */
         @media (max-width: 768px) {
+            .main-content {
+                padding: 15px 10px !important;
+            }
+
             .content-container {
-                padding: 20px !important;
+                padding: 15px !important;
                 margin: 0;
+                min-height: calc(100vh - 160px);
+                border-radius: 15px;
             }
 
             .document-header {
                 flex-direction: column;
                 align-items: stretch;
                 gap: 15px;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
             }
 
             .document-actions {
@@ -830,11 +956,19 @@
 
             .tab-navigation {
                 overflow-x: auto;
+                margin-bottom: 20px;
             }
 
             .tab-button {
                 white-space: nowrap;
-                min-width: 120px;
+                min-width: 100px;
+                padding: 12px 18px;
+                font-size: 14px;
+            }
+
+            .info-section {
+                padding: 20px;
+                margin-bottom: 15px;
             }
 
             .files-grid {
@@ -844,9 +978,42 @@
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+
+            .notes-list {
+                gap: 12px;
+            }
+
+            .note-item {
+                padding: 15px;
+            }
+
+            .note-content {
+                font-size: 15px;
+                margin-bottom: 12px;
+            }
+
+            .note-timestamp {
+                font-size: 13px;
+            }
         }
 
         @media (max-width: 480px) {
+            .main-content {
+                padding: 10px 8px !important;
+            }
+
+            .content-container {
+                padding: 12px !important;
+                margin: 0;
+                min-height: calc(100vh - 120px);
+                border-radius: 12px;
+            }
+
+            .document-header {
+                margin-bottom: 15px;
+                padding-bottom: 12px;
+            }
+
             .document-metadata {
                 flex-direction: column;
                 gap: 8px;
@@ -860,6 +1027,34 @@
             .action-btn {
                 padding: 8px 12px;
                 font-size: 13px;
+            }
+
+            .tab-navigation {
+                margin-bottom: 15px;
+            }
+
+            .tab-button {
+                padding: 10px 15px;
+                font-size: 13px;
+                min-width: 90px;
+            }
+
+            .info-section {
+                padding: 15px;
+                margin-bottom: 12px;
+            }
+
+            .note-item {
+                padding: 12px;
+            }
+
+            .note-content {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+
+            .note-timestamp {
+                font-size: 12px;
             }
             
             /* Extra small screen file modal optimizations */
@@ -1072,6 +1267,10 @@
                     <span class="material-icons" style="font-size: 18px; margin-right: 5px;">attach_file</span>
                     Files ({{.Document.FileCount}})
                 </button>
+                <button class="tab-button" onclick="switchTab('notes')">
+                    <span class="material-icons" style="font-size: 18px; margin-right: 5px;">sticky_note_2</span>
+                    Notes
+                </button>
             </div>
 
             <!-- General Tab -->
@@ -1122,6 +1321,12 @@
                                 <div class="stat-label">Tags</div>
                             </div>
                             <div class="stat-item">
+                                <div class="stat-value" id="total-size-stat-value">
+                                    <span class="material-icons">sync</span>
+                                </div>
+                                <div class="stat-label">Total Size</div>
+                            </div>
+                            <div class="stat-item">
                                 <div class="stat-value">{{if .Document.Preview}}Yes{{else}}No{{end}}</div>
                                 <div class="stat-label">Preview</div>
                             </div>
@@ -1146,11 +1351,49 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Notes Tab -->
+            <div id="notes-tab" class="tab-content">
+                <div class="notes-container">
+                    <div class="notes-header">
+                        <div class="notes-count" id="notes-count-display">
+                            Loading notes...
+                        </div>
+                    </div>
+                    <div id="notes-content">
+                        <div class="loading">
+                            <span class="material-icons">hourglass_empty</span>
+                            <p>Loading notes...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         let filesLoaded = false;
+        let notesLoaded = false;
+
+        // Initialize the Total Size statistic as clickable
+        document.addEventListener('DOMContentLoaded', function() {
+            const totalSizeStatValue = document.getElementById('total-size-stat-value');
+            if (totalSizeStatValue && !filesLoaded) {
+                totalSizeStatValue.classList.add('clickable');
+                totalSizeStatValue.setAttribute('title', 'Click to load files and calculate total size');
+                totalSizeStatValue.onclick = function() {
+                    if (!filesLoaded) {
+
+                        const currentContent = totalSizeStatValue.innerHTML;
+                        totalSizeStatValue.innerHTML = '<span class="material-symbols-outlined sync-icon">sync</span>';
+                        totalSizeStatValue.classList.add('loading');
+                        
+                        loadDocumentFiles();
+                        filesLoaded = true;
+                    }
+                };
+            }
+        });
 
         function switchTab(tabName) {
             // Remove active class from all tabs and buttons
@@ -1165,6 +1408,12 @@
             if (tabName === 'files' && !filesLoaded) {
                 loadDocumentFiles();
                 filesLoaded = true;
+            }
+
+            // Load notes when Notes tab is clicked for the first time
+            if (tabName === 'notes' && !notesLoaded) {
+                loadDocumentNotes();
+                notesLoaded = true;
             }
         }
 
@@ -1201,6 +1450,18 @@
             
             // Store files data globally for metadata modal access
             window.currentDocumentFiles = files;
+            
+            // Calculate and update total file size in statistics
+            const totalSize = files.reduce((sum, file) => sum + (file.FileSize || 0), 0);
+            const totalSizeFormatted = formatFileSize(totalSize);
+            const totalSizeStatValue = document.getElementById('total-size-stat-value');
+            if (totalSizeStatValue) {
+                // Simple update without animation
+                totalSizeStatValue.innerHTML = totalSizeFormatted;
+                totalSizeStatValue.classList.remove('clickable', 'loading');
+                totalSizeStatValue.removeAttribute('title');
+                totalSizeStatValue.onclick = null;
+            }
             
             if (files.length === 0) {
                 filesContent.innerHTML = `
@@ -1277,31 +1538,84 @@
             return contentType.startsWith('image/') || contentType === 'application/pdf';
         }
 
-        function formatFileSize(bytes) {
-            // Handle undefined, null, or non-numeric values
-            if (bytes == null || isNaN(bytes) || bytes < 0) return '0 B';
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        function loadDocumentNotes() {
+            const documentId = '{{.Document.Id}}';
+            const notesContent = document.getElementById('notes-content');
+            const notesCountDisplay = document.getElementById('notes-count-display');
+
+            fetch(`/api/documents/${documentId}/notes`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const notes = data.notes || [];
+                        renderNotes(notes);
+                        notesCountDisplay.textContent = `${notes.length} note${notes.length !== 1 ? 's' : ''}`;
+                    } else {
+                        showNotesError(data.error || 'Failed to load notes');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading notes:', error);
+                    showNotesError('Failed to load notes. Please try again.');
+                });
         }
 
-        function formatTimestamp(timestamp) {
-            // Format timestamp to match the consistent application format "2006-01-02 15:04"
-            if (!timestamp) return 'N/A';
+        function renderNotes(notes) {
+            const notesContent = document.getElementById('notes-content');
             
-            const date = new Date(timestamp);
-            if (isNaN(date.getTime())) return 'Invalid Date';
-            
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            
-            return `${year}-${month}-${day} ${hours}:${minutes}`;
+            if (notes.length === 0) {
+                notesContent.innerHTML = `
+                    <div class="notes-empty">
+                        <span class="material-icons">sticky_note_2</span>
+                        <h3>No Notes</h3>
+                        <p>This document doesn't have any notes yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const notesList = notes.map(note => {
+                const createdDate = formatTimestamp(note.CreatedAt);
+                const modifiedDate = formatTimestamp(note.ModifiedAt);
+                
+                return `
+                    <div class="note-item">
+                        <div class="note-content">${note.Content}</div>
+                        <div class="note-timestamp">
+                            <div>Created: ${createdDate}</div>
+                            ${note.CreatedAt !== note.ModifiedAt ? `<div>Modified: ${modifiedDate}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            notesContent.innerHTML = `<div class="notes-list">${notesList}</div>`;
         }
+
+        function showNotesError(message) {
+            const notesContent = document.getElementById('notes-content');
+            
+            notesContent.innerHTML = `
+                <div class="notes-empty">
+                    <span class="material-icons">error</span>
+                    <h3>Error Loading Notes</h3>
+                    <p>${message}</p>
+                    <button onclick="loadDocumentNotes()" class="action-btn" style="margin-top: 15px;">
+                        <span class="material-icons">refresh</span>
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
+
+
+
+
 
         function showFileMetadata(fileId) {
             // Find the file data from the already loaded files
@@ -1537,6 +1851,21 @@
 
         function showFilesError(message) {
             const filesContent = document.getElementById('files-content');
+            
+            // Update the statistics section to show sync icon on error
+            const totalSizeStatValue = document.getElementById('total-size-stat-value');
+            if (totalSizeStatValue) {
+                totalSizeStatValue.innerHTML = '<span class="material-icons">sync_problem</span>';
+                totalSizeStatValue.classList.remove('loading'); // Remove loading state
+                // Keep it clickable so user can retry
+                totalSizeStatValue.classList.add('clickable');
+                totalSizeStatValue.setAttribute('title', 'Error loading files - Click to retry');
+                totalSizeStatValue.onclick = function() {
+                    loadDocumentFiles();
+                    filesLoaded = true;
+                };
+            }
+            
             filesContent.innerHTML = `
                 <div class="files-empty">
                     <span class="material-icons">error</span>

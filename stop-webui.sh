@@ -23,6 +23,12 @@ find_webui_processes() {
     fi
     
     # Check for ./ffwebui processes (run from bin directory)
+    local local_pids=$(pgrep -f "./webui" 2>/dev/null || true)
+    if [ -n "$local_pids" ]; then
+        all_pids="$all_pids $local_pids"
+    fi
+
+    # Check for ./ffwebui processes (run from bin directory)
     local local_pids=$(pgrep -f "./ffwebui" 2>/dev/null || true)
     if [ -n "$local_pids" ]; then
         all_pids="$all_pids $local_pids"

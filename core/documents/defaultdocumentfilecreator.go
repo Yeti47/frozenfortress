@@ -3,6 +3,7 @@ package documents
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -50,18 +51,18 @@ func (c *DefaultDocumentFileCreator) CreateDocumentFile(
 	if err != nil {
 		return nil, nil, ccc.NewDatabaseError("failed to find document", err)
 	}
-	if document == nil {
+	if document == nil || document.UserId != request.UserId {
 		return nil, nil, ccc.NewResourceNotFoundError("document", request.DocumentId)
-	}
-	if document.UserId != request.UserId {
-		return nil, nil, ccc.NewUnauthorizedError("document does not belong to user")
 	}
 
 	// Generate file ID
 	fileId := c.fileIdGen.GenerateId()
 
+	// Sanitize the filename to prevent path traversal attacks.
+	sanitizedFilename := filepath.Base(request.FileName)
+
 	// Encrypt file name
-	encryptedFileName, err := dataProtector.Protect(request.FileName)
+	encryptedFileName, err := dataProtector.Protect(sanitizedFilename)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to encrypt file name: %w", err)
 	}

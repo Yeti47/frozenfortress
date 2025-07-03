@@ -19,6 +19,7 @@ type DefaultDocumentUnitOfWork struct {
 	metadataRepo     DocumentFileMetadataRepository
 	tagRepo          TagRepository
 	documentTagRepo  DocumentTagRepository
+	noteRepo         NoteRepository
 }
 
 // NewDocumentUnitOfWork creates a new DefaultDocumentUnitOfWork instance.
@@ -116,6 +117,15 @@ func (uow *DefaultDocumentUnitOfWork) DocumentTagRepo() DocumentTagRepository {
 	return uow.documentTagRepo
 }
 
+// NoteRepo returns a NoteRepository instance.
+func (uow *DefaultDocumentUnitOfWork) NoteRepo() NoteRepository {
+	if uow.noteRepo == nil {
+		executor := uow.getExecutor()
+		uow.noteRepo = newSQLiteNoteRepository(executor)
+	}
+	return uow.noteRepo
+}
+
 // getExecutor returns the appropriate database executor.
 // If a transaction is active, it returns the transaction.
 // Otherwise, it returns the regular database connection.
@@ -134,6 +144,7 @@ func (uow *DefaultDocumentUnitOfWork) clearRepositoryCache() {
 	uow.metadataRepo = nil
 	uow.tagRepo = nil
 	uow.documentTagRepo = nil
+	uow.noteRepo = nil
 }
 
 // cleanup resets the transaction state and clears repository cache.
@@ -237,4 +248,5 @@ func (f *DefaultDocumentUnitOfWorkFactory) initializeTables() {
 	newSQLiteDocumentFileMetadataRepository(f.db)
 	newSQLiteTagRepository(f.db)
 	newSQLiteDocumentTagRepository(f.db)
+	newSQLiteNoteRepository(f.db)
 }

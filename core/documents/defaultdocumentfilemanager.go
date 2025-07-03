@@ -60,11 +60,8 @@ func (m *DefaultDocumentFileManager) AddDocumentFile(
 		if docErr != nil {
 			return ccc.NewDatabaseError("failed to find document", docErr)
 		}
-		if document == nil {
+		if document == nil || document.UserId != userId {
 			return ccc.NewResourceNotFoundError("document", documentId)
-		}
-		if document.UserId != userId {
-			return ccc.NewUnauthorizedError("document does not belong to user")
 		}
 
 		// Map AddFileRequest to CreateFileRequest
@@ -120,11 +117,8 @@ func (m *DefaultDocumentFileManager) GetDocumentFiles(
 	if err != nil {
 		return nil, ccc.NewDatabaseError("failed to find document", err)
 	}
-	if document == nil {
+	if document == nil || document.UserId != userId {
 		return nil, ccc.NewResourceNotFoundError("document", documentId)
-	}
-	if document.UserId != userId {
-		return nil, ccc.NewUnauthorizedError("document does not belong to user")
 	}
 
 	// Get all files for the document
@@ -179,11 +173,8 @@ func (m *DefaultDocumentFileManager) GetDocumentFile(
 	if err != nil {
 		return nil, ccc.NewDatabaseError("failed to find document", err)
 	}
-	if document == nil {
+	if document == nil || document.UserId != userId {
 		return nil, ccc.NewResourceNotFoundError("document", documentId)
-	}
-	if document.UserId != userId {
-		return nil, ccc.NewUnauthorizedError("document does not belong to user")
 	}
 
 	// Get the specific file
@@ -195,7 +186,7 @@ func (m *DefaultDocumentFileManager) GetDocumentFile(
 		return nil, ccc.NewResourceNotFoundError("document file", fileId)
 	}
 	if file.DocumentId != documentId {
-		return nil, ccc.NewUnauthorizedError("file does not belong to specified document")
+		return nil, ccc.NewResourceNotFoundError("document file", fileId)
 	}
 
 	// Get metadata for the file
@@ -231,11 +222,8 @@ func (m *DefaultDocumentFileManager) DeleteDocumentFile(
 		if err != nil {
 			return ccc.NewDatabaseError("failed to find document", err)
 		}
-		if document == nil {
+		if document == nil || document.UserId != userId {
 			return ccc.NewResourceNotFoundError("document", documentId)
-		}
-		if document.UserId != userId {
-			return ccc.NewUnauthorizedError("document does not belong to user")
 		}
 
 		// Verify file exists and belongs to document
@@ -247,7 +235,7 @@ func (m *DefaultDocumentFileManager) DeleteDocumentFile(
 			return ccc.NewResourceNotFoundError("document file", fileId)
 		}
 		if file.DocumentId != documentId {
-			return ccc.NewUnauthorizedError("file does not belong to specified document")
+			return ccc.NewResourceNotFoundError("document file", fileId)
 		}
 
 		// Delete file metadata
@@ -362,11 +350,8 @@ func (m *DefaultDocumentFileManager) GetDocumentFilePreviews(
 	if err != nil {
 		return nil, ccc.NewDatabaseError("failed to find document", err)
 	}
-	if document == nil {
+	if document == nil || document.UserId != userId {
 		return nil, ccc.NewResourceNotFoundError("document", documentId)
-	}
-	if document.UserId != userId {
-		return nil, ccc.NewUnauthorizedError("document does not belong to user")
 	}
 
 	// Get all file details (including metadata and preview) in one efficient query

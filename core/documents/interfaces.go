@@ -20,6 +20,10 @@ type TagIdGenerator interface {
 	GenerateId() string
 }
 
+type NoteIdGenerator interface {
+	GenerateId() string
+}
+
 // Core Repository Interfaces - Simple CRUD operations only
 type DocumentRepository interface {
 	FindById(ctx context.Context, documentId string) (*Document, error)
@@ -73,6 +77,15 @@ type DocumentTagRepository interface {
 	FindDocumentsByTagId(ctx context.Context, tagId string) ([]*Document, error)
 }
 
+type NoteRepository interface {
+	FindById(ctx context.Context, noteId string) (*Note, error)
+	FindByDocumentId(ctx context.Context, documentId string) ([]*Note, error)
+	Add(ctx context.Context, note *Note) error
+	Update(ctx context.Context, note *Note) error
+	Delete(ctx context.Context, noteId string) error
+	DeleteByDocumentId(ctx context.Context, documentId string) error
+}
+
 // Unit of Work for transaction management
 type DocumentUnitOfWork interface {
 	Begin(ctx context.Context) error
@@ -85,6 +98,7 @@ type DocumentUnitOfWork interface {
 	DocumentFileMetadataRepo() DocumentFileMetadataRepository
 	TagRepo() TagRepository
 	DocumentTagRepo() DocumentTagRepository
+	NoteRepo() NoteRepository
 
 	// Fluent transaction execution
 	Execute(ctx context.Context, fn func(uow DocumentUnitOfWork) error) error
@@ -155,6 +169,14 @@ type TagManager interface {
 	GetUserTags(ctx context.Context, userId string) ([]*TagDto, error)
 	UpdateTag(ctx context.Context, userId, tagId string, request UpdateTagRequest) error
 	DeleteTag(ctx context.Context, userId, tagId string) error
+}
+
+// Note Manager - dedicated service for note CRUD operations
+type NoteManager interface {
+	CreateNote(ctx context.Context, request CreateNoteRequest, dataProtector dataprotection.DataProtector) (*CreateNoteResponse, error)
+	GetDocumentNotes(ctx context.Context, userId, documentId string, dataProtector dataprotection.DataProtector) ([]*NoteDto, error)
+	UpdateNote(ctx context.Context, request UpdateNoteRequest, dataProtector dataprotection.DataProtector) error
+	DeleteNote(ctx context.Context, userId, noteId string) error
 }
 
 // Document File Processing interfaces

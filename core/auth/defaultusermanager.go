@@ -88,13 +88,11 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 	}
 	if existingUser != nil {
 		manager.logger.Warn("User creation failed: username already exists", "username", request.UserName)
-		userTakenError := ccc.NewInvalidInputErrorWithMessage(
+		return CreateUserResponse{}, ccc.NewInvalidInputErrorWithMessage(
 			"username",
-			"username already taken",
-			"This username is already taken. Please choose a different username.",
+			"username invalid",
+			"Username must be 3-20 characters long and can only contain letters, numbers, and underscores.",
 		)
-		userTakenError.Code = ccc.ErrCodeUserNameTaken
-		return CreateUserResponse{}, userTakenError
 	}
 
 	isValidPw, err := manager.IsValidPassword(request.Password)
@@ -600,33 +598,33 @@ func (manager *DefaultUserManager) DeleteUser(id string) (bool, error) {
 }
 
 // VerifyPassword checks if the provided password matches the user's password
-func (manager *DefaultUserManager) VerifyPassword(userId string, password string) (bool, error) {
+func (manager *DefaultUserManager) VerifyPassword(userId string, password string) error {
 	manager.logger.Debug("Verifying user password", "user_id", userId)
 
 	user, err := manager.userRepository.FindById(userId)
 	if err != nil {
 		manager.logger.Error("Failed to find user for password verification", "user_id", userId, "error", err)
-		return false, ccc.NewDatabaseError("find user by ID", err)
+		return ccc.NewDatabaseError("find user by ID", err)
 	}
 
 	if user == nil {
 		manager.logger.Warn("User not found for password verification", "user_id", userId)
-		return false, ccc.NewResourceNotFoundError(userId, "User")
+		return ccc.NewUnauthorizedError("operation not authorized")
 	}
 
 	success, err := manager.securityService.VerifyUserPassword(*user, password)
 	if err != nil {
 		manager.logger.Error("Security service failed to verify password", "user_id", userId, "username", user.UserName, "error", err)
-		return false, ccc.NewInternalError("verify user password", err)
+		return ccc.NewInternalError("verify user password", err)
 	}
 
 	if success {
 		manager.logger.Debug("Password verification successful", "user_id", userId, "username", user.UserName)
+		return nil
 	} else {
 		manager.logger.Warn("Password verification failed", "user_id", userId, "username", user.UserName)
+		return ccc.NewUnauthorizedError("operation not authorized")
 	}
-
-	return success, nil
 }
 
 // GenerateRecoveryCode generates a new recovery code for a user.
