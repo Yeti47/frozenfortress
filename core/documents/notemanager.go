@@ -82,12 +82,9 @@ func (m *DefaultNoteManager) CreateNote(ctx context.Context, request CreateNoteR
 			m.logger.Error("Failed to find document for note creation", "userId", request.UserId, "documentId", request.DocumentId, "err", err)
 			return ccc.NewDatabaseError("find document", err)
 		}
-		if document == nil {
+		if document == nil || document.UserId != request.UserId {
+			m.logger.Warn("Document not found or not owned by user for note creation", "userId", request.UserId, "documentId", request.DocumentId)
 			return ccc.NewResourceNotFoundError(request.DocumentId, "Document")
-		}
-		if document.UserId != request.UserId {
-			m.logger.Warn("Document not owned by user for note creation", "userId", request.UserId, "documentId", request.DocumentId)
-			return ccc.NewUnauthorizedError("document does not belong to user")
 		}
 
 		note = &Note{
@@ -130,12 +127,9 @@ func (m *DefaultNoteManager) GetDocumentNotes(ctx context.Context, userId, docum
 		m.logger.Error("Failed to find document for notes retrieval", "userId", userId, "documentId", documentId, "err", err)
 		return nil, ccc.NewDatabaseError("find document", err)
 	}
-	if document == nil {
+	if document == nil || document.UserId != userId {
+		m.logger.Warn("Document not found or not owned by user for notes retrieval", "userId", userId, "documentId", documentId)
 		return nil, ccc.NewResourceNotFoundError(documentId, "Document")
-	}
-	if document.UserId != userId {
-		m.logger.Warn("Document not owned by user for notes retrieval", "userId", userId, "documentId", documentId)
-		return nil, ccc.NewUnauthorizedError("document does not belong to user")
 	}
 
 	// Get all notes for the document
@@ -194,13 +188,9 @@ func (m *DefaultNoteManager) UpdateNote(ctx context.Context, request UpdateNoteR
 			m.logger.Error("Failed to find note for update", "userId", request.UserId, "noteId", request.NoteId, "err", err)
 			return ccc.NewResourceNotFoundError(request.NoteId, "Note")
 		}
-		if note == nil {
-			m.logger.Warn("Note not found for update", "userId", request.UserId, "noteId", request.NoteId)
+		if note == nil || note.UserId != request.UserId {
+			m.logger.Warn("Note not found or not owned by user for update", "userId", request.UserId, "noteId", request.NoteId)
 			return ccc.NewResourceNotFoundError(request.NoteId, "Note")
-		}
-		if note.UserId != request.UserId {
-			m.logger.Warn("Note not owned by user for update", "userId", request.UserId, "noteId", request.NoteId)
-			return ccc.NewUnauthorizedError("note does not belong to user")
 		}
 
 		note.Content = encryptedContent
@@ -233,15 +223,11 @@ func (m *DefaultNoteManager) DeleteNote(ctx context.Context, userId, noteId stri
 			m.logger.Error("Failed to find note for delete", "userId", userId, "noteId", noteId, "err", err)
 			return ccc.NewResourceNotFoundError(noteId, "Note")
 		}
-		if note == nil {
-			// Already deleted, treat as success (idempotent)
+		if note == nil || note.UserId != userId {
+			// Already deleted or not owned by user, treat as success (idempotent)
 			alreadyDeleted = true
-			m.logger.Info("Note already deleted (idempotent)", "userId", userId, "noteId", noteId)
+			m.logger.Info("Note already deleted or not found (idempotent)", "userId", userId, "noteId", noteId)
 			return nil
-		}
-		if note.UserId != userId {
-			m.logger.Warn("Note not owned by user for delete", "userId", userId, "noteId", noteId)
-			return ccc.NewUnauthorizedError("note does not belong to user")
 		}
 		if err := uow.NoteRepo().Delete(ctx, noteId); err != nil {
 			m.logger.Error("Failed to delete note", "userId", userId, "noteId", noteId, "err", err)

@@ -50,11 +50,8 @@ func (c *DefaultDocumentFileCreator) CreateDocumentFile(
 	if err != nil {
 		return nil, nil, ccc.NewDatabaseError("failed to find document", err)
 	}
-	if document == nil {
+	if document == nil || document.UserId != request.UserId {
 		return nil, nil, ccc.NewResourceNotFoundError("document", request.DocumentId)
-	}
-	if document.UserId != request.UserId {
-		return nil, nil, ccc.NewUnauthorizedError("document does not belong to user")
 	}
 
 	// Generate file ID

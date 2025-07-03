@@ -93,11 +93,8 @@ func (m *DefaultDocumentManager) CreateDocument(
 				if err != nil {
 					return ccc.NewDatabaseError(fmt.Sprintf("failed to find tag %s", tagId), err)
 				}
-				if tag == nil {
+				if tag == nil || tag.UserId != userId {
 					return ccc.NewResourceNotFoundError("tag", tagId)
-				}
-				if tag.UserId != userId {
-					return ccc.NewUnauthorizedError("tag does not belong to user")
 				}
 
 				if err := uow.DocumentTagRepo().AddDocumentTag(ctx, documentId, tagId); err != nil {
@@ -159,11 +156,8 @@ func (m *DefaultDocumentManager) GetDocument(
 	if err != nil {
 		return nil, ccc.NewDatabaseError("failed to find document", err)
 	}
-	if document == nil {
+	if document == nil || document.UserId != userId {
 		return nil, ccc.NewResourceNotFoundError("document", documentId)
-	}
-	if document.UserId != userId {
-		return nil, ccc.NewUnauthorizedError("document does not belong to user")
 	}
 
 	// Get file count
@@ -360,11 +354,8 @@ func (m *DefaultDocumentManager) UpdateDocument(
 		if err != nil {
 			return ccc.NewDatabaseError("failed to find document", err)
 		}
-		if document == nil {
+		if document == nil || document.UserId != userId {
 			return ccc.NewResourceNotFoundError("document", documentId)
-		}
-		if document.UserId != userId {
-			return ccc.NewUnauthorizedError("document does not belong to user")
 		}
 
 		// Update fields
@@ -390,11 +381,8 @@ func (m *DefaultDocumentManager) UpdateDocument(
 				if err != nil {
 					return ccc.NewDatabaseError(fmt.Sprintf("failed to find tag %s", tagId), err)
 				}
-				if tag == nil {
+				if tag == nil || tag.UserId != userId {
 					return ccc.NewResourceNotFoundError("tag", tagId)
-				}
-				if tag.UserId != userId {
-					return ccc.NewUnauthorizedError("tag does not belong to user")
 				}
 
 				if err := uow.DocumentTagRepo().AddDocumentTag(ctx, documentId, tagId); err != nil {
@@ -423,11 +411,8 @@ func (m *DefaultDocumentManager) DeleteDocument(ctx context.Context, userId, doc
 		if err != nil {
 			return ccc.NewDatabaseError("failed to find document", err)
 		}
-		if document == nil {
+		if document == nil || document.UserId != userId {
 			return ccc.NewResourceNotFoundError("document", documentId)
-		}
-		if document.UserId != userId {
-			return ccc.NewUnauthorizedError("document does not belong to user")
 		}
 
 		// Delete document tags
