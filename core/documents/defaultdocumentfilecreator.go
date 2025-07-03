@@ -3,6 +3,7 @@ package documents
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -57,8 +58,11 @@ func (c *DefaultDocumentFileCreator) CreateDocumentFile(
 	// Generate file ID
 	fileId := c.fileIdGen.GenerateId()
 
+	// Sanitize the filename to prevent path traversal attacks.
+	sanitizedFilename := filepath.Base(request.FileName)
+
 	// Encrypt file name
-	encryptedFileName, err := dataProtector.Protect(request.FileName)
+	encryptedFileName, err := dataProtector.Protect(sanitizedFilename)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to encrypt file name: %w", err)
 	}
