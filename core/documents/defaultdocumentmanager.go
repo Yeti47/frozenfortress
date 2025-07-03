@@ -435,6 +435,11 @@ func (m *DefaultDocumentManager) DeleteDocument(ctx context.Context, userId, doc
 			return ccc.NewDatabaseError("failed to remove document tags", err)
 		}
 
+		// Delete document notes
+		if err := uow.NoteRepo().DeleteByDocumentId(ctx, documentId); err != nil {
+			return ccc.NewDatabaseError("failed to delete document notes", err)
+		}
+
 		// Delete file metadata
 		if err := uow.DocumentFileMetadataRepo().DeleteByDocumentId(ctx, documentId); err != nil {
 			return ccc.NewDatabaseError("failed to delete file metadata", err)

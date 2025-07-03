@@ -173,7 +173,7 @@ type TagManager interface {
 
 // Note Manager - dedicated service for note CRUD operations
 type NoteManager interface {
-	CreateNote(ctx context.Context, request CreateNoteRequest, dataProtector dataprotection.DataProtector) (*NoteDto, error)
+	CreateNote(ctx context.Context, request CreateNoteRequest, dataProtector dataprotection.DataProtector) (*CreateNoteResponse, error)
 	GetDocumentNotes(ctx context.Context, userId, documentId string, dataProtector dataprotection.DataProtector) ([]*NoteDto, error)
 	UpdateNote(ctx context.Context, request UpdateNoteRequest, dataProtector dataprotection.DataProtector) error
 	DeleteNote(ctx context.Context, userId, noteId string) error

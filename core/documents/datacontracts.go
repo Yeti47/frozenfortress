@@ -99,6 +99,10 @@ type UpdateNoteRequest struct {
 	Content string
 }
 
+type CreateNoteResponse struct {
+	NoteId string
+}
+
 // DTOs for API responses (with decrypted data)
 type DocumentDto struct {
 	Id          string
