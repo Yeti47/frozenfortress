@@ -80,18 +80,14 @@ func (h *DefaultSignInHandler) findAndValidateUser(userName string, context Sign
 }
 
 // Helper function to validate user status (active, not locked)
-func (h *DefaultSignInHandler) validateUserStatus(user *User, historyItem *SignInHistoryItem, context SignInContext) (bool, string) {
+func (h *DefaultSignInHandler) validateUserStatus(user *User, context SignInContext) (bool, string) {
 	if user.IsLocked {
-		h.logger.Warn("Sign-in failed: account is locked", "username", user.UserName, "user_id", user.Id, "ip_address", context.IPAddress)
-		historyItem.DenialReason = "Account is locked"
-		_ = h.signInHistoryRepository.Add(historyItem)
+		h.logger.Warn("Sign-in denied: account is locked", "username", user.UserName, "user_id", user.Id, "ip_address", context.IPAddress)
 		return false, "Account is locked"
 	}
 
 	if !user.IsActive {
-		h.logger.Warn("Sign-in failed: account is inactive", "username", user.UserName, "user_id", user.Id, "ip_address", context.IPAddress)
-		historyItem.DenialReason = "Account is inactive"
-		_ = h.signInHistoryRepository.Add(historyItem)
+		h.logger.Warn("Sign-in denied: account is inactive", "username", user.UserName, "user_id", user.Id, "ip_address", context.IPAddress)
 		return false, "Account is inactive"
 	}
 
@@ -99,7 +95,7 @@ func (h *DefaultSignInHandler) validateUserStatus(user *User, historyItem *SignI
 }
 
 // Helper function to handle failed attempts and rate limiting
-func (h *DefaultSignInHandler) handleFailedAttempt(user *User, historyItem *SignInHistoryItem, denialReason string, context SignInContext, attemptType string) (bool, string) {
+func (h *DefaultSignInHandler) handleFailedAttempt(user *User, historyItem *SignInHistoryItem, denialReason string, context SignInContext, attemptType string) {
 	historyItem.DenialReason = denialReason
 	_ = h.signInHistoryRepository.Add(historyItem)
 
@@ -110,7 +106,7 @@ func (h *DefaultSignInHandler) handleFailedAttempt(user *User, historyItem *Sign
 
 		if err != nil {
 			h.logger.Error("Failed to check recent failed attempts", "username", user.UserName, "user_id", user.Id, "attempt_type", attemptType, "error", err)
-			return false, "Internal error"
+			return
 		}
 
 		h.logger.Debug("Checked recent failed attempts", "username", user.UserName, "user_id", user.Id, "attempt_type", attemptType, "failed_count", len(failedAttempts), "max_attempts", h.config.MaxSignInAttempts)
@@ -131,12 +127,8 @@ func (h *DefaultSignInHandler) handleFailedAttempt(user *User, historyItem *Sign
 			} else {
 				h.logger.Info("Account locked successfully due to failed attempts", "username", user.UserName, "user_id", user.Id, "attempt_type", attemptType)
 			}
-
-			return true, "Account has been locked due to too many failed attempts"
 		}
 	}
-
-	return false, denialReason
 }
 
 // Helper function to log successful attempt
@@ -183,11 +175,13 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 	}
 
 	// Validate user status
-	valid, errorMessage := h.validateUserStatus(user, historyItem, context)
+	valid, denialReason := h.validateUserStatus(user, context)
 	if !valid {
+		historyItem.DenialReason = denialReason
+		_ = h.signInHistoryRepository.Add(historyItem)
 		return SignInResult{
 			Success:      false,
-			ErrorMessage: errorMessage,
+			ErrorMessage: "Invalid credentials",
 		}, nil
 	}
 
@@ -208,13 +202,7 @@ func (h *DefaultSignInHandler) HandleSignIn(request SignInRequest, context SignI
 	if !passwordValid {
 		h.logger.Warn("Sign-in failed: invalid password", "username", request.UserName, "user_id", user.Id, "ip_address", context.IPAddress)
 
-		accountLocked, errorMsg := h.handleFailedAttempt(user, historyItem, "Invalid credentials", context, "password")
-		if accountLocked {
-			return SignInResult{
-				Success:      false,
-				ErrorMessage: errorMsg,
-			}, nil
-		}
+		h.handleFailedAttempt(user, historyItem, "Invalid credentials", context, "password")
 		return SignInResult{
 			Success:      false,
 			ErrorMessage: "Invalid credentials",
@@ -305,12 +293,14 @@ func (h *DefaultSignInHandler) HandleRecoverySignIn(request RecoverySignInReques
 	}
 
 	// Validate user status
-	valid, errorMessage := h.validateUserStatus(user, historyItem, context)
+	valid, denialReason := h.validateUserStatus(user, context)
 	if !valid {
+		historyItem.DenialReason = denialReason
+		_ = h.signInHistoryRepository.Add(historyItem)
 		return RecoverySignInResult{
 			Success:         false,
 			NewRecoveryCode: "",
-			ErrorMessage:    errorMessage,
+			ErrorMessage:    "Invalid username or recovery code",
 		}, nil
 	}
 
@@ -319,15 +309,7 @@ func (h *DefaultSignInHandler) HandleRecoverySignIn(request RecoverySignInReques
 	if err != nil {
 		h.logger.Warn("Recovery sign-in failed: invalid recovery code", "username", request.UserName, "user_id", user.Id, "ip_address", context.IPAddress, "error", err)
 
-		accountLocked, errorMsg := h.handleFailedAttempt(user, historyItem, "Invalid recovery code", context, "recovery")
-		if accountLocked {
-			return RecoverySignInResult{
-				Success:         false,
-				NewRecoveryCode: "",
-				ErrorMessage:    errorMsg,
-			}, nil
-		}
-
+		h.handleFailedAttempt(user, historyItem, "Invalid recovery code", context, "recovery")
 		return RecoverySignInResult{
 			Success:         false,
 			NewRecoveryCode: "",

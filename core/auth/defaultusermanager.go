@@ -88,13 +88,11 @@ func (manager *DefaultUserManager) CreateUser(request CreateUserRequest) (Create
 	}
 	if existingUser != nil {
 		manager.logger.Warn("User creation failed: username already exists", "username", request.UserName)
-		userTakenError := ccc.NewInvalidInputErrorWithMessage(
+		return CreateUserResponse{}, ccc.NewInvalidInputErrorWithMessage(
 			"username",
-			"username already taken",
-			"This username is already taken. Please choose a different username.",
+			"username invalid",
+			"Username must be 3-20 characters long and can only contain letters, numbers, and underscores.",
 		)
-		userTakenError.Code = ccc.ErrCodeUserNameTaken
-		return CreateUserResponse{}, userTakenError
 	}
 
 	isValidPw, err := manager.IsValidPassword(request.Password)
