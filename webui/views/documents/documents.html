@@ -35,6 +35,23 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            min-height: 0; /* Allow flex shrinking */
+        }
+
+        /* Documents content wrapper - takes available space */
+        .documents-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Allow flex shrinking */
+        }
+
+        /* Documents grid container that grows to fill space */
+        .documents-grid-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Allow flex shrinking */
         }
         
         .documents-header {
@@ -495,52 +512,82 @@
         }
 
         /* Pagination */
-        .pagination-container {
+        .pagination {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 30px;
-            gap: 10px;
+            gap: 8px;
+            margin-top: auto; /* Push pagination to bottom */
+            padding-top: 30px; /* Add space above pagination */
+            flex-wrap: wrap;
+            flex-shrink: 0; /* Prevent pagination from shrinking */
+        }
+
+        .pagination-pages {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .pagination-info {
             color: #7f8c8d;
             font-size: 14px;
-        }
-
-        .pagination-controls {
-            display: flex;
-            gap: 5px;
+            text-align: center;
+            margin-top: 15px;
+            flex-shrink: 0; /* Prevent info from shrinking */
         }
 
         .pagination-btn {
-            background: white;
+            background: rgba(255, 255, 255, 0.9);
             border: 1px solid #e1e8ed;
-            padding: 8px 12px;
             border-radius: 6px;
-            color: #2c3e50;
+            padding: 8px 12px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            color: #495057;
             text-decoration: none;
             font-size: 14px;
+            min-width: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .pagination-nav-btn {
+            /* Navigation buttons (first, prev, next, last) */
+            flex-shrink: 0;
+        }
+
+        .pagination-page-btn {
+            /* Page number buttons */
+            flex-shrink: 0;
         }
 
         .pagination-btn:hover:not(.disabled) {
-            background: #3498db;
-            color: white;
-            border-color: #3498db;
-        }
-
-        .pagination-btn.current {
-            background: #3498db;
+            background-color: #3498db;
             color: white;
             border-color: #3498db;
         }
 
         .pagination-btn.disabled {
-            background: #f8f9fa;
-            color: #bdc3c7;
+            opacity: 0.5;
             cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .pagination-btn.current {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+            font-weight: 600;
+        }
+
+        .pagination-ellipsis {
+            cursor: default;
+            pointer-events: none;
         }
 
         /* Empty State */
@@ -682,8 +729,47 @@
                 min-width: auto;
             }
 
-            .pagination-controls {
-                flex-wrap: wrap;
+            .pagination {
+                gap: 4px;
+                flex-wrap: nowrap;
+                padding: 0 5px;
+            }
+
+            .pagination-pages {
+                gap: 4px;
+                flex-wrap: nowrap;
+                order: 2;
+            }
+
+            /* First and Previous buttons - should come first */
+            .pagination-nav-btn[title="First page"],
+            .pagination-nav-btn[title="Previous page"] {
+                order: 1;
+            }
+
+            /* Next and Last buttons - should come last */
+            .pagination-nav-btn[title="Next page"],
+            .pagination-nav-btn[title="Last page"] {
+                order: 3;
+            }
+
+            .pagination-info {
+                order: 4;
+                flex-basis: 100%;
+                text-align: center;
+                margin-bottom: 0;
+                margin-top: 15px;
+            }
+
+            .pagination-btn {
+                min-width: 32px;
+                padding: 5px 6px;
+                font-size: 11px;
+            }
+
+            .pagination-nav-btn {
+                min-width: 36px;
+                padding: 5px 6px;
             }
             
             /* Improve touch accessibility for tablets */
@@ -717,8 +803,9 @@
             }
 
             .pagination-btn {
-                padding: 6px 10px;
+                padding: 6px 8px;
                 font-size: 12px;
+                min-width: 32px;
             }
 
             .create-document-btn .button-text-full {
@@ -748,6 +835,126 @@
 
             .document-btn .material-icons {
                 font-size: 18px;
+            }
+        }
+
+        /* Ultra-small screens - optimize pagination for limited horizontal space */
+        @media (max-width: 480px) {
+            .pagination {
+                gap: 2px;
+                padding: 0 3px;
+                flex-wrap: nowrap;
+            }
+
+            .pagination-pages {
+                gap: 2px;
+                flex-wrap: nowrap;
+            }
+
+            .pagination-btn {
+                padding: 4px 5px;
+                font-size: 10px;
+                min-width: 26px;
+                border-radius: 3px;
+                flex-shrink: 0;
+            }
+
+            .pagination-nav-btn {
+                min-width: 28px;
+                padding: 4px 5px;
+            }
+
+            .pagination-info {
+                font-size: 11px;
+                margin-bottom: 10px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .pagination {
+                gap: 2px;
+                padding: 0 3px;
+            }
+
+            .pagination-pages {
+                gap: 2px;
+            }
+
+            .pagination-btn {
+                padding: 4px 6px;
+                font-size: 10px;
+                min-width: 26px;
+                border-radius: 3px;
+            }
+
+            .pagination-nav-btn {
+                min-width: 28px;
+                padding: 4px 5px;
+            }
+
+            .pagination-info {
+                font-size: 11px;
+                margin-bottom: 8px;
+            }
+        }
+
+        /* Very small screens - further optimize pagination */
+        @media (max-width: 320px) {
+            .pagination {
+                gap: 1px;
+                padding: 0 1px;
+            }
+
+            .pagination-pages {
+                gap: 1px;
+            }
+
+            .pagination-btn {
+                padding: 2px 3px;
+                font-size: 8px;
+                min-width: 20px;
+                border-radius: 2px;
+            }
+
+            .pagination-nav-btn {
+                min-width: 22px;
+                padding: 2px 3px;
+            }
+
+            .pagination-info {
+                font-size: 9px;
+                margin-bottom: 5px;
+            }
+        }
+
+        /* Ultra-small screens - extreme optimization */
+        @media (max-width: 280px) {
+            .pagination {
+                gap: 0;
+                padding: 0;
+                flex-wrap: nowrap;
+            }
+
+            .pagination-pages {
+                gap: 0;
+                flex-wrap: nowrap;
+            }
+
+            .pagination-btn {
+                padding: 1px 2px;
+                font-size: 7px;
+                min-width: 18px;
+                border-radius: 1px;
+            }
+
+            .pagination-nav-btn {
+                min-width: 20px;
+                padding: 1px 2px;
+            }
+
+            .pagination-info {
+                font-size: 8px;
+                margin-bottom: 4px;
             }
         }
 
@@ -1067,6 +1274,7 @@
         </div>
         {{end}}
 
+        <div class="documents-content">
                 <div class="documents-header">
                     <h1 class="documents-title">My Documents</h1>
                     <div class="documents-actions">
@@ -1145,150 +1353,220 @@
                     </div>
                 </div>
 
-                <!-- Documents Grid -->
-                {{if .Documents}}
-                    <div class="documents-grid">
-                        {{range .Documents}}
-                            <div class="document-card{{if .IsSearchResult}} search-result{{end}}">
-                                <a href="/view-document?id={{.Id}}" style="text-decoration: none; color: inherit;">
-                                    <div class="document-preview">
-                                        {{if .Preview}}
-                                            {{if eq .Preview.PreviewType "application/pdf"}}
-                                                <span class="material-icons pdf-icon">picture_as_pdf</span>
+                <!-- Documents Grid Container -->
+                <div class="documents-grid-container">
+                    {{if .Documents}}
+                        <div class="documents-grid">
+                            {{range .Documents}}
+                                <div class="document-card{{if .IsSearchResult}} search-result{{end}}">
+                                    <a href="/view-document?id={{.Id}}" style="text-decoration: none; color: inherit;">
+                                        <div class="document-preview">
+                                            {{if .Preview}}
+                                                {{if eq .Preview.PreviewType "application/pdf"}}
+                                                    <span class="material-icons pdf-icon">picture_as_pdf</span>
+                                                {{else}}
+                                                    <img src="data:{{.Preview.PreviewType}};base64,{{base64 .Preview.PreviewData}}" alt="Document preview">
+                                                {{end}}
                                             {{else}}
-                                                <img src="data:{{.Preview.PreviewType}};base64,{{base64 .Preview.PreviewData}}" alt="Document preview">
+                                                <span class="material-icons generic-icon">description</span>
                                             {{end}}
-                                        {{else}}
-                                            <span class="material-icons generic-icon">description</span>
-                                        {{end}}
-                                    </div>
-                                </a>
-                                <div class="document-info">
-                                    <div class="document-header">
-                                        <div class="document-title-section">
-                                            <h3 class="document-title">{{.Title}}</h3>
                                         </div>
-                                    </div>
-                                    <p class="document-description">{{.Description}}</p>
-                                    {{if .IsSearchResult}}
-                                        {{if .HighlightedText}}
-                                            <div class="search-highlight">
-                                                <div class="search-highlight-header">
-                                                    <div class="search-highlight-label">Match:</div>
-                                                    <div class="search-relevance-score" title="Relevance Score">{{printf "%.2f" .RelevanceScore}}</div>
-                                                </div>
-                                                <div class="search-highlight-text" data-highlight-text="{{.HighlightedText}}"></div>
+                                    </a>
+                                    <div class="document-info">
+                                        <div class="document-header">
+                                            <div class="document-title-section">
+                                                <h3 class="document-title">{{.Title}}</h3>
                                             </div>
-                                        {{end}}
-                                    {{end}}
-                                    <div class="document-footer">
-                                        <div class="document-meta">
-                                            <span class="document-file-count">
-                                                <span class="material-icons" style="font-size: 14px;">attach_file</span>
-                                                {{.FileCount}} file{{if ne .FileCount 1}}s{{end}}
-                                            </span>
-                                            <span>{{.ModifiedAt.Format "2006-01-02 15:04:05"}}</span>
                                         </div>
-                                        <div class="document-tags">
-                                            {{range .Tags}}
-                                                <span class="document-tag" style="background-color: {{.Color}}20; color: {{.Color}};">{{.Name}}</span>
+                                        <p class="document-description">{{.Description}}</p>
+                                        {{if .IsSearchResult}}
+                                            {{if .HighlightedText}}
+                                                <div class="search-highlight">
+                                                    <div class="search-highlight-header">
+                                                        <div class="search-highlight-label">Match:</div>
+                                                        <div class="search-relevance-score" title="Relevance Score">{{printf "%.2f" .RelevanceScore}}</div>
+                                                    </div>
+                                                    <div class="search-highlight-text" data-highlight-text="{{.HighlightedText}}"></div>
+                                                </div>
                                             {{end}}
-                                        </div>
-                                        <div class="document-actions">
-                                            <a href="/view-document?id={{.Id}}" class="document-btn view-btn" title="View Document">
-                                                <span class="material-icons">visibility</span>
-                                            </a>
-                                            <a href="/edit-document?id={{.Id}}&returnTo=documents" class="document-btn edit-btn" title="Edit Document">
-                                                <span class="material-icons">edit</span>
-                                            </a>
-                                            <button class="document-btn delete-btn" onclick="deleteDocument('{{.Id}}', '{{.Title}}')" title="Delete Document">
-                                                <span class="material-icons">delete</span>
-                                            </button>
+                                        {{end}}
+                                        <div class="document-footer">
+                                            <div class="document-meta">
+                                                <span class="document-file-count">
+                                                    <span class="material-icons" style="font-size: 14px;">attach_file</span>
+                                                    {{.FileCount}} file{{if ne .FileCount 1}}s{{end}}
+                                                </span>
+                                                <span>{{.ModifiedAt.Format "2006-01-02 15:04:05"}}</span>
+                                            </div>
+                                            <div class="document-tags">
+                                                {{range .Tags}}
+                                                    <span class="document-tag" style="background-color: {{.Color}}20; color: {{.Color}};">{{.Name}}</span>
+                                                {{end}}
+                                            </div>
+                                            <div class="document-actions">
+                                                <a href="/view-document?id={{.Id}}" class="document-btn view-btn" title="View Document">
+                                                    <span class="material-icons">visibility</span>
+                                                </a>
+                                                <a href="/edit-document?id={{.Id}}&returnTo=documents" class="document-btn edit-btn" title="Edit Document">
+                                                    <span class="material-icons">edit</span>
+                                                </a>
+                                                <button class="document-btn delete-btn" onclick="deleteDocument('{{.Id}}', '{{.Title}}')" title="Delete Document">
+                                                    <span class="material-icons">delete</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+                            {{end}}
+                        </div>
+                    {{else}}
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <span class="material-icons" style="font-size: inherit;">description</span>
                             </div>
-                        {{end}}
-                    </div>
+                            <div class="empty-state-title">No documents found</div>
+                            <div class="empty-state-text">
+                                {{if .TagIds}}
+                                    No documents match the selected filters.
+                                {{else}}
+                                    You haven't created any documents yet.
+                                {{end}}
+                            </div>
+                            <a href="/create-document" class="create-document-btn">
+                                <span class="material-icons">add</span>
+                                {{if .TagIds}}
+                                    Create new document
+                                {{else}}
+                                    Create your first document
+                                {{end}}
+                            </a>
+                        </div>
+                    {{end}}
+                </div>
+        </div>
+
+        <!-- Pagination -->
+        {{if gt .TotalPages 1}}
+            <div class="pagination" id="pagination-container">
+                <!-- First page button -->
+                {{if gt .Page 1}}
+                    <a href="?page=1&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-nav-btn" title="First page">
+                        <span class="material-icons">first_page</span>
+                    </a>
                 {{else}}
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <span class="material-icons" style="font-size: inherit;">description</span>
-                        </div>
-                        <div class="empty-state-title">No documents found</div>
-                        <div class="empty-state-text">
-                            {{if .TagIds}}
-                                No documents match the selected filters.
-                            {{else}}
-                                You haven't created any documents yet.
-                            {{end}}
-                        </div>
-                        <a href="/create-document" class="create-document-btn">
-                            <span class="material-icons">add</span>
-                            {{if .TagIds}}
-                                Create new document
-                            {{else}}
-                                Create your first document
-                            {{end}}
-                        </a>
-                    </div>
+                    <span class="pagination-btn pagination-nav-btn disabled" title="First page">
+                        <span class="material-icons">first_page</span>
+                    </span>
                 {{end}}
 
-                <!-- Pagination -->
-                {{if gt .TotalPages 1}}
-                    <div class="pagination-container">
-                        <div class="pagination-info">
-                            Showing {{if .Documents}}{{add (mul (sub .Page 1) .PageSize) 1}}-{{min (mul .Page .PageSize) .TotalCount}}{{else}}0{{end}} of {{.TotalCount}} documents
-                        </div>
-                        <div class="pagination-controls">
-                            {{if .HasPrevious}}
-                                <a href="?page={{sub .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">Previous</a>
+                <!-- Previous page button -->
+                {{if gt .Page 1}}
+                    <a href="?page={{sub .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-nav-btn" title="Previous page">
+                        <span class="material-icons">chevron_left</span>
+                    </a>
+                {{else}}
+                    <span class="pagination-btn pagination-nav-btn disabled" title="Previous page">
+                        <span class="material-icons">chevron_left</span>
+                    </span>
+                {{end}}
+
+                <!-- Page numbers container -->
+                <div class="pagination-pages" id="pagination-pages">
+                    {{$currentPage := .Page}}
+                    {{$totalPages := .TotalPages}}
+                    {{$startPage := max 1 (sub $currentPage 2)}}
+                    {{$endPage := min $totalPages (add $currentPage 2)}}
+                    
+                    {{if gt $startPage 1}}
+                        <a href="?page=1&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">1</a>
+                        {{if gt $startPage 2}}
+                            <span class="pagination-btn pagination-page-btn disabled pagination-ellipsis">...</span>
+                        {{end}}
+                    {{end}}
+                    
+                    {{/* Generate pages from startPage to endPage */}}
+                    {{if ge $startPage 1}}
+                        {{if le $startPage $endPage}}
+                            {{if eq $startPage $currentPage}}
+                                <span class="pagination-btn pagination-page-btn current">{{$startPage}}</span>
                             {{else}}
-                                <span class="pagination-btn disabled">Previous</span>
+                                <a href="?page={{$startPage}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$startPage}}</a>
                             {{end}}
-                            
-                            {{$currentPage := .Page}}
-                            {{$totalPages := .TotalPages}}
-                            {{$sortBy := .SortBy}}
-                            {{$sortAsc := .SortAsc}}
-                            {{$tagIds := .TagIds}}
-                            
-                            {{range $i := 1}}
-                                {{if le $i $totalPages}}
-                                    {{$start := max 1 (sub $currentPage 2)}}
-                                    {{$end := min $totalPages (add $currentPage 2)}}
-                                    
-                                    {{if gt $start 1}}
-                                        <a href="?page=1&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">1</a>
-                                        {{if gt $start 2}}<span class="pagination-btn disabled">...</span>{{end}}
-                                    {{end}}
-                                    
-                                    {{range $page := $start}}
-                                        {{if le $page $end}}
-                                            {{if eq $page $currentPage}}
-                                                <span class="pagination-btn current">{{$page}}</span>
-                                            {{else}}
-                                                <a href="?page={{$page}}&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">{{$page}}</a>
-                                            {{end}}
-                                        {{end}}
-                                    {{end}}
-                                    
-                                    {{if lt $end $totalPages}}
-                                        {{if lt $end (sub $totalPages 1)}}<span class="pagination-btn disabled">...</span>{{end}}
-                                        <a href="?page={{$totalPages}}&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">{{$totalPages}}</a>
-                                    {{end}}
-                                {{end}}
-                            {{end}}
-                            
-                            {{if .HasNext}}
-                                <a href="?page={{add .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">Next</a>
+                        {{end}}
+                        
+                        {{$page2 := add $startPage 1}}
+                        {{if and (le $page2 $endPage) (le $page2 $totalPages)}}
+                            {{if eq $page2 $currentPage}}
+                                <span class="pagination-btn pagination-page-btn current">{{$page2}}</span>
                             {{else}}
-                                <span class="pagination-btn disabled">Next</span>
+                                <a href="?page={{$page2}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$page2}}</a>
                             {{end}}
-                        </div>
-                    </div>
+                        {{end}}
+                        
+                        {{$page3 := add $startPage 2}}
+                        {{if and (le $page3 $endPage) (le $page3 $totalPages)}}
+                            {{if eq $page3 $currentPage}}
+                                <span class="pagination-btn pagination-page-btn current">{{$page3}}</span>
+                            {{else}}
+                                <a href="?page={{$page3}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$page3}}</a>
+                            {{end}}
+                        {{end}}
+                        
+                        {{$page4 := add $startPage 3}}
+                        {{if and (le $page4 $endPage) (le $page4 $totalPages)}}
+                            {{if eq $page4 $currentPage}}
+                                <span class="pagination-btn pagination-page-btn current">{{$page4}}</span>
+                            {{else}}
+                                <a href="?page={{$page4}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$page4}}</a>
+                            {{end}}
+                        {{end}}
+                        
+                        {{$page5 := add $startPage 4}}
+                        {{if and (le $page5 $endPage) (le $page5 $totalPages)}}
+                            {{if eq $page5 $currentPage}}
+                                <span class="pagination-btn pagination-page-btn current">{{$page5}}</span>
+                            {{else}}
+                                <a href="?page={{$page5}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$page5}}</a>
+                            {{end}}
+                        {{end}}
+                    {{end}}
+                    
+                    {{if lt $endPage $totalPages}}
+                        {{if lt $endPage (sub $totalPages 1)}}
+                            <span class="pagination-btn pagination-page-btn disabled pagination-ellipsis">...</span>
+                        {{end}}
+                        <a href="?page={{$totalPages}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$totalPages}}</a>
+                    {{end}}
+                </div>
+
+                <!-- Next page button -->
+                {{if lt .Page .TotalPages}}
+                    <a href="?page={{add .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-nav-btn" title="Next page">
+                        <span class="material-icons">chevron_right</span>
+                    </a>
+                {{else}}
+                    <span class="pagination-btn pagination-nav-btn disabled" title="Next page">
+                        <span class="material-icons">chevron_right</span>
+                    </span>
+                {{end}}
+
+                <!-- Last page button -->
+                {{if lt .Page .TotalPages}}
+                    <a href="?page={{.TotalPages}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-nav-btn" title="Last page">
+                        <span class="material-icons">last_page</span>
+                    </a>
+                {{else}}
+                    <span class="pagination-btn pagination-nav-btn disabled" title="Last page">
+                        <span class="material-icons">last_page</span>
+                    </span>
                 {{end}}
             </div>
+
+            <!-- Page info -->
+            <div class="pagination-info">
+                Page {{.Page}} of {{.TotalPages}} ({{.TotalCount}} documents)
+            </div>
+        {{end}}
     </div>
 
     <script>
