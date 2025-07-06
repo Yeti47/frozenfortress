@@ -495,52 +495,49 @@
         }
 
         /* Pagination */
-        .pagination-container {
+        .pagination {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 30px;
             gap: 10px;
+            margin-top: 30px;
+            flex-wrap: wrap;
         }
 
         .pagination-info {
             color: #7f8c8d;
             font-size: 14px;
-        }
-
-        .pagination-controls {
-            display: flex;
-            gap: 5px;
+            margin: 0 15px;
         }
 
         .pagination-btn {
-            background: white;
+            background: rgba(255, 255, 255, 0.9);
             border: 1px solid #e1e8ed;
-            padding: 8px 12px;
             border-radius: 6px;
-            color: #2c3e50;
+            padding: 8px 12px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            color: #495057;
             text-decoration: none;
             font-size: 14px;
         }
 
         .pagination-btn:hover:not(.disabled) {
-            background: #3498db;
-            color: white;
-            border-color: #3498db;
-        }
-
-        .pagination-btn.current {
-            background: #3498db;
+            background-color: #3498db;
             color: white;
             border-color: #3498db;
         }
 
         .pagination-btn.disabled {
-            background: #f8f9fa;
-            color: #bdc3c7;
+            opacity: 0.5;
             cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .pagination-btn.current {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
         }
 
         /* Empty State */
@@ -682,8 +679,16 @@
                 min-width: auto;
             }
 
-            .pagination-controls {
-                flex-wrap: wrap;
+            .pagination {
+                gap: 5px;
+            }
+
+            .pagination-info {
+                margin: 0 5px;
+                order: -1;
+                flex-basis: 100%;
+                text-align: center;
+                margin-bottom: 10px;
             }
             
             /* Improve touch accessibility for tablets */
@@ -1236,56 +1241,30 @@
 
                 <!-- Pagination -->
                 {{if gt .TotalPages 1}}
-                    <div class="pagination-container">
+                    <div class="pagination">
+                        {{if gt .Page 1}}
+                            <a href="?page={{sub .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">
+                                <span class="material-icons">chevron_left</span>
+                            </a>
+                        {{else}}
+                            <span class="pagination-btn disabled">
+                                <span class="material-icons">chevron_left</span>
+                            </span>
+                        {{end}}
+
                         <div class="pagination-info">
-                            Showing {{if .Documents}}{{add (mul (sub .Page 1) .PageSize) 1}}-{{min (mul .Page .PageSize) .TotalCount}}{{else}}0{{end}} of {{.TotalCount}} documents
+                            Page {{.Page}} of {{.TotalPages}} ({{.TotalCount}} documents)
                         </div>
-                        <div class="pagination-controls">
-                            {{if .HasPrevious}}
-                                <a href="?page={{sub .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">Previous</a>
-                            {{else}}
-                                <span class="pagination-btn disabled">Previous</span>
-                            {{end}}
-                            
-                            {{$currentPage := .Page}}
-                            {{$totalPages := .TotalPages}}
-                            {{$sortBy := .SortBy}}
-                            {{$sortAsc := .SortAsc}}
-                            {{$tagIds := .TagIds}}
-                            
-                            {{range $i := 1}}
-                                {{if le $i $totalPages}}
-                                    {{$start := max 1 (sub $currentPage 2)}}
-                                    {{$end := min $totalPages (add $currentPage 2)}}
-                                    
-                                    {{if gt $start 1}}
-                                        <a href="?page=1&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">1</a>
-                                        {{if gt $start 2}}<span class="pagination-btn disabled">...</span>{{end}}
-                                    {{end}}
-                                    
-                                    {{range $page := $start}}
-                                        {{if le $page $end}}
-                                            {{if eq $page $currentPage}}
-                                                <span class="pagination-btn current">{{$page}}</span>
-                                            {{else}}
-                                                <a href="?page={{$page}}&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">{{$page}}</a>
-                                            {{end}}
-                                        {{end}}
-                                    {{end}}
-                                    
-                                    {{if lt $end $totalPages}}
-                                        {{if lt $end (sub $totalPages 1)}}<span class="pagination-btn disabled">...</span>{{end}}
-                                        <a href="?page={{$totalPages}}&sortBy={{$sortBy}}&sortAsc={{$sortAsc}}{{range $tagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">{{$totalPages}}</a>
-                                    {{end}}
-                                {{end}}
-                            {{end}}
-                            
-                            {{if .HasNext}}
-                                <a href="?page={{add .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">Next</a>
-                            {{else}}
-                                <span class="pagination-btn disabled">Next</span>
-                            {{end}}
-                        </div>
+
+                        {{if lt .Page .TotalPages}}
+                            <a href="?page={{add .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn">
+                                <span class="material-icons">chevron_right</span>
+                            </a>
+                        {{else}}
+                            <span class="pagination-btn disabled">
+                                <span class="material-icons">chevron_right</span>
+                            </span>
+                        {{end}}
                     </div>
                 {{end}}
             </div>
