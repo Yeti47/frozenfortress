@@ -12,10 +12,10 @@ This document captures the planned move to a Docker-first Frozen Fortress releas
 - Automatically create a self-signed certificate when no certificate is present.
 - Support drop-in existing certificates for smooth migration or production deployments.
 - Allow deployments to use a remote Ollama instance, such as a GPU workstation, by changing configuration only.
-- Make image OCR fully asynchronous so uploads do not wait for OCR completion.
+- Make OCR fully asynchronous so uploads do not wait for text extraction.
 - Use GLM OCR through Ollama as the primary image OCR provider.
 - Keep Tesseract available as the fallback image OCR provider.
-- Leave PDF processing unchanged.
+- Keep PDF text extraction behavior functionally unchanged, but run it asynchronously like image OCR.
 
 ## Target Docker Topology
 
@@ -133,7 +133,7 @@ Migration checklist:
 7. If no certificate is provided, let the Frozen Fortress certificate bootstrap create a self-signed certificate on first startup.
 8. Start the Docker Compose stack.
 9. Sign in through the nginx HTTPS endpoint and verify existing users, secrets, documents, and backups are visible.
-10. Upload a test image and verify an OCR job is queued and later completed.
+10. Upload a test image and verify OCR moves to processing and later completes while the session-backed data protector is still available.
 
 Example bind mount layout:
 
@@ -163,15 +163,20 @@ Remote Ollama deployments need careful network exposure. Prefer a private networ
 
 ## OCR Architecture
 
-Image OCR should move out of the upload request path.
+OCR must move out of the upload request path without introducing a persisted OCR job queue.
 
-Current behavior blocks upload while image OCR runs. The new behavior should:
+The master encryption key is volatile and bound to the current HTTP session. A persisted OCR queue would outlive that session context and would either require persisting key material or create jobs that cannot be completed later. That would break the privacy and isolation model. OCR should therefore use a best-effort in-process model: when a file is uploaded, the request handler starts a goroutine while the MEK-backed data protector is still available in memory.
+
+Current behavior blocks upload while text extraction runs. The new behavior should:
 
 1. Validate and store the uploaded file.
 2. Generate previews synchronously, as today.
-3. For PDFs, keep the existing synchronous PDF text extraction path unchanged.
-4. For images, create a durable pending OCR job and return the upload response immediately.
-5. Let a background OCR worker process queued image OCR jobs.
+3. Start a best-effort goroutine for text extraction.
+4. Run both PDF text extraction and image OCR through that async path.
+5. Return the upload response immediately after file persistence and preview generation.
+6. Persist extracted text only when the goroutine completes successfully while the volatile data protector is still available.
+
+This means OCR is intentionally not durable work. If the process stops, the session ends, or the goroutine fails after retry exhaustion, the upload remains valid but OCR text may be missing. The application may persist non-sensitive status such as `processing`, `completed`, or `failed`, but it must not persist a resumable queue item that requires later access to the MEK.
 
 The OCR provider chain should be:
 
@@ -183,60 +188,61 @@ Image preprocessing for Ollama should decode PNG/JPEG input, resize it so the la
 
 The Ollama provider should use the local HTTP API with streaming disabled. It can use `/api/chat` or `/api/generate`, with image bytes in the `images` field and a deterministic OCR prompt. Frozen Fortress should request `glm-ocr:q8_0` by default.
 
-## Async OCR Queue
+PDF extraction should keep using the existing PDF parser and should not call Ollama or Tesseract. The only change for PDFs is scheduling: text extraction is launched asynchronously in the same best-effort path used by image OCR.
 
-OCR jobs should be stored in SQLite, not Redis or memory. This keeps OCR work durable across restarts and makes migration simple because the queue state travels with the database.
+## Best-Effort OCR State
 
-Recommended model:
+OCR jobs should not be stored in SQLite, Redis, or any other durable queue. The only long-lived data should be:
 
-- A dedicated OCR job table for worker bookkeeping.
-- OCR status fields in or near document file metadata for user-facing state and search behavior.
+- The uploaded encrypted file.
+- Optional non-sensitive OCR status fields for user-facing state.
+- Encrypted extracted text after successful completion.
 
 Recommended statuses:
 
 | Status | Meaning |
 | --- | --- |
-| `pending` | OCR job exists and has not started |
-| `processing` | A worker has claimed the job |
+| `processing` | A best-effort OCR goroutine is running or was started |
 | `completed` | Extracted text was persisted |
 | `failed` | OCR failed after retry exhaustion |
 | `skipped` | OCR was intentionally not run |
 
-The worker should also track attempts, provider used, last error, and timestamps.
+The application may also track provider used, last error, and timestamps. These fields are operational metadata only; they must not be treated as a durable queue or a promise that OCR will resume after restart.
 
-## Worker Behavior
+## Async OCR Goroutine Behavior
 
-The OCR worker should follow the existing backup worker pattern: background loop, context cancellation, periodic checks, and clean shutdown.
+The upload flow should start a goroutine after the file is persisted and while the request still has access to the MEK-backed data protector. The goroutine should receive only the minimum data it needs, and it must not write plaintext file data or key material to durable storage.
 
-Worker loop:
+Goroutine flow:
 
-1. Claim a small batch of pending or retryable image OCR jobs atomically.
-2. Load the encrypted file data by file ID.
-3. Decrypt the file data using the appropriate user data protector context.
-4. Preprocess the image to max 640 pixels.
-5. Send the OCR request to Ollama.
-6. Fall back to Tesseract if Ollama is unavailable, times out, or fails in a usable way.
-7. Encrypt and persist extracted text, confidence, provider, and final status.
-8. Retry transient failures with bounded attempts.
-9. Mark final failures without deleting files.
+1. Mark OCR status as `processing` if status persistence is implemented.
+2. For PDFs, run the existing PDF text extraction code path.
+3. For images, preprocess the image to max 640 pixels and send the OCR request to Ollama.
+4. Fall back to Tesseract if Ollama is unavailable, times out, or fails in a usable way.
+5. Retry transient failures with bounded attempts and backoff while the goroutine is alive.
+6. Encrypt and persist extracted text, confidence, provider, and final status.
+7. Mark final failures without deleting files.
 
 Recommended controls:
 
 ```text
-FF_OCR_WORKER_CONCURRENCY=1
 FF_OCR_MAX_ATTEMPTS=3
+FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS=2
+FF_OCR_RETRY_MAX_BACKOFF_SECONDS=30
 FF_OCR_OLLAMA_TIMEOUT_SECONDS=300
 FF_OCR_OLLAMA_PULL_ON_START=true
 FF_OCR_OLLAMA_KEEP_ALIVE=5m
 ```
 
+Because OCR is not backed by a durable queue, concurrency control should be local process backpressure rather than worker scheduling. If needed, use a small in-process semaphore to limit concurrent OCR goroutines.
+
 ## Ollama Model Bootstrap
 
-Frozen Fortress should check Ollama availability on startup or worker startup. It can use `/api/version`, `/api/tags`, or both.
+Frozen Fortress should check Ollama availability on startup or before the first Ollama OCR attempt. It can use `/api/version`, `/api/tags`, or both.
 
 If `FF_OCR_OLLAMA_PULL_ON_START=true`, Frozen Fortress should request a pull for `glm-ocr:q8_0` through Ollama. Ollama handles download resume and SHA verification internally.
 
-If Ollama bootstrap fails and Tesseract fallback is available, startup should remain non-fatal. The application should log a clear warning, continue serving requests, and either fall back to Tesseract or retry Ollama later through queued OCR jobs.
+If Ollama bootstrap fails and Tesseract fallback is available, startup should remain non-fatal. The application should log a clear warning, continue serving requests, and use Tesseract fallback or in-goroutine retry/backoff for OCR attempts that happen while the volatile data protector is available.
 
 ## Documentation Updates Needed During Implementation
 
@@ -245,7 +251,8 @@ If Ollama bootstrap fails and Tesseract fallback is available, startup should re
 - Document self-signed certificate bootstrap behavior and drop-in existing certificate migration.
 - Document remote Ollama configuration for GPU devices.
 - Document binary-to-Docker migration with bind mount examples.
-- Document OCR status behavior so users understand queued and processing states.
+- Document best-effort OCR behavior so users understand that OCR may be missing after process shutdown, session loss, or retry exhaustion.
+- Document OCR status behavior so users understand processing, completed, failed, and skipped states.
 - Update `.env.example` with Docker, TLS, and OCR/Ollama variables.
 
 ## Verification Plan
@@ -263,12 +270,14 @@ Before release, verify:
 9. `/data/frozenfortress.db`, `/data/keys`, `/data/backups`, and `/data/certs` persist across restarts.
 10. Ollama pulls `glm-ocr:q8_0` into its own persistent volume.
 11. Image upload returns before OCR completion.
-12. OCR status moves from queued or processing to completed.
-13. Extracted OCR text is encrypted at rest and becomes searchable after completion.
-14. Stopping or breaking Ollama causes Tesseract fallback or a retryable job state.
-15. PDF upload and text extraction behavior remains unchanged.
-16. A copied binary-installation data directory works when mounted into `/data`.
-17. A remote Ollama endpoint works when `FF_OCR_OLLAMA_URL` points to another host.
+12. PDF upload returns before text extraction completion.
+13. OCR status moves from processing to completed or failed for both images and PDFs.
+14. Extracted OCR text is encrypted at rest and becomes searchable after completion.
+15. Stopping or breaking Ollama causes Tesseract fallback for images or failed status after retry exhaustion.
+16. Restarting the process does not resume unfinished OCR, and no durable OCR job remains.
+17. PDF text extraction behavior remains functionally unchanged except for async scheduling.
+18. A copied binary-installation data directory works when mounted into `/data`.
+19. A remote Ollama endpoint works when `FF_OCR_OLLAMA_URL` points to another host.
 
 ## Implementation Notes
 
@@ -278,5 +287,7 @@ Before release, verify:
 - Keep `webui`, Redis, and Ollama private in the dedicated Frozen Fortress Docker network.
 - Generate self-signed certificates only when no certificate/key pair exists.
 - Never overwrite dropped-in certificate files automatically.
+- Do not add a persisted OCR job queue while OCR requires volatile MEK-backed data protection.
+- Run both PDF text extraction and image OCR asynchronously through best-effort goroutines started during upload.
 - Avoid GPU-specific Frozen Fortress images for the first release; remote Ollama covers GPU deployments through configuration.
 - Preserve all existing environment variable overrides so current installations do not lose configurability.
