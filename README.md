@@ -530,5 +530,5 @@ We welcome contributions! Please feel free to submit issues, feature requests, o
 
 ------
 
-© 2025 Yetibyte
+© 2026 Yetibyte
 
