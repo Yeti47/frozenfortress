@@ -9,8 +9,11 @@ import (
 
 // createOCRService creates a NopOCRService when the notesseract build tag is present
 func createOCRService(config ccc.AppConfig, logger ccc.Logger) documents.OCRService {
-	return documents.NewNopOCRService(
-		config.OCR,
-		logger,
-	)
+	nop := documents.NewNopOCRService(config.OCR, logger)
+	switch config.OCR.Provider {
+	case "ollama", "ollama-tesseract":
+		return documents.NewFallbackOCRService(documents.NewOllamaOCRService(config.OCR, logger), nop, logger)
+	default:
+		return nop
+	}
 }

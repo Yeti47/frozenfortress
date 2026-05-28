@@ -121,6 +121,24 @@ type DocumentSearchEngine interface {
 	SearchDocuments(ctx context.Context, userId string, request DocumentSearchRequest, dataProtector dataprotection.DataProtector) (*PaginatedDocumentSearchResponse, error)
 }
 
+type OCRDispatchRequest struct {
+	DocumentFileId string
+	ContentType    string
+	FileData       []byte
+	Processor      DocumentFileProcessor
+	DataProtector  dataprotection.DataProtector
+	StartedAt      time.Time
+}
+
+type OCRDispatcher interface {
+	Enqueue(request OCRDispatchRequest)
+	Dispatch()
+}
+
+type OCRDispatcherFactory interface {
+	Create() OCRDispatcher
+}
+
 // DocumentFileCreator is a domain service that handles the complete file creation workflow
 // This ensures consistent behavior between DocumentManager.CreateDocument and DocumentFileManager.AddDocumentFile
 type DocumentFileCreator interface {
@@ -130,12 +148,13 @@ type DocumentFileCreator interface {
 	// - Text extraction (OCR) if applicable
 	// - Preview generation if applicable
 	// - Database persistence
-	// This method operates within the provided UOW transaction scope to ensure atomicity
+	// This method operates within the provided UOW transaction scope to ensure atomicity.
 	CreateDocumentFile(
 		ctx context.Context,
 		uow DocumentUnitOfWork,
 		request CreateFileRequest,
 		dataProtector dataprotection.DataProtector,
+		ocrDispatcher OCRDispatcher,
 	) (*DocumentFile, *DocumentFileMetadata, error)
 
 	// ValidateFileRequest performs basic validation on file request data

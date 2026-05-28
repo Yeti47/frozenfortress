@@ -12,11 +12,12 @@ import (
 
 // DefaultDocumentManager implements DocumentManager interface
 type DefaultDocumentManager struct {
-	uowFactory    DocumentUnitOfWorkFactory
-	documentIdGen DocumentIdGenerator
-	fileCreator   DocumentFileCreator
-	logger        ccc.Logger
-	sorter        DocumentSorter[*DocumentDetails]
+	uowFactory           DocumentUnitOfWorkFactory
+	documentIdGen        DocumentIdGenerator
+	fileCreator          DocumentFileCreator
+	ocrDispatcherFactory OCRDispatcherFactory
+	logger               ccc.Logger
+	sorter               DocumentSorter[*DocumentDetails]
 }
 
 // NewDefaultDocumentManager creates a new DefaultDocumentManager instance
@@ -24,6 +25,7 @@ func NewDefaultDocumentManager(
 	uowFactory DocumentUnitOfWorkFactory,
 	documentIdGen DocumentIdGenerator,
 	fileCreator DocumentFileCreator,
+	ocrDispatcherFactory OCRDispatcherFactory,
 	logger ccc.Logger,
 	sorter DocumentSorter[*DocumentDetails],
 ) *DefaultDocumentManager {
@@ -32,11 +34,12 @@ func NewDefaultDocumentManager(
 	}
 
 	return &DefaultDocumentManager{
-		uowFactory:    uowFactory,
-		documentIdGen: documentIdGen,
-		fileCreator:   fileCreator,
-		logger:        logger,
-		sorter:        sorter,
+		uowFactory:           uowFactory,
+		documentIdGen:        documentIdGen,
+		fileCreator:          fileCreator,
+		ocrDispatcherFactory: ocrDispatcherFactory,
+		logger:               logger,
+		sorter:               sorter,
 	}
 }
 
@@ -79,6 +82,7 @@ func (m *DefaultDocumentManager) CreateDocument(
 	}
 
 	uow := m.uowFactory.Create()
+	ocrDispatcher := m.ocrDispatcherFactory.Create()
 	err = uow.Execute(ctx, func(uow DocumentUnitOfWork) error {
 		// Add the document
 		if err := uow.DocumentRepo().Add(ctx, document); err != nil {
@@ -115,7 +119,7 @@ func (m *DefaultDocumentManager) CreateDocument(
 					FileData:    fileRequest.FileData,
 				}
 
-				_, _, err := m.fileCreator.CreateDocumentFile(ctx, uow, createFileReq, dataProtector)
+				_, _, err := m.fileCreator.CreateDocumentFile(ctx, uow, createFileReq, dataProtector, ocrDispatcher)
 				if err != nil {
 					return ccc.NewDatabaseError("failed to create document file", err)
 				}
@@ -128,6 +132,7 @@ func (m *DefaultDocumentManager) CreateDocument(
 	if err != nil {
 		return nil, err
 	}
+	ocrDispatcher.Dispatch()
 
 	// Return the document creation response
 	return &CreateDocumentResponse{

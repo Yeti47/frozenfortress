@@ -124,6 +124,8 @@ type DocumentFileDto struct {
 	PageCount     int
 	ExtractedText string // Decrypted, if available
 	Confidence    float32
+	OcrStatus     string
+	OcrError      string
 	FileData      []byte // Decrypted, only when explicitly requested
 	CreatedAt     time.Time
 	ModifiedAt    time.Time
@@ -140,6 +142,8 @@ type DocumentFilePreviewDto struct {
 	PageCount     int
 	ExtractedText string // Decrypted, if available
 	Confidence    float32
+	OcrStatus     string
+	OcrError      string
 	Preview       *DocumentPreviewDto // Preview/thumbnail data, if available
 	CreatedAt     time.Time
 	ModifiedAt    time.Time

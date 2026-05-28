@@ -562,6 +562,7 @@
             border: 1px solid #e1e8ed;
             border-radius: 8px;
             overflow: hidden;
+            position: relative;
         }
 
         .extracted-text {
@@ -614,6 +615,37 @@
         .no-text-message p {
             margin: 0;
             font-style: italic;
+        }
+
+        .ocr-pending-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 200px;
+            padding: 24px;
+            text-align: center;
+            color: #2c3e50;
+            background: rgba(248, 249, 250, 0.92);
+            backdrop-filter: blur(2px);
+        }
+
+        .ocr-pending-overlay .material-icons {
+            font-size: 36px;
+            color: #2f5f9e;
+        }
+
+        .ocr-pending-overlay strong {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .ocr-pending-overlay p {
+            margin: 0;
+            color: #5a6c7d;
         }
 
         @media (max-width: 768px) {
@@ -851,6 +883,27 @@
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 14px;
+        }
+
+        .ocr-status-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #eef4ff;
+            color: #2f5f9e;
+        }
+
+        .ocr-status-pill.completed {
+            background: #e8f7ef;
+            color: #247346;
+        }
+
+        .ocr-status-pill.failed {
+            background: #fdecec;
+            color: #b13a31;
         }
 
         .extracted-text {
@@ -1645,6 +1698,10 @@
             
             // Format file size
             const sizeFormatted = formatFileSize(file.FileSize);
+            const ocrStatus = (file.OcrStatus || '').toLowerCase();
+            const ocrStatusLabel = ocrStatus ? ocrStatus.charAt(0).toUpperCase() + ocrStatus.slice(1) : 'Not started';
+            const hasExtractedText = file.ExtractedText && file.ExtractedText.trim();
+            const showConfidence = ocrStatus === 'completed' && file.Confidence !== undefined;
             
             // Calculate confidence percentage
             const confidencePercent = Math.round((file.Confidence || 0) * 100);
@@ -1687,11 +1744,19 @@
             `;
             
             // Populate the Extracted Text tab
-            if (file.ExtractedText && file.ExtractedText.trim() || file.Confidence !== undefined) {
+            if (ocrStatus || hasExtractedText || file.Confidence !== undefined) {
                 textContent.innerHTML = `
                 <div class="metadata-section">
                     <h3><span class="material-icons">text_fields</span>Extracted Text</h3>
-                    ${file.Confidence !== undefined ? `
+                    <div class="metadata-grid" style="margin-bottom: 15px;">
+                        <div class="metadata-label">Status:</div>
+                        <div class="metadata-value"><span class="ocr-status-pill ${ocrStatus}">${ocrStatusLabel}</span></div>
+                        ${file.OcrError ? `
+                        <div class="metadata-label">Error:</div>
+                        <div class="metadata-value">${file.OcrError}</div>
+                        ` : ''}
+                    </div>
+                    ${showConfidence ? `
                     <div class="metadata-grid" style="margin-bottom: 15px;">
                         <div class="metadata-label">Confidence:</div>
                         <div class="metadata-value">
@@ -1702,7 +1767,16 @@
                         </div>
                     </div>
                     ` : ''}
-                    ${file.ExtractedText && file.ExtractedText.trim() ? `
+                    ${ocrStatus === 'processing' ? `
+                    <div class="extracted-text-container">
+                        <div class="extracted-text" aria-hidden="true"></div>
+                        <div class="ocr-pending-overlay" role="status" aria-live="polite">
+                            <span class="material-icons">hourglass_empty</span>
+                            <strong>OCR is still in progress.</strong>
+                            <p>Check back later to view extracted text.</p>
+                        </div>
+                    </div>
+                    ` : hasExtractedText ? `
                     <div class="extracted-text-container">
                         <div class="extracted-text">${file.ExtractedText}</div>
                     </div>

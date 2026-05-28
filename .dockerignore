@@ -1,0 +1,9 @@
+.git
+bin
+releases
+webui/__debug_bin*
+*.db
+*.db-*
+frozenfortress-config.sh
+frozenfortress-config.bat
+docker-data

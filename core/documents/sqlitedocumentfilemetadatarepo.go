@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	_ "github.com/mattn/go-sqlite3"
@@ -16,7 +17,7 @@ type SQLiteDocumentFileMetadataRepository struct {
 
 const (
 	// Field list for DocumentFileMetadata table queries
-	documentFileMetadataFieldList = `DocumentFileId, ExtractedText, OcrConfidence`
+	documentFileMetadataFieldList = `DocumentFileId, ExtractedText, OcrConfidence, OcrStatus, OcrError, OcrStartedAt, OcrCompletedAt`
 )
 
 // newSQLiteDocumentFileMetadataRepository creates a new SQLiteDocumentFileMetadataRepository instance.
@@ -39,11 +40,35 @@ func (r *SQLiteDocumentFileMetadataRepository) initializeTable(db *sql.DB) error
 	CREATE TABLE IF NOT EXISTS DocumentFileMetadata (
 		DocumentFileId TEXT PRIMARY KEY,
 		ExtractedText TEXT,
-		OcrConfidence REAL DEFAULT 0.0
+		OcrConfidence REAL DEFAULT 0.0,
+		OcrStatus TEXT DEFAULT '',
+		OcrError TEXT DEFAULT '',
+		OcrStartedAt TIMESTAMP,
+		OcrCompletedAt TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_documentfilemetadata_confidence ON DocumentFileMetadata(OcrConfidence);
+	CREATE INDEX IF NOT EXISTS idx_documentfilemetadata_status ON DocumentFileMetadata(OcrStatus);
 	`
 	_, err := db.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	for _, migration := range []string{
+		`ALTER TABLE DocumentFileMetadata ADD COLUMN OcrStatus TEXT DEFAULT ''`,
+		`ALTER TABLE DocumentFileMetadata ADD COLUMN OcrError TEXT DEFAULT ''`,
+		`ALTER TABLE DocumentFileMetadata ADD COLUMN OcrStartedAt TIMESTAMP`,
+		`ALTER TABLE DocumentFileMetadata ADD COLUMN OcrCompletedAt TIMESTAMP`,
+	} {
+		_, _ = db.Exec(migration)
+	}
+
+	_, err = db.Exec(`
+		UPDATE DocumentFileMetadata
+		SET OcrStatus = ?
+		WHERE COALESCE(OcrStatus, '') = ''
+		  AND COALESCE(ExtractedText, '') <> ''
+	`, OcrStatusCompleted)
 	if err != nil {
 		return err
 	}
@@ -71,7 +96,7 @@ func (r *SQLiteDocumentFileMetadataRepository) FindByDocumentFileId(ctx context.
 // FindByDocumentId finds all metadata for files in a document.
 func (r *SQLiteDocumentFileMetadataRepository) FindByDocumentId(ctx context.Context, documentId string) ([]*DocumentFileMetadata, error) {
 	query := `
-	SELECT dfm.DocumentFileId, dfm.ExtractedText, dfm.OcrConfidence 
+	SELECT ` + documentFileMetadataFieldList + `
 	FROM DocumentFileMetadata dfm
 	INNER JOIN DocumentFile df ON dfm.DocumentFileId = df.Id
 	WHERE df.DocumentId = ?
@@ -96,26 +121,40 @@ func (r *SQLiteDocumentFileMetadataRepository) FindByDocumentId(ctx context.Cont
 
 // Add adds new document file metadata.
 func (r *SQLiteDocumentFileMetadataRepository) Add(ctx context.Context, metadata *DocumentFileMetadata) error {
-	query := `INSERT INTO DocumentFileMetadata (` + documentFileMetadataFieldList + `) VALUES (?, ?, ?)`
+	query := `INSERT INTO DocumentFileMetadata (` + documentFileMetadataFieldList + `) VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	_, err := r.db.ExecContext(ctx, query,
 		metadata.DocumentFileId,
 		metadata.ExtractedText,
 		metadata.OcrConfidence,
+		metadata.OcrStatus,
+		metadata.OcrError,
+		formatOptionalSQLiteTimestamp(metadata.OcrStartedAt),
+		formatOptionalSQLiteTimestamp(metadata.OcrCompletedAt),
 	)
 	return err
 }
 
 // Update updates existing document file metadata.
 func (r *SQLiteDocumentFileMetadataRepository) Update(ctx context.Context, metadata *DocumentFileMetadata) error {
-	query := `UPDATE DocumentFileMetadata SET ExtractedText = ?, OcrConfidence = ? WHERE DocumentFileId = ?`
+	query := `UPDATE DocumentFileMetadata SET ExtractedText = ?, OcrConfidence = ?, OcrStatus = ?, OcrError = ?, OcrStartedAt = ?, OcrCompletedAt = ? WHERE DocumentFileId = ?`
 
-	_, err := r.db.ExecContext(ctx, query,
+	result, err := r.db.ExecContext(ctx, query,
 		metadata.ExtractedText,
 		metadata.OcrConfidence,
+		metadata.OcrStatus,
+		metadata.OcrError,
+		formatOptionalSQLiteTimestamp(metadata.OcrStartedAt),
+		formatOptionalSQLiteTimestamp(metadata.OcrCompletedAt),
 		metadata.DocumentFileId,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	if rowsAffected, err := result.RowsAffected(); err == nil && rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 // Delete deletes document file metadata by file ID.
@@ -161,7 +200,11 @@ func (r *SQLiteDocumentFileMetadataRepository) FindExtended(ctx context.Context,
 		f.CreatedAt,
 		f.ModifiedAt,
 		COALESCE(m.ExtractedText, '') AS ExtractedText,
-		COALESCE(m.OcrConfidence, 0.0) AS OcrConfidence
+		COALESCE(m.OcrConfidence, 0.0) AS OcrConfidence,
+		COALESCE(m.OcrStatus, '') AS OcrStatus,
+		COALESCE(m.OcrError, '') AS OcrError,
+		m.OcrStartedAt,
+		m.OcrCompletedAt
 	FROM DocumentFile f
 	LEFT JOIN DocumentFileMetadata m ON f.Id = m.DocumentFileId
 	WHERE f.DocumentId IN (` + strings.Join(placeholders, ",") + `)
@@ -194,11 +237,16 @@ func (r *SQLiteDocumentFileMetadataRepository) FindExtended(ctx context.Context,
 // scanDocumentFileMetadata scans a database row into a DocumentFileMetadata struct.
 func scanDocumentFileMetadata(scanner ccc.RowScanner) (*DocumentFileMetadata, error) {
 	meta := &DocumentFileMetadata{}
+	var startedAt, completedAt sql.NullString
 
 	err := scanner.Scan(
 		&meta.DocumentFileId,
 		&meta.ExtractedText,
 		&meta.OcrConfidence,
+		&meta.OcrStatus,
+		&meta.OcrError,
+		&startedAt,
+		&completedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -207,6 +255,8 @@ func scanDocumentFileMetadata(scanner ccc.RowScanner) (*DocumentFileMetadata, er
 	if err != nil {
 		return nil, err
 	}
+	meta.OcrStartedAt = parseOptionalSQLiteTimestamp(startedAt)
+	meta.OcrCompletedAt = parseOptionalSQLiteTimestamp(completedAt)
 
 	return meta, nil
 }
@@ -214,6 +264,7 @@ func scanDocumentFileMetadata(scanner ccc.RowScanner) (*DocumentFileMetadata, er
 // scanExtendedDocumentFileMetadata scans a database row into an ExtendedDocumentFileMetadata struct.
 func scanExtendedDocumentFileMetadata(scanner ccc.RowScanner) (*ExtendedDocumentFileMetadata, error) {
 	extended := &ExtendedDocumentFileMetadata{}
+	var startedAt, completedAt sql.NullString
 
 	err := scanner.Scan(
 		&extended.DocumentFileId,
@@ -226,6 +277,10 @@ func scanExtendedDocumentFileMetadata(scanner ccc.RowScanner) (*ExtendedDocument
 		&extended.ModifiedAt,
 		&extended.ExtractedText,
 		&extended.OcrConfidence,
+		&extended.OcrStatus,
+		&extended.OcrError,
+		&startedAt,
+		&completedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -234,6 +289,26 @@ func scanExtendedDocumentFileMetadata(scanner ccc.RowScanner) (*ExtendedDocument
 	if err != nil {
 		return nil, err
 	}
+	extended.OcrStartedAt = parseOptionalSQLiteTimestamp(startedAt)
+	extended.OcrCompletedAt = parseOptionalSQLiteTimestamp(completedAt)
 
 	return extended, nil
+}
+
+func formatOptionalSQLiteTimestamp(value *time.Time) any {
+	if value == nil {
+		return nil
+	}
+	return ccc.FormatSQLiteTimestamp(*value)
+}
+
+func parseOptionalSQLiteTimestamp(value sql.NullString) *time.Time {
+	if !value.Valid || value.String == "" {
+		return nil
+	}
+	parsed, err := ccc.ParseSQLiteTimestamp(value.String)
+	if err != nil {
+		return nil
+	}
+	return &parsed
 }

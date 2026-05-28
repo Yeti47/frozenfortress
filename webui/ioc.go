@@ -119,17 +119,18 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 	imageProcessor := documents.NewImageFileProcessor(ocrService)
 	processorFactory := documents.NewDefaultDocumentFileProcessorFactory(pdfProcessor, imageProcessor)
 
-	// Create document file creator
+	// Create document file creator and OCR dispatcher factory
 	fileCreator := documents.NewDefaultDocumentFileCreator(idGenerator, processorFactory, logger)
+	ocrDispatcherFactory := documents.NewDefaultOCRDispatcherFactory(uowFactory, config.OCR, logger)
 
 	// Create document sorter
 	documentSorter := documents.NewDefaultDocumentSorter[*documents.DocumentDetails]()
 
 	// Create document manager
-	documentManager := documents.NewDefaultDocumentManager(uowFactory, idGenerator, fileCreator, logger, documentSorter)
+	documentManager := documents.NewDefaultDocumentManager(uowFactory, idGenerator, fileCreator, ocrDispatcherFactory, logger, documentSorter)
 
 	// Create document file manager
-	documentFileManager := documents.NewDefaultDocumentFileManager(uowFactory, fileCreator, logger)
+	documentFileManager := documents.NewDefaultDocumentFileManager(uowFactory, fileCreator, ocrDispatcherFactory, logger)
 
 	// Create document search engine
 	searchSorter := documents.NewSearchDocumentSorter()

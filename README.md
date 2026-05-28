@@ -15,7 +15,7 @@ Frozen Fortress is designed to help individuals and small teams manage their sen
 - **Web Interface**: Modern web UI for easy interaction
 - **CLI Tools**: Command-line interface for administrative tasks
 - **Backup System**: Automated backup functionality to protect your data
-- **OCR Support**: Text extraction from images and PDFs using Tesseract
+- **OCR Support**: Best-effort asynchronous text extraction from images and PDFs using Ollama, with optional Tesseract fallback for local builds
 
 ## 🏗️ Architecture & Tech Stack
 
@@ -33,7 +33,7 @@ Frozen Fortress is built with **simplicity and pragmatism** as core driving prin
 - **Session Storage**: Redis (required for session management)
 - **Web Framework**: Gin (HTTP web framework)
 - **CLI Framework**: Cobra (command-line interface)
-- **OCR**: Tesseract (optical character recognition)
+- **OCR**: Ollama `glm-ocr:q8_0` for image OCR, PDF text extraction in-process, optional Tesseract fallback for local builds
 - **Authentication**: Session-based with secure cookies
 - **Encryption**: Built-in encryption services for data protection
 
@@ -62,10 +62,33 @@ frozenfortress/
 
 ### Prerequisites
 
+- **Docker** and **Docker Compose** for the recommended Docker-native deployment
 - **Go 1.24.3** or higher
 - **SQLite** (usually included with Go)
 - **Redis** (required for session storage)
-- **Tesseract OCR** (optional, for document text extraction)
+- **Tesseract OCR** (optional fallback for local non-Docker document text extraction)
+
+### Docker Native Quick Start
+
+Frozen Fortress is moving to a Docker-first deployment model. The compose stack starts nginx, the WebUI, Redis, and a focused Ollama container on a dedicated Docker network. Only nginx publishes a host port by default.
+
+```bash
+docker compose up -d
+```
+
+The WebUI is available at `https://127.0.0.1:8443` with a self-signed certificate unless you configure `FF_HTTPS_PORT` differently.
+
+TLS certificates are managed by the nginx container:
+
+- If `/data/certs/frozenfortress.crt` and `/data/certs/frozenfortress.key` both exist, they are used unchanged.
+- If neither exists, nginx generates a self-signed certificate on startup.
+- If only one file exists, startup fails so a partial certificate pair is not used accidentally.
+
+To use an external Ollama host instead of the bundled container, set `FF_OCR_OLLAMA_URL`, for example:
+
+```bash
+FF_OCR_OLLAMA_URL=http://gpu-host:11434 docker compose up -d
+```
 
 ### Development Environment Setup
 
@@ -173,7 +196,17 @@ Frozen Fortress uses environment variables for configuration. All available vari
 | `FF_BACKUP_DIRECTORY` | Directory where backup files are stored | `~/.config/frozenfortress/backups` |
 | `FF_BACKUP_MAX_GENERATIONS` | Maximum number of backup files to keep | `10` |
 | `FF_OCR_ENABLED` | Enable OCR functionality | `true` |
+| `FF_OCR_PROVIDER` | OCR provider mode: `ollama-tesseract`, `ollama`, `tesseract`, `nop` | `ollama-tesseract` |
 | `FF_OCR_LANGUAGES` | OCR languages (comma-separated, e.g., "eng,deu") | `eng` |
+| `FF_OCR_OLLAMA_URL` | Ollama API base URL | `http://ollama:11434` |
+| `FF_OCR_OLLAMA_MODEL` | Ollama OCR model | `glm-ocr:q8_0` |
+| `FF_OCR_OLLAMA_PULL_ON_START` | Pull the Ollama model before first OCR use | `true` |
+| `FF_OCR_OLLAMA_KEEP_ALIVE` | Ollama model keep-alive value | `5m` |
+| `FF_OCR_OLLAMA_TIMEOUT_SECONDS` | Ollama OCR request timeout | `300` |
+| `FF_OCR_IMAGE_MAX_DIMENSION` | Maximum image width/height sent to Ollama | `640` |
+| `FF_OCR_MAX_ATTEMPTS` | Maximum best-effort OCR attempts per upload | `3` |
+| `FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS` | Initial async OCR retry backoff | `2` |
+| `FF_OCR_RETRY_MAX_BACKOFF_SECONDS` | Maximum async OCR retry backoff | `30` |
 
 **Note:** When `FF_KEY_DIR` is empty (default), the system automatically uses OS-specific user data directories:
 - **Linux**: `$XDG_CONFIG_HOME/frozenfortress` or `~/.config/frozenfortress`
@@ -248,7 +281,7 @@ Alternatively, administrators can create users directly via the CLI without requ
 
 ## 🌐 Deployment & Security Considerations
 
-Frozen Fortress is specifically designed for **local self-hosting** environments. The application architecture prioritizes simplicity and ease of deployment while maintaining security best practices.
+Frozen Fortress is specifically designed for **local self-hosting** environments. The Docker-native stack is the recommended deployment path and includes nginx TLS termination, Redis, WebUI, and Ollama on a dedicated Docker network.
 
 ### Network Security
 - **HTTP by Design**: The Go application runs on plain HTTP and does not include built-in HTTPS support
@@ -259,6 +292,8 @@ Frozen Fortress is specifically designed for **local self-hosting** environments
 ```
 Local Network → nginx (HTTPS) → Frozen Fortress WebUI (HTTP)
 ```
+
+The included `compose.yaml` implements this layout. The Go WebUI and Redis/Ollama services are private to the `frozenfortress` Docker network; nginx binds `127.0.0.1:8443` by default.
 
 ### Example nginx Configuration
 ```nginx

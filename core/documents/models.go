@@ -2,6 +2,13 @@ package documents
 
 import "time"
 
+const (
+	OcrStatusProcessing = "processing"
+	OcrStatusCompleted  = "completed"
+	OcrStatusFailed     = "failed"
+	OcrStatusSkipped    = "skipped"
+)
+
 type Document struct {
 	Id          string
 	UserId      string
@@ -27,6 +34,10 @@ type DocumentFileMetadata struct {
 	DocumentFileId string
 	ExtractedText  string // Encrypted extracted text
 	OcrConfidence  float32
+	OcrStatus      string
+	OcrError       string
+	OcrStartedAt   *time.Time
+	OcrCompletedAt *time.Time
 }
 
 type Tag struct {
@@ -75,6 +86,10 @@ type ExtendedDocumentFileMetadata struct {
 	ModifiedAt     time.Time
 	ExtractedText  string // Encrypted extracted text
 	OcrConfidence  float32
+	OcrStatus      string
+	OcrError       string
+	OcrStartedAt   *time.Time
+	OcrCompletedAt *time.Time
 }
 
 // DocumentFileDetails combines DocumentFile with its optional metadata

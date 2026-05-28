@@ -208,12 +208,89 @@ func runSetup(readOnly bool) error {
 			Validation:   validateBool,
 		},
 		{
+			EnvVar:       ccc.EnvOCRProvider,
+			Description:  "OCR provider mode (ollama-tesseract, ollama, tesseract, nop)",
+			CurrentValue: currentConfig.OCR.Provider,
+			DefaultValue: defaultConfig.OCR.Provider,
+			Type:         "string",
+			Validation:   validateOCRProvider,
+		},
+		{
 			EnvVar:       ccc.EnvOCRLanguages,
 			Description:  "OCR languages (comma-separated, e.g., 'eng,deu' for English and German)",
 			CurrentValue: strings.Join(currentConfig.OCR.Languages, ","),
 			DefaultValue: strings.Join(defaultConfig.OCR.Languages, ","),
 			Type:         "string",
 			Validation:   validateOCRLanguages,
+		},
+		{
+			EnvVar:       ccc.EnvOCROllamaURL,
+			Description:  "Ollama API URL for OCR",
+			CurrentValue: currentConfig.OCR.OllamaURL,
+			DefaultValue: defaultConfig.OCR.OllamaURL,
+			Type:         "string",
+		},
+		{
+			EnvVar:       ccc.EnvOCROllamaModel,
+			Description:  "Ollama OCR model name",
+			CurrentValue: currentConfig.OCR.OllamaModel,
+			DefaultValue: defaultConfig.OCR.OllamaModel,
+			Type:         "string",
+		},
+		{
+			EnvVar:       ccc.EnvOCROllamaPullOnStart,
+			Description:  "Pull the Ollama OCR model before first OCR use (true/false)",
+			CurrentValue: strconv.FormatBool(currentConfig.OCR.OllamaPullOnStart),
+			DefaultValue: strconv.FormatBool(defaultConfig.OCR.OllamaPullOnStart),
+			Type:         "bool",
+			Validation:   validateBool,
+		},
+		{
+			EnvVar:       ccc.EnvOCROllamaKeepAlive,
+			Description:  "Ollama keep_alive value for OCR model",
+			CurrentValue: currentConfig.OCR.OllamaKeepAlive,
+			DefaultValue: defaultConfig.OCR.OllamaKeepAlive,
+			Type:         "string",
+		},
+		{
+			EnvVar:       ccc.EnvOCROllamaTimeout,
+			Description:  "Ollama OCR request timeout in seconds",
+			CurrentValue: strconv.Itoa(currentConfig.OCR.OllamaTimeoutSeconds),
+			DefaultValue: strconv.Itoa(defaultConfig.OCR.OllamaTimeoutSeconds),
+			Type:         "int",
+			Validation:   validatePositiveInt,
+		},
+		{
+			EnvVar:       ccc.EnvOCRMaxAttempts,
+			Description:  "Maximum async OCR attempts per upload",
+			CurrentValue: strconv.Itoa(currentConfig.OCR.MaxAttempts),
+			DefaultValue: strconv.Itoa(defaultConfig.OCR.MaxAttempts),
+			Type:         "int",
+			Validation:   validatePositiveInt,
+		},
+		{
+			EnvVar:       ccc.EnvOCRRetryInitial,
+			Description:  "Initial OCR retry backoff in seconds",
+			CurrentValue: strconv.Itoa(currentConfig.OCR.RetryInitialBackoffSeconds),
+			DefaultValue: strconv.Itoa(defaultConfig.OCR.RetryInitialBackoffSeconds),
+			Type:         "int",
+			Validation:   validatePositiveInt,
+		},
+		{
+			EnvVar:       ccc.EnvOCRRetryMax,
+			Description:  "Maximum OCR retry backoff in seconds",
+			CurrentValue: strconv.Itoa(currentConfig.OCR.RetryMaxBackoffSeconds),
+			DefaultValue: strconv.Itoa(defaultConfig.OCR.RetryMaxBackoffSeconds),
+			Type:         "int",
+			Validation:   validatePositiveInt,
+		},
+		{
+			EnvVar:       ccc.EnvOCRImageMaxDimension,
+			Description:  "Maximum image width/height sent to Ollama OCR",
+			CurrentValue: strconv.Itoa(currentConfig.OCR.ImageMaxDimension),
+			DefaultValue: strconv.Itoa(defaultConfig.OCR.ImageMaxDimension),
+			Type:         "int",
+			Validation:   validatePositiveInt,
 		},
 	}
 
@@ -538,6 +615,15 @@ func validateOCRLanguages(value string) (string, error) {
 	}
 
 	return strings.Join(validatedLanguages, ","), nil
+}
+
+func validateOCRProvider(value string) (string, error) {
+	provider := strings.ToLower(strings.TrimSpace(value))
+	validProviders := []string{"ollama-tesseract", "ollama", "tesseract", "nop"}
+	if slices.Contains(validProviders, provider) {
+		return provider, nil
+	}
+	return "", fmt.Errorf("invalid OCR provider: %s (valid: %s)", value, strings.Join(validProviders, ", "))
 }
 
 func init() {

@@ -1,0 +1,89 @@
+name: frozenfortress
+
+services:
+  nginx:
+    build:
+      context: ./docker/nginx
+    depends_on:
+      - webui
+    environment:
+      FF_TLS_CERT_PATH: /data/certs/frozenfortress.crt
+      FF_TLS_KEY_PATH: /data/certs/frozenfortress.key
+      FF_TLS_COMMON_NAME: ${FF_TLS_COMMON_NAME:-frozenfortress.local}
+      FF_TLS_HOSTS: ${FF_TLS_HOSTS:-localhost,frozenfortress.local}
+    ports:
+      - "127.0.0.1:${FF_HTTPS_PORT:-8443}:8443"
+    volumes:
+      - frozenfortress-certs:/data/certs
+    networks:
+      - frozenfortress
+    restart: unless-stopped
+
+  webui:
+    build:
+      context: .
+    depends_on:
+      - redis
+      - ollama
+    environment:
+      FF_DATABASE_PATH: /data/frozenfortress.db
+      FF_KEY_DIR: /data/keys
+      FF_BACKUP_DIRECTORY: /data/backups
+      FF_REDIS_ADDRESS: redis:6379
+      FF_WEB_UI_PORT: 8080
+      FF_LOG_LEVEL: ${FF_LOG_LEVEL:-Info}
+      FF_BACKUP_ENABLED: ${FF_BACKUP_ENABLED:-false}
+      FF_OCR_ENABLED: ${FF_OCR_ENABLED:-true}
+      FF_OCR_PROVIDER: ${FF_OCR_PROVIDER:-ollama-tesseract}
+      FF_OCR_OLLAMA_URL: ${FF_OCR_OLLAMA_URL:-http://ollama:11434}
+      FF_OCR_OLLAMA_MODEL: ${FF_OCR_OLLAMA_MODEL:-glm-ocr:q8_0}
+      FF_OCR_OLLAMA_PULL_ON_START: ${FF_OCR_OLLAMA_PULL_ON_START:-true}
+      FF_OCR_OLLAMA_KEEP_ALIVE: ${FF_OCR_OLLAMA_KEEP_ALIVE:-5m}
+      FF_OCR_OLLAMA_TIMEOUT_SECONDS: ${FF_OCR_OLLAMA_TIMEOUT_SECONDS:-300}
+      FF_OCR_IMAGE_MAX_DIMENSION: ${FF_OCR_IMAGE_MAX_DIMENSION:-640}
+      FF_OCR_MAX_ATTEMPTS: ${FF_OCR_MAX_ATTEMPTS:-3}
+      FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS: ${FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS:-2}
+      FF_OCR_RETRY_MAX_BACKOFF_SECONDS: ${FF_OCR_RETRY_MAX_BACKOFF_SECONDS:-30}
+    expose:
+      - "8080"
+    volumes:
+      - frozenfortress-data:/data
+    networks:
+      - frozenfortress
+    restart: unless-stopped
+
+  redis:
+    # redis:7.4.2-alpine
+    image: redis@sha256:02419de7eddf55aa5bcf49efb74e88fa8d931b4d77c07eff8a6b2144472b6952
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    user: "999:1000"
+    expose:
+      - "6379"
+    networks:
+      - frozenfortress
+    restart: unless-stopped
+
+  ollama:
+    build:
+      context: ./docker/ollama
+    environment:
+      HOME: /home/ollama
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_MODELS: /models
+    expose:
+      - "11434"
+    volumes:
+      - frozenfortress-ollama:/models
+    networks:
+      - frozenfortress
+    restart: unless-stopped
+
+networks:
+  frozenfortress:
+    name: frozenfortress
+    driver: bridge
+
+volumes:
+  frozenfortress-data:
+  frozenfortress-certs:
+  frozenfortress-ollama:

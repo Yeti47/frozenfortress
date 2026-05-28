@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -40,6 +41,7 @@ func (c *DefaultDocumentFileCreator) CreateDocumentFile(
 	uow DocumentUnitOfWork,
 	request CreateFileRequest,
 	dataProtector dataprotection.DataProtector,
+	ocrDispatcher OCRDispatcher,
 ) (*DocumentFile, *DocumentFileMetadata, error) {
 	// Validate the request
 	if err := c.ValidateFileRequest(request); err != nil {
@@ -82,7 +84,7 @@ func (c *DefaultDocumentFileCreator) CreateDocumentFile(
 		FileName:    encryptedFileName,
 		ContentType: request.ContentType,
 		FileSize:    int64(len(request.FileData)),
-		PageCount:   0, // Will be set by processor if applicable
+		PageCount:   initialPageCount(request.ContentType),
 		FileData:    []byte(encryptedFileData),
 		CreatedAt:   now,
 		ModifiedAt:  now,
@@ -92,15 +94,6 @@ func (c *DefaultDocumentFileCreator) CreateDocumentFile(
 	processor, err := c.docProcessorFactory.GetProcessor(request.ContentType)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get processor for content type %s: %w", request.ContentType, err)
-	}
-
-	// Extract text and get page count in a single call
-	extractedText, confidence, pageCount, err := processor.ExtractText(ctx, request.FileData)
-	if err != nil {
-		c.logger.Warn("Failed to process file for text extraction", "error", err, "fileId", fileId, "contentType", request.ContentType)
-		// Continue without processing result - not critical for file creation
-	} else {
-		documentFile.PageCount = pageCount
 	}
 
 	// Generate preview if the processor supports it
@@ -149,33 +142,37 @@ func (c *DefaultDocumentFileCreator) CreateDocumentFile(
 		}
 	}
 
-	// Handle text extraction metadata
-	var documentFileMetadata *DocumentFileMetadata
-	if extractedText != "" {
-		// Encrypt extracted text
-		encryptedText, err := dataProtector.Protect(extractedText)
-		if err != nil {
-			c.logger.Error("Failed to encrypt extracted text", "error", err, "fileId", fileId)
-			// Continue without storing text extraction result
-		} else {
-			documentFileMetadata = &DocumentFileMetadata{
-				DocumentFileId: fileId,
-				ExtractedText:  encryptedText,
-				OcrConfidence:  confidence,
-			}
+	startedAt := time.Now()
+	documentFileMetadata := &DocumentFileMetadata{
+		DocumentFileId: fileId,
+		OcrStatus:      OcrStatusProcessing,
+		OcrStartedAt:   &startedAt,
+	}
+	if err := uow.DocumentFileMetadataRepo().Add(ctx, documentFileMetadata); err != nil {
+		return nil, nil, ccc.NewDatabaseError("failed to add document file metadata", err)
+	}
 
-			// Persist metadata
-			if err := uow.DocumentFileMetadataRepo().Add(ctx, documentFileMetadata); err != nil {
-				c.logger.Error("Failed to add document file metadata", "error", err, "fileId", fileId)
-				// Return error since metadata persistence failed
-				return nil, nil, ccc.NewDatabaseError("failed to add document file metadata", err)
-			}
-		}
+	if ocrDispatcher != nil {
+		ocrDispatcher.Enqueue(OCRDispatchRequest{
+			DocumentFileId: fileId,
+			ContentType:    request.ContentType,
+			FileData:       request.FileData,
+			Processor:      processor,
+			DataProtector:  dataProtector,
+			StartedAt:      startedAt,
+		})
 	}
 
 	c.logger.Info("Successfully created document file", "fileId", fileId, "documentId", request.DocumentId, "fileName", request.FileName)
 
 	return documentFile, documentFileMetadata, nil
+}
+
+func initialPageCount(contentType string) int {
+	if strings.HasPrefix(strings.ToLower(contentType), "image/") {
+		return 1
+	}
+	return 0
 }
 
 // ValidateFileRequest performs basic validation on file request data
