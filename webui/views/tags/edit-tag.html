@@ -375,13 +375,13 @@
                 {{if .CreatedAt}}
                 <div class="tag-info-item">
                     <span class="tag-info-label">Created:</span>
-                    <span class="tag-info-value">{{.CreatedAt}}</span>
+                    <span class="tag-info-value"><time class="local-time" datetime="{{.CreatedAt}}">{{.CreatedAt}}</time></span>
                 </div>
                 {{end}}
                 {{if .ModifiedAt}}
                 <div class="tag-info-item">
                     <span class="tag-info-label">Modified:</span>
-                    <span class="tag-info-value">{{.ModifiedAt}}</span>
+                    <span class="tag-info-value"><time class="local-time" datetime="{{.ModifiedAt}}">{{.ModifiedAt}}</time></span>
                 </div>
                 {{end}}
             </div>

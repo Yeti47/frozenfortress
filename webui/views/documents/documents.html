@@ -1396,7 +1396,7 @@
                                                     <span class="material-icons" style="font-size: 14px;">attach_file</span>
                                                     {{.FileCount}} file{{if ne .FileCount 1}}s{{end}}
                                                 </span>
-                                                <span>{{.ModifiedAt.Format "2006-01-02 15:04:05"}}</span>
+                                                <time class="local-time" datetime="{{.ModifiedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.ModifiedAt.Format "2006-01-02 15:04:05"}}</time>
                                             </div>
                                             <div class="document-tags">
                                                 {{range .Tags}}

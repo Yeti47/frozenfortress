@@ -1291,11 +1291,11 @@
                 <div class="document-metadata">
                     <div class="metadata-item">
                         <span class="material-icons" style="font-size: 16px;">event</span>
-                        <span>Created: {{.Document.CreatedAt.Format "2006-01-02 15:04"}}</span>
+                        <span>Created: <time class="local-time" datetime="{{.Document.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Document.CreatedAt.Format "2006-01-02 15:04"}}</time></span>
                     </div>
                     <div class="metadata-item">
                         <span class="material-icons" style="font-size: 16px;">update</span>
-                        <span>Modified: {{.Document.ModifiedAt.Format "2006-01-02 15:04"}}</span>
+                        <span>Modified: <time class="local-time" datetime="{{.Document.ModifiedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Document.ModifiedAt.Format "2006-01-02 15:04"}}</time></span>
                     </div>
                     <div class="metadata-item">
                         <span class="material-icons" style="font-size: 16px;">attach_file</span>

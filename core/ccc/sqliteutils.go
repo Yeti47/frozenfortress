@@ -32,6 +32,8 @@ func ParseSQLiteTimestamp(timestampStr string) (time.Time, error) {
 }
 
 // FormatSQLiteTimestamp formats a time.Time to the standard SQLite timestamp format.
+// The value is always normalised to UTC before formatting so all stored timestamps
+// are unambiguously UTC, regardless of the server's local timezone.
 func FormatSQLiteTimestamp(t time.Time) string {
-	return t.Format("2006-01-02 15:04:05")
+	return t.UTC().Format("2006-01-02 15:04:05")
 }

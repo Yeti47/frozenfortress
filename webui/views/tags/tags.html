@@ -471,9 +471,9 @@
                                 </div>
                                 <div class="tag-color-value">{{.Color}}</div>
                                 <div class="tag-dates">
-                                    Created: {{.CreatedAt.Format "2006-01-02 15:04:05"}}
+                                    Created: <time class="local-time" datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.CreatedAt.Format "2006-01-02 15:04:05"}}</time>
                                     {{if ne .CreatedAt .ModifiedAt}}
-                                    <br>Modified: {{.ModifiedAt.Format "2006-01-02 15:04:05"}}
+                                    <br>Modified: <time class="local-time" datetime="{{.ModifiedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.ModifiedAt.Format "2006-01-02 15:04:05"}}</time>
                                     {{end}}
                                 </div>
                             </div>
