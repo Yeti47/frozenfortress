@@ -12,19 +12,23 @@ import (
 	"image/jpeg"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/nfnt/resize"
 )
 
+// ollamaOCRConfidence is the fixed confidence score reported for all successful Ollama OCR results.
+// It is derived from GLM-OCR's published benchmark: 94.62 on OmniDocBench V1.5 (ranked #1 overall).
+// Source: https://ollama.com/library/glm-ocr / https://github.com/zai-org/GLM-OCR
+// Note: our integration calls the model directly via Ollama without the full SDK pipeline
+// (PP-DocLayout-V3 layout detection), so this is a conservative approximation.
+const ollamaOCRConfidence float32 = 0.95
+
 type OllamaOCRService struct {
 	config     ccc.OCRConfig
 	logger     ccc.Logger
 	httpClient *http.Client
-	pullOnce   sync.Once
-	pullErr    error
 }
 
 func NewOllamaOCRService(config ccc.OCRConfig, logger ccc.Logger) *OllamaOCRService {
@@ -61,10 +65,6 @@ func (s *OllamaOCRService) ExtractText(ctx context.Context, imageData []byte) (s
 		return "", 0, fmt.Errorf("Ollama OCR is not enabled")
 	}
 
-	if err := s.ensureModel(ctx); err != nil {
-		return "", 0, err
-	}
-
 	processedImage, err := prepareImageForOllama(imageData, s.config.ImageMaxDimension)
 	if err != nil {
 		return "", 0, err
@@ -86,22 +86,7 @@ func (s *OllamaOCRService) ExtractText(ctx context.Context, imageData []byte) (s
 		return "", 0, err
 	}
 
-	return strings.TrimSpace(response.Response), 0.8, nil
-}
-
-func (s *OllamaOCRService) ensureModel(ctx context.Context) error {
-	if !s.config.OllamaPullOnStart {
-		return nil
-	}
-
-	s.pullOnce.Do(func() {
-		s.pullErr = s.postJSON(ctx, "/api/pull", ollamaPullRequest{Model: s.config.OllamaModel, Stream: false}, nil)
-		if s.pullErr != nil {
-			s.logger.Warn("Failed to pull Ollama OCR model", "model", s.config.OllamaModel, "error", s.pullErr)
-		}
-	})
-
-	return s.pullErr
+	return strings.TrimSpace(response.Response), ollamaOCRConfidence, nil
 }
 
 func (s *OllamaOCRService) postJSON(ctx context.Context, path string, payload any, target any) error {
@@ -177,9 +162,4 @@ type ollamaGenerateRequest struct {
 
 type ollamaGenerateResponse struct {
 	Response string `json:"response"`
-}
-
-type ollamaPullRequest struct {
-	Model  string `json:"model"`
-	Stream bool   `json:"stream"`
 }

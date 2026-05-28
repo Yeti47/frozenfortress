@@ -238,14 +238,6 @@ func runSetup(readOnly bool) error {
 			Type:         "string",
 		},
 		{
-			EnvVar:       ccc.EnvOCROllamaPullOnStart,
-			Description:  "Pull the Ollama OCR model before first OCR use (true/false)",
-			CurrentValue: strconv.FormatBool(currentConfig.OCR.OllamaPullOnStart),
-			DefaultValue: strconv.FormatBool(defaultConfig.OCR.OllamaPullOnStart),
-			Type:         "bool",
-			Validation:   validateBool,
-		},
-		{
 			EnvVar:       ccc.EnvOCROllamaKeepAlive,
 			Description:  "Ollama keep_alive value for OCR model",
 			CurrentValue: currentConfig.OCR.OllamaKeepAlive,

@@ -36,7 +36,6 @@ const (
 	EnvOCRLanguages         = "FF_OCR_LANGUAGES"
 	EnvOCROllamaURL         = "FF_OCR_OLLAMA_URL"
 	EnvOCROllamaModel       = "FF_OCR_OLLAMA_MODEL"
-	EnvOCROllamaPullOnStart = "FF_OCR_OLLAMA_PULL_ON_START"
 	EnvOCROllamaKeepAlive   = "FF_OCR_OLLAMA_KEEP_ALIVE"
 	EnvOCROllamaTimeout     = "FF_OCR_OLLAMA_TIMEOUT_SECONDS"
 	EnvOCRMaxAttempts       = "FF_OCR_MAX_ATTEMPTS"
@@ -60,7 +59,6 @@ type OCRConfig struct {
 	Languages                  []string // OCR languages to use for Tesseract fallback
 	OllamaURL                  string   // Ollama API base URL
 	OllamaModel                string   // Ollama model name for GLM OCR
-	OllamaPullOnStart          bool     // Pull the Ollama model before first use
 	OllamaKeepAlive            string   // Ollama keep_alive value
 	OllamaTimeoutSeconds       int      // Timeout for Ollama requests
 	MaxAttempts                int      // Best-effort OCR attempts per upload goroutine
@@ -127,7 +125,6 @@ var DefaultConfig = AppConfig{
 		Languages:                  []string{"eng"},
 		OllamaURL:                  "http://ollama:11434",
 		OllamaModel:                "glm-ocr:q8_0",
-		OllamaPullOnStart:          true,
 		OllamaKeepAlive:            "5m",
 		OllamaTimeoutSeconds:       300,
 		MaxAttempts:                3,
@@ -247,9 +244,6 @@ func LoadConfigFromEnv() AppConfig {
 	}
 	if ollamaModel := os.Getenv(EnvOCROllamaModel); ollamaModel != "" {
 		config.OCR.OllamaModel = ollamaModel
-	}
-	if pullOnStart := os.Getenv(EnvOCROllamaPullOnStart); pullOnStart != "" {
-		config.OCR.OllamaPullOnStart = pullOnStart == "true"
 	}
 	if keepAlive := os.Getenv(EnvOCROllamaKeepAlive); keepAlive != "" {
 		config.OCR.OllamaKeepAlive = keepAlive

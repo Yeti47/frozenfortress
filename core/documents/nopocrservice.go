@@ -32,7 +32,7 @@ func (s *NopOCRService) ExtractText(ctx context.Context, imageData []byte) (text
 	return "", 0.0, nil
 }
 
-// IsOcrEnabled checks if OCR is enabled in the configuration
+// IsOcrEnabled returns false — NopOCRService never performs OCR.
 func (s *NopOCRService) IsOcrEnabled() bool {
-	return s.config.Enabled
+	return false
 }

@@ -2,6 +2,7 @@ package documents
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -80,7 +81,7 @@ func (d *DefaultOCRDispatcher) process(request OCRDispatchRequest) {
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		text, confidence, pageCount, lastErr = request.Processor.ExtractText(context.Background(), request.FileData)
-		if lastErr == nil {
+		if lastErr == nil || errors.Is(lastErr, ErrOCRSkipped) {
 			break
 		}
 		d.logger.Warn("Async text extraction attempt failed", "error", lastErr, "fileId", request.DocumentFileId, "attempt", attempt)
@@ -88,6 +89,11 @@ func (d *DefaultOCRDispatcher) process(request OCRDispatchRequest) {
 			time.Sleep(backoff)
 			backoff = minDuration(backoff*2, maxBackoff)
 		}
+	}
+
+	if errors.Is(lastErr, ErrOCRSkipped) {
+		d.persistSkipped(request.DocumentFileId, request.StartedAt)
+		return
 	}
 
 	if lastErr != nil {
@@ -119,6 +125,17 @@ func (d *DefaultOCRDispatcher) persistSuccess(fileId, encryptedText string, conf
 		OcrCompletedAt: &completedAt,
 	}
 	d.persistResult(fileId, pageCount, metadata)
+}
+
+func (d *DefaultOCRDispatcher) persistSkipped(fileId string, startedAt time.Time) {
+	completedAt := time.Now()
+	metadata := &DocumentFileMetadata{
+		DocumentFileId: fileId,
+		OcrStatus:      OcrStatusSkipped,
+		OcrStartedAt:   &startedAt,
+		OcrCompletedAt: &completedAt,
+	}
+	d.persistResult(fileId, 0, metadata)
 }
 
 func (d *DefaultOCRDispatcher) persistFailure(fileId string, startedAt time.Time, extractionErr error) {

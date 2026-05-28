@@ -63,7 +63,7 @@ func (p *ImageFileProcessor) ExtractText(ctx context.Context, fileData []byte) (
 
 	// Check if OCR is enabled
 	if !p.ocrService.IsOcrEnabled() {
-		return "", 0.0, imgPageCount, fmt.Errorf("OCR is not enabled")
+		return "", 0.0, imgPageCount, ErrOCRSkipped
 	}
 
 	// Use the OCR service to extract text from the image data

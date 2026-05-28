@@ -1,6 +1,9 @@
 package documents
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 const (
 	OcrStatusProcessing = "processing"
@@ -8,6 +11,11 @@ const (
 	OcrStatusFailed     = "failed"
 	OcrStatusSkipped    = "skipped"
 )
+
+// ErrOCRSkipped is returned by a DocumentFileProcessor when OCR is not available
+// or has been explicitly disabled, signalling the dispatcher to mark the status
+// as "skipped" rather than "failed".
+var ErrOCRSkipped = errors.New("OCR is disabled or not available")
 
 type Document struct {
 	Id          string

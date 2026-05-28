@@ -200,7 +200,6 @@ Frozen Fortress uses environment variables for configuration. All available vari
 | `FF_OCR_LANGUAGES` | OCR languages (comma-separated, e.g., "eng,deu") | `eng` |
 | `FF_OCR_OLLAMA_URL` | Ollama API base URL | `http://ollama:11434` |
 | `FF_OCR_OLLAMA_MODEL` | Ollama OCR model | `glm-ocr:q8_0` |
-| `FF_OCR_OLLAMA_PULL_ON_START` | Pull the Ollama model before first OCR use | `true` |
 | `FF_OCR_OLLAMA_KEEP_ALIVE` | Ollama model keep-alive value | `5m` |
 | `FF_OCR_OLLAMA_TIMEOUT_SECONDS` | Ollama OCR request timeout | `300` |
 | `FF_OCR_IMAGE_MAX_DIMENSION` | Maximum image width/height sent to Ollama | `640` |

@@ -37,7 +37,6 @@ services:
       FF_OCR_PROVIDER: ${FF_OCR_PROVIDER:-ollama-tesseract}
       FF_OCR_OLLAMA_URL: ${FF_OCR_OLLAMA_URL:-http://ollama:11434}
       FF_OCR_OLLAMA_MODEL: ${FF_OCR_OLLAMA_MODEL:-glm-ocr:q8_0}
-      FF_OCR_OLLAMA_PULL_ON_START: ${FF_OCR_OLLAMA_PULL_ON_START:-true}
       FF_OCR_OLLAMA_KEEP_ALIVE: ${FF_OCR_OLLAMA_KEEP_ALIVE:-5m}
       FF_OCR_OLLAMA_TIMEOUT_SECONDS: ${FF_OCR_OLLAMA_TIMEOUT_SECONDS:-300}
       FF_OCR_IMAGE_MAX_DIMENSION: ${FF_OCR_IMAGE_MAX_DIMENSION:-640}
@@ -70,6 +69,7 @@ services:
       HOME: /home/ollama
       OLLAMA_HOST: 0.0.0.0:11434
       OLLAMA_MODELS: /models
+      OLLAMA_MODEL: ${FF_OCR_OLLAMA_MODEL:-glm-ocr:q8_0}
     expose:
       - "11434"
     volumes:
