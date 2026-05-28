@@ -9,7 +9,7 @@ RUN go mod download
 COPY . .
 
 RUN mkdir -p /out /out-data \
-    && CGO_ENABLED=1 GOOS=linux go build -tags notesseract -trimpath -ldflags="-s -w" -o /out/ffwebui ./webui \
+    && CGO_ENABLED=1 GOOS=linux go build -tags notesseract -trimpath -ldflags="-s -w -X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=1.1.0" -o /out/ffwebui ./webui \
     && cp -r webui/views /out/views \
     && cp -r webui/img /out/img \
     && if [ -d webui/static ]; then cp -r webui/static /out/static; fi
