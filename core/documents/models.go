@@ -22,6 +22,8 @@ type Document struct {
 	UserId      string
 	Title       string // Encrypted title
 	Description string // Encrypted description
+	Issuer      string // Encrypted issuer
+	IssueDate   *time.Time
 	CreatedAt   time.Time
 	ModifiedAt  time.Time
 }

@@ -1297,6 +1297,18 @@
                         <span class="material-icons" style="font-size: 16px;">update</span>
                         <span>Modified: <time class="local-time" datetime="{{.Document.ModifiedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Document.ModifiedAt.Format "2006-01-02 15:04"}}</time></span>
                     </div>
+                    {{if .Document.IssueDate}}
+                    <div class="metadata-item">
+                        <span class="material-icons" style="font-size: 16px;">calendar_today</span>
+                        <span>Issued: <time class="local-date" datetime="{{.Document.IssueDate.Format "2006-01-02"}}">{{.Document.IssueDate.Format "2006-01-02"}}</time></span>
+                    </div>
+                    {{end}}
+                    {{if .Document.Issuer}}
+                    <div class="metadata-item">
+                        <span class="material-icons" style="font-size: 16px;">business</span>
+                        <span>Issuer: {{.Document.Issuer}}</span>
+                    </div>
+                    {{end}}
                     <div class="metadata-item">
                         <span class="material-icons" style="font-size: 16px;">attach_file</span>
                         <span>{{.Document.FileCount}} file{{if ne .Document.FileCount 1}}s{{end}}</span>
@@ -1345,6 +1357,25 @@
                             <p class="description-text" style="color: #95a5a6; font-style: italic;">No description provided</p>
                         {{end}}
                     </div>
+
+                    {{if or .Document.Issuer .Document.IssueDate}}
+                    <div class="info-section">
+                        <h3>
+                            <span class="material-icons">badge</span>
+                            Issuer Information
+                        </h3>
+                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px;">
+                            {{if .Document.Issuer}}
+                            <span style="font-weight: 600; color: #5a6c7d;">Issuer</span>
+                            <span style="color: #2c3e50;">{{.Document.Issuer}}</span>
+                            {{end}}
+                            {{if .Document.IssueDate}}
+                            <span style="font-weight: 600; color: #5a6c7d;">Issue Date</span>
+                            <span style="color: #2c3e50;"><time class="local-date" datetime="{{.Document.IssueDate.Format "2006-01-02"}}">{{.Document.IssueDate.Format "2006-01-02"}}</time></span>
+                            {{end}}
+                        </div>
+                    </div>
+                    {{end}}
 
                     <div class="info-section">
                         <h3>

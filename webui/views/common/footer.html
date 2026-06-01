@@ -38,10 +38,37 @@
             }).format(date);
         }
 
+        // Global utility function for date-only formatting — uses the user's locale and time zone
+        function formatDate(timestamp) {
+            if (!timestamp) return 'N/A';
+
+            let normalized = timestamp.trim();
+            if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
+                normalized = normalized.replace(' ', 'T') + 'Z';
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+                normalized = normalized + 'T00:00:00Z';
+            }
+
+            const date = new Date(normalized);
+            if (isNaN(date.getTime())) return 'Invalid Date';
+
+            return new Intl.DateTimeFormat(undefined, {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(date);
+        }
+
         // Reformat all server-rendered <time class="local-time"> elements using the user's locale
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('time.local-time[datetime]').forEach(function (el) {
                 const formatted = formatTimestamp(el.getAttribute('datetime'));
+                if (formatted !== 'N/A' && formatted !== 'Invalid Date') {
+                    el.textContent = formatted;
+                }
+            });
+            document.querySelectorAll('time.local-date[datetime]').forEach(function (el) {
+                const formatted = formatDate(el.getAttribute('datetime'));
                 if (formatted !== 'N/A' && formatted !== 'Invalid Date') {
                     el.textContent = formatted;
                 }

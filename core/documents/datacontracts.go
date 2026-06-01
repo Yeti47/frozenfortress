@@ -6,6 +6,8 @@ import "time"
 type CreateDocumentRequest struct {
 	Title       string
 	Description string
+	Issuer      string
+	IssueDate   *time.Time
 	TagIds      []string
 	Files       []AddFileRequest
 }
@@ -13,6 +15,8 @@ type CreateDocumentRequest struct {
 type UpdateDocumentRequest struct {
 	Title       string
 	Description string
+	Issuer      string
+	IssueDate   *time.Time
 	TagIds      []string
 }
 
@@ -31,9 +35,12 @@ type GetDocumentsRequest struct {
 }
 
 type DocumentFilters struct {
-	TagIds   []string
-	DateFrom *time.Time
-	DateTo   *time.Time
+	TagIds        []string
+	DateFrom      *time.Time
+	DateTo        *time.Time
+	IssueDateFrom *time.Time
+	IssueDateTo   *time.Time
+	Issuer        string
 }
 
 type DocumentSearchRequest struct {
@@ -69,6 +76,8 @@ type DocumentSearchResult struct {
 	FileCount       int    // Number of files in the document
 	OcrConfidence   float32
 	RelevanceScore  float64 // Calculated relevance score for sorting
+	Issuer          string  // Decrypted
+	IssueDate       *time.Time
 	CreatedAt       time.Time
 	ModifiedAt      time.Time
 	MatchTypes      []string            // Types of matches found: "title", "description", "filename", "content"
@@ -108,6 +117,8 @@ type DocumentDto struct {
 	Id          string
 	Title       string // Decrypted
 	Description string // Decrypted
+	Issuer      string // Decrypted
+	IssueDate   *time.Time
 	FileCount   int
 	Tags        []*TagDto
 	Preview     *DocumentPreviewDto // Preview of the oldest file in the document

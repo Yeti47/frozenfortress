@@ -1019,6 +1019,18 @@
                                 <span id="descriptionCount">{{if .Document}}{{len .Document.Description}}{{else}}0{{end}}</span>/200 characters
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label for="issuer" class="form-label">Issuer</label>
+                            <input type="text" id="issuer" name="issuer" class="form-input" 
+                                   value="{{if .Document}}{{.Document.Issuer}}{{end}}" 
+                                   maxlength="100"
+                                   placeholder="e.g. Company name, institution...">
+                        </div>
+                        <div class="form-group">
+                            <label for="issueDate" class="form-label">Issue Date</label>
+                            <input type="date" id="issueDate" name="issueDate" class="form-input" 
+                                   value="{{if .Document}}{{if .Document.IssueDate}}{{.Document.IssueDate.Format "2006-01-02"}}{{end}}{{end}}">
+                        </div>
                     </div>
 
                     <div class="form-section">

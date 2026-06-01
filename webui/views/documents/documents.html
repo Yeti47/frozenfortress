@@ -1140,6 +1140,64 @@
             margin-top: 10px;
         }
 
+        .date-filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .date-filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .date-filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .date-filter-group input[type="date"],
+        .date-filter-group input[type="text"] {
+            padding: 6px 10px;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2c3e50;
+            background: white;
+            min-width: 140px;
+        }
+
+        .date-filter-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .filter-apply-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            align-self: flex-end;
+        }
+
+        .filter-apply-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #1f618d);
+            transform: translateY(-1px);
+        }
+
         /* Responsive filter layout */
         @media (max-width: 768px) {
             .filter-header {
@@ -1287,6 +1345,7 @@
                                 <option value="title" {{if eq .SortBy "title"}}selected{{end}}>Title</option>
                                 <option value="created_at" {{if eq .SortBy "created_at"}}selected{{end}}>Created</option>
                                 <option value="modified_at" {{if eq .SortBy "modified_at"}}selected{{end}}>Modified</option>
+                                <option value="issue_date" {{if eq .SortBy "issue_date"}}selected{{end}}>Issue Date</option>
                             </select>
                             <button class="sort-direction" onclick="toggleSortDirection()" title="{{if .SortAsc}}Sort Descending{{else}}Sort Ascending{{end}}">
                                 <span class="material-icons">{{if .SortAsc}}arrow_upward{{else}}arrow_downward{{end}}</span>
@@ -1317,14 +1376,14 @@
                     <div class="filter-header" onclick="toggleFilterCollapse()">
                         <h3 class="filter-title">
                             <span class="material-icons">filter_list</span>
-                            Filter by Tags
+                            Filters
                             <span class="material-icons filter-collapse-icon expanded" id="filterCollapseIcon">keyboard_arrow_down</span>
                         </h3>
                         <div class="filter-status">
                             <span class="selected-count" id="tag-count">{{len .TagIds}}</span>
-                            <span>of 3 selected</span>
-                            {{if .TagIds}}
-                                <button class="clear-filters-btn" onclick="clearFilters(); event.stopPropagation();">
+                            <span>tags selected</span>
+                            {{if or .TagIds .DateFrom .DateTo .IssueDateFrom .IssueDateTo .IssuerFilter}}
+                                <button class="clear-filters-btn" onclick="clearAllFilters(); event.stopPropagation();">
                                     <span class="material-icons" style="font-size: 16px;">clear</span>
                                     Clear Filters
                                 </button>
@@ -1349,6 +1408,32 @@
                         <div class="filter-limit-message" id="filterLimitMessage" style="display: none;">
                             <span class="material-icons" style="font-size: 16px;">warning</span>
                             Maximum 3 tags can be selected for filtering
+                        </div>
+
+                        <div class="date-filter-row">
+                            <div class="date-filter-group">
+                                <label>Created From</label>
+                                <input type="date" id="filterDateFrom" value="{{.DateFrom}}">
+                            </div>
+                            <div class="date-filter-group">
+                                <label>Created To</label>
+                                <input type="date" id="filterDateTo" value="{{.DateTo}}">
+                            </div>
+                            <div class="date-filter-group">
+                                <label>Issue Date From</label>
+                                <input type="date" id="filterIssueDateFrom" value="{{.IssueDateFrom}}">
+                            </div>
+                            <div class="date-filter-group">
+                                <label>Issue Date To</label>
+                                <input type="date" id="filterIssueDateTo" value="{{.IssueDateTo}}">
+                            </div>
+                            <div class="date-filter-group">
+                                <label>Issuer</label>
+                                <input type="text" id="filterIssuer" value="{{.IssuerFilter}}" placeholder="Search issuer...">
+                            </div>
+                            <button class="filter-apply-btn" onclick="applyDateFilters()">
+                                <span class="material-icons" style="font-size: 14px; vertical-align: middle;">search</span> Apply
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1450,7 +1535,7 @@
             <div class="pagination" id="pagination-container">
                 <!-- First page button -->
                 {{if gt .Page 1}}
-                    <a href="?page=1&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-nav-btn" title="First page">
+                    <a href="?page=1&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-nav-btn" title="First page">
                         <span class="material-icons">first_page</span>
                     </a>
                 {{else}}
@@ -1461,7 +1546,7 @@
 
                 <!-- Previous page button -->
                 {{if gt .Page 1}}
-                    <a href="?page={{sub .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-nav-btn" title="Previous page">
+                    <a href="?page={{sub .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-nav-btn" title="Previous page">
                         <span class="material-icons">chevron_left</span>
                     </a>
                 {{else}}
@@ -1478,7 +1563,7 @@
                     {{$endPage := min $totalPages (add $currentPage 2)}}
                     
                     {{if gt $startPage 1}}
-                        <a href="?page=1&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">1</a>
+                        <a href="?page=1&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-page-btn">1</a>
                         {{if gt $startPage 2}}
                             <span class="pagination-btn pagination-page-btn disabled pagination-ellipsis">...</span>
                         {{end}}
@@ -1490,7 +1575,7 @@
                             {{if eq $startPage $currentPage}}
                                 <span class="pagination-btn pagination-page-btn current">{{$startPage}}</span>
                             {{else}}
-                                <a href="?page={{$startPage}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$startPage}}</a>
+                                <a href="?page={{$startPage}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-page-btn">{{$startPage}}</a>
                             {{end}}
                         {{end}}
                         
@@ -1499,7 +1584,7 @@
                             {{if eq $page2 $currentPage}}
                                 <span class="pagination-btn pagination-page-btn current">{{$page2}}</span>
                             {{else}}
-                                <a href="?page={{$page2}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$page2}}</a>
+                                <a href="?page={{$page2}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-page-btn">{{$page2}}</a>
                             {{end}}
                         {{end}}
                         
@@ -1508,7 +1593,7 @@
                             {{if eq $page3 $currentPage}}
                                 <span class="pagination-btn pagination-page-btn current">{{$page3}}</span>
                             {{else}}
-                                <a href="?page={{$page3}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$page3}}</a>
+                                <a href="?page={{$page3}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-page-btn">{{$page3}}</a>
                             {{end}}
                         {{end}}
                         
@@ -1517,7 +1602,7 @@
                             {{if eq $page4 $currentPage}}
                                 <span class="pagination-btn pagination-page-btn current">{{$page4}}</span>
                             {{else}}
-                                <a href="?page={{$page4}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$page4}}</a>
+                                <a href="?page={{$page4}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-page-btn">{{$page4}}</a>
                             {{end}}
                         {{end}}
                         
@@ -1526,7 +1611,7 @@
                             {{if eq $page5 $currentPage}}
                                 <span class="pagination-btn pagination-page-btn current">{{$page5}}</span>
                             {{else}}
-                                <a href="?page={{$page5}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$page5}}</a>
+                                <a href="?page={{$page5}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-page-btn">{{$page5}}</a>
                             {{end}}
                         {{end}}
                     {{end}}
@@ -1535,13 +1620,13 @@
                         {{if lt $endPage (sub $totalPages 1)}}
                             <span class="pagination-btn pagination-page-btn disabled pagination-ellipsis">...</span>
                         {{end}}
-                        <a href="?page={{$totalPages}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-page-btn">{{$totalPages}}</a>
+                        <a href="?page={{$totalPages}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-page-btn">{{$totalPages}}</a>
                     {{end}}
                 </div>
 
                 <!-- Next page button -->
                 {{if lt .Page .TotalPages}}
-                    <a href="?page={{add .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-nav-btn" title="Next page">
+                    <a href="?page={{add .Page 1}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-nav-btn" title="Next page">
                         <span class="material-icons">chevron_right</span>
                     </a>
                 {{else}}
@@ -1552,7 +1637,7 @@
 
                 <!-- Last page button -->
                 {{if lt .Page .TotalPages}}
-                    <a href="?page={{.TotalPages}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}" class="pagination-btn pagination-nav-btn" title="Last page">
+                    <a href="?page={{.TotalPages}}&sortBy={{.SortBy}}&sortAsc={{.SortAsc}}{{if .SearchTerm}}&searchTerm={{.SearchTerm}}{{end}}{{range .TagIds}}&tagIds={{.}}{{end}}{{if .DateFrom}}&dateFrom={{.DateFrom}}{{end}}{{if .DateTo}}&dateTo={{.DateTo}}{{end}}{{if .IssueDateFrom}}&issueDateFrom={{.IssueDateFrom}}{{end}}{{if .IssueDateTo}}&issueDateTo={{.IssueDateTo}}{{end}}{{if .IssuerFilter}}&issuer={{.IssuerFilter}}{{end}}" class="pagination-btn pagination-nav-btn" title="Last page">
                         <span class="material-icons">last_page</span>
                     </a>
                 {{else}}
@@ -1585,11 +1670,27 @@
             
             // Initialize filter collapse state
             initializeFilterCollapse();
+
+            // Add Enter key support for filter inputs
+            const filterInputs = document.querySelectorAll('#filterDateFrom, #filterDateTo, #filterIssueDateFrom, #filterIssueDateTo, #filterIssuer');
+            filterInputs.forEach(input => {
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyDateFilters();
+                    }
+                });
+            });
         });
 
         function initializeFilterCollapse() {
             // Check if filters are being used
-            const hasActiveFilters = selectedTags.length > 0;
+            const hasActiveFilters = selectedTags.length > 0
+                || document.getElementById('filterDateFrom')?.value
+                || document.getElementById('filterDateTo')?.value
+                || document.getElementById('filterIssueDateFrom')?.value
+                || document.getElementById('filterIssueDateTo')?.value
+                || document.getElementById('filterIssuer')?.value;
             
             // Start expanded if there are active filters, collapsed otherwise
             const shouldExpand = hasActiveFilters;
@@ -1735,6 +1836,38 @@
             urlParams.delete('tagIds');
             urlParams.set('page', '1');
             clearSuccessMessageParams(urlParams); // Clear success messages
+            window.location.search = urlParams.toString();
+        }
+
+        function applyDateFilters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            const issueDateFrom = document.getElementById('filterIssueDateFrom').value;
+            const issueDateTo = document.getElementById('filterIssueDateTo').value;
+            const issuer = document.getElementById('filterIssuer').value.trim();
+
+            if (dateFrom) { urlParams.set('dateFrom', dateFrom); } else { urlParams.delete('dateFrom'); }
+            if (dateTo) { urlParams.set('dateTo', dateTo); } else { urlParams.delete('dateTo'); }
+            if (issueDateFrom) { urlParams.set('issueDateFrom', issueDateFrom); } else { urlParams.delete('issueDateFrom'); }
+            if (issueDateTo) { urlParams.set('issueDateTo', issueDateTo); } else { urlParams.delete('issueDateTo'); }
+            if (issuer) { urlParams.set('issuer', issuer); } else { urlParams.delete('issuer'); }
+
+            urlParams.set('page', '1');
+            clearSuccessMessageParams(urlParams);
+            window.location.search = urlParams.toString();
+        }
+
+        function clearAllFilters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.delete('tagIds');
+            urlParams.delete('dateFrom');
+            urlParams.delete('dateTo');
+            urlParams.delete('issueDateFrom');
+            urlParams.delete('issueDateTo');
+            urlParams.delete('issuer');
+            urlParams.set('page', '1');
+            clearSuccessMessageParams(urlParams);
             window.location.search = urlParams.toString();
         }
 

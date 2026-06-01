@@ -11,6 +11,7 @@ type SortableDocument interface {
 	GetTitle() string
 	GetCreatedAt() time.Time
 	GetModifiedAt() time.Time
+	GetIssueDate() *time.Time
 }
 
 // DocumentSorter interface for sorting documents
@@ -44,6 +45,8 @@ func (s *DefaultDocumentSorter[T]) Sort(items []T, sortBy string, ascending bool
 			return s.compareByCreatedAt(items[i], items[j], ascending)
 		case "modified_at":
 			return s.compareByModifiedAt(items[i], items[j], ascending)
+		case "issue_date":
+			return s.compareByIssueDate(items[i], items[j], ascending)
 		default:
 			// Default to modified_at descending
 			return s.compareByModifiedAt(items[i], items[j], false)
@@ -60,6 +63,8 @@ func (s *DefaultDocumentSorter[T]) normalizeSortCriteria(sortBy string) string {
 		return "created_at"
 	case "modified_at", "modifiedat", "modified":
 		return "modified_at"
+	case "issue_date", "issuedate", "issue":
+		return "issue_date"
 	default:
 		return "modified_at" // Default
 	}
@@ -90,6 +95,26 @@ func (s *DefaultDocumentSorter[T]) compareByModifiedAt(a, b T, ascending bool) b
 	return a.GetModifiedAt().After(b.GetModifiedAt())
 }
 
+func (s *DefaultDocumentSorter[T]) compareByIssueDate(a, b T, ascending bool) bool {
+	dateA := a.GetIssueDate()
+	dateB := b.GetIssueDate()
+
+	if dateA == nil && dateB == nil {
+		return false
+	}
+	if dateA == nil {
+		return false
+	}
+	if dateB == nil {
+		return true
+	}
+
+	if ascending {
+		return dateA.Before(*dateB)
+	}
+	return dateA.After(*dateB)
+}
+
 func (d *DocumentDetails) GetTitle() string {
 	return d.Document.Title
 }
@@ -100,6 +125,10 @@ func (d *DocumentDetails) GetCreatedAt() time.Time {
 
 func (d *DocumentDetails) GetModifiedAt() time.Time {
 	return d.Document.ModifiedAt
+}
+
+func (d *DocumentDetails) GetIssueDate() *time.Time {
+	return d.Document.IssueDate
 }
 
 // SearchDocumentSorter extends sorting functionality for search results with relevance support
@@ -144,6 +173,8 @@ func (s *SearchDocumentSorter) normalizeSortCriteria(sortBy string) string {
 		return "created_at"
 	case "modified_at", "modifiedat", "modified":
 		return "modified_at"
+	case "issue_date", "issuedate", "issue":
+		return "issue_date"
 	default:
 		return "relevance" // Default for search results
 	}
@@ -180,4 +211,8 @@ func (r *DocumentSearchResult) GetCreatedAt() time.Time {
 
 func (r *DocumentSearchResult) GetModifiedAt() time.Time {
 	return r.ModifiedAt
+}
+
+func (r *DocumentSearchResult) GetIssueDate() *time.Time {
+	return r.IssueDate
 }

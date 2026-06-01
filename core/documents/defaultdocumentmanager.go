@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -69,6 +70,11 @@ func (m *DefaultDocumentManager) CreateDocument(
 		return nil, fmt.Errorf("failed to encrypt document description: %w", err)
 	}
 
+	encryptedIssuer, err := dataProtector.Protect(request.Issuer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt document issuer: %w", err)
+	}
+
 	now := time.Now()
 	documentId := m.documentIdGen.GenerateId()
 
@@ -77,6 +83,8 @@ func (m *DefaultDocumentManager) CreateDocument(
 		UserId:      userId,
 		Title:       encryptedTitle,
 		Description: encryptedDescription,
+		Issuer:      encryptedIssuer,
+		IssueDate:   request.IssueDate,
 		CreatedAt:   now,
 		ModifiedAt:  now,
 	}
@@ -192,6 +200,13 @@ func (m *DefaultDocumentManager) GetDocument(
 		document.Description = ""
 	}
 
+	if decrypted, err := dataProtector.Unprotect(document.Issuer); err == nil {
+		document.Issuer = decrypted
+	} else {
+		m.logger.Warn("Failed to decrypt issuer", "documentId", document.Id, "error", err)
+		document.Issuer = ""
+	}
+
 	// Get preview data for this document
 	var preview *DocumentPreviewDto
 	previews, err := uow.DocumentFileRepo().FindOldestPreviewsByDocumentIds(ctx, []string{documentId})
@@ -252,6 +267,18 @@ func (m *DefaultDocumentManager) GetDocuments(
 
 	// Decrypt all fields upfront
 	m.decryptDocumentDetails(documentDetails, dataProtector)
+
+	// Apply issuer filter at application level (Issuer is encrypted in DB)
+	if filters.Issuer != "" {
+		issuerLower := strings.ToLower(filters.Issuer)
+		filtered := make([]*DocumentDetails, 0, len(documentDetails))
+		for _, detail := range documentDetails {
+			if strings.Contains(strings.ToLower(detail.Document.Issuer), issuerLower) {
+				filtered = append(filtered, detail)
+			}
+		}
+		documentDetails = filtered
+	}
 
 	// Apply sorting on decrypted data
 	m.sorter.Sort(documentDetails, request.SortBy, request.SortAsc)
@@ -352,6 +379,11 @@ func (m *DefaultDocumentManager) UpdateDocument(
 		return fmt.Errorf("failed to encrypt document description: %w", err)
 	}
 
+	encryptedIssuer, err := dataProtector.Protect(request.Issuer)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt document issuer: %w", err)
+	}
+
 	uow := m.uowFactory.Create()
 	return uow.Execute(ctx, func(uow DocumentUnitOfWork) error {
 		// Find existing document
@@ -366,6 +398,8 @@ func (m *DefaultDocumentManager) UpdateDocument(
 		// Update fields
 		document.Title = encryptedTitle
 		document.Description = encryptedDescription
+		document.Issuer = encryptedIssuer
+		document.IssueDate = request.IssueDate
 		document.ModifiedAt = time.Now()
 
 		// Save changes
@@ -502,6 +536,8 @@ func (m *DefaultDocumentManager) buildDocumentDto(document *Document, tags []*Ta
 		Id:          document.Id,
 		Title:       document.Title,       // Already decrypted
 		Description: document.Description, // Already decrypted
+		Issuer:      document.Issuer,      // Already decrypted
+		IssueDate:   document.IssueDate,
 		FileCount:   fileCount,
 		Tags:        tagDtos,
 		Preview:     preview,
@@ -527,6 +563,14 @@ func (m *DefaultDocumentManager) decryptDocumentDetails(documentDetails []*Docum
 		} else {
 			m.logger.Warn("Failed to decrypt description", "documentId", detail.Document.Id, "error", err)
 			detail.Document.Description = "" // Fallback
+		}
+
+		// Decrypt issuer
+		if decrypted, err := dataProtector.Unprotect(detail.Document.Issuer); err == nil {
+			detail.Document.Issuer = decrypted
+		} else {
+			m.logger.Warn("Failed to decrypt issuer", "documentId", detail.Document.Id, "error", err)
+			detail.Document.Issuer = "" // Fallback
 		}
 	}
 }
