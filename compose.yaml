@@ -2,6 +2,7 @@ name: frozenfortress
 
 services:
   nginx:
+    container_name: frozenfortress-nginx
     build:
       context: ./docker/nginx
     depends_on:
@@ -20,6 +21,7 @@ services:
     restart: unless-stopped
 
   webui:
+    container_name: frozenfortress-webui
     build:
       context: .
     depends_on:
@@ -64,6 +66,7 @@ services:
     restart: unless-stopped
 
   ollama:
+    container_name: frozenfortress-ollama
     build:
       context: ./docker/ollama
     environment:
