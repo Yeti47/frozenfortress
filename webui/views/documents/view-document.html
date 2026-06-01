@@ -1297,18 +1297,6 @@
                         <span class="material-icons" style="font-size: 16px;">update</span>
                         <span>Modified: <time class="local-time" datetime="{{.Document.ModifiedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Document.ModifiedAt.Format "2006-01-02 15:04"}}</time></span>
                     </div>
-                    {{if .Document.IssueDate}}
-                    <div class="metadata-item">
-                        <span class="material-icons" style="font-size: 16px;">calendar_today</span>
-                        <span>Issued: <time class="local-date" datetime="{{.Document.IssueDate.Format "2006-01-02"}}">{{.Document.IssueDate.Format "2006-01-02"}}</time></span>
-                    </div>
-                    {{end}}
-                    {{if .Document.Issuer}}
-                    <div class="metadata-item">
-                        <span class="material-icons" style="font-size: 16px;">business</span>
-                        <span>Issuer: {{.Document.Issuer}}</span>
-                    </div>
-                    {{end}}
                     <div class="metadata-item">
                         <span class="material-icons" style="font-size: 16px;">attach_file</span>
                         <span>{{.Document.FileCount}} file{{if ne .Document.FileCount 1}}s{{end}}</span>
