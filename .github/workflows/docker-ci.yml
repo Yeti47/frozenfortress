@@ -1,0 +1,21 @@
+name: Docker CI
+
+on:
+  push:
+    branches: [ master, main, develop, docker_port ]
+  pull_request:
+    branches: [ master, main, develop ]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+    - name: Validate Docker Compose build
+      run: docker compose build
