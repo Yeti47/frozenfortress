@@ -1,5 +1,3 @@
-//go:build notesseract
-
 package documents
 
 import (
@@ -8,8 +6,7 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 )
 
-// NopOCRService is a no-op implementation of OCRService for when Tesseract is not available
-// This allows the application to compile and run without Tesseract installed
+// NopOCRService is a no-op implementation of OCRService for disabled OCR or fallback builds.
 type NopOCRService struct {
 	logger ccc.Logger
 	config ccc.OCRConfig
@@ -28,15 +25,14 @@ func NewNopOCRService(config ccc.OCRConfig, logger ccc.Logger) *NopOCRService {
 	}
 }
 
-// ExtractText is a no-op implementation that returns an empty string and zero confidence
-// It logs a warning that OCR functionality is not available
+// ExtractText returns an empty OCR result.
 func (s *NopOCRService) ExtractText(ctx context.Context, imageData []byte) (text string, confidence float32, err error) {
 
-	s.logger.Warn("OCR service is not available. Frozen Fortress was built without Tesseract. Text extraction will not work.")
+	s.logger.Warn("OCR service is disabled or unavailable. Text extraction will not run for this image.")
 	return "", 0.0, nil
 }
 
-// IsOcrEnabled checks if OCR is enabled in the configuration
+// IsOcrEnabled returns false — NopOCRService never performs OCR.
 func (s *NopOCRService) IsOcrEnabled() bool {
-	return s.config.Enabled
+	return false
 }

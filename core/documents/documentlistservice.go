@@ -83,6 +83,8 @@ func (s *DefaultDocumentListService) performSearch(
 				Id:          result.DocumentId,
 				Title:       result.DocumentTitle,
 				Description: "", // Search results don't include description
+				Issuer:      result.Issuer,
+				IssueDate:   result.IssueDate,
 				FileCount:   result.FileCount,
 				Tags:        result.Tags,
 				Preview:     result.Preview,

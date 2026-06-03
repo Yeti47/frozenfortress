@@ -95,6 +95,18 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 			decryptedDescription = ""
 		}
 
+		decryptedIssuer, err := dataProtector.Unprotect(doc.Issuer)
+		if err != nil {
+			decryptedIssuer = ""
+		}
+
+		// Apply issuer filter at application level (Issuer is encrypted in DB)
+		if request.Filters.Issuer != "" {
+			if !strings.Contains(strings.ToLower(decryptedIssuer), strings.ToLower(request.Filters.Issuer)) {
+				continue
+			}
+		}
+
 		// Check for matches and collect match information
 		var matchTypes []string
 		var highlightParts []string
@@ -162,6 +174,8 @@ func (s *DefaultDocumentSearchEngine) SearchDocuments(
 				HighlightedText: strings.Join(highlightParts, " | "),
 				FileCount:       docDetail.FileCount,
 				OcrConfidence:   maxOcrConfidence,
+				Issuer:          decryptedIssuer,
+				IssueDate:       doc.IssueDate,
 				CreatedAt:       doc.CreatedAt,
 				ModifiedAt:      doc.ModifiedAt,
 				MatchTypes:      matchTypes,

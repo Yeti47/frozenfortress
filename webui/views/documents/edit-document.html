@@ -798,21 +798,20 @@
             background: #f8fbff;
         }
 
-        .note-item.editing .note-meta {
+        .note-item.editing .note-footer {
             display: none;
         }
 
-        .note-header {
+        .note-footer {
             display: flex;
-            justify-content: flex-end;
-            align-items: flex-start;
-            margin-bottom: 12px;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
         }
 
         .note-meta {
             font-size: 12px;
             color: #7f8c8d;
-            margin-top: 15px;
         }
 
         .note-meta div {
@@ -903,10 +902,10 @@
                 padding: 15px;
             }
 
-            .note-header {
+            .note-footer {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 8px;
+                gap: 6px;
             }
 
             .note-actions-buttons {
@@ -1019,6 +1018,18 @@
                             <div class="char-count">
                                 <span id="descriptionCount">{{if .Document}}{{len .Document.Description}}{{else}}0{{end}}</span>/200 characters
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="issuer" class="form-label">Issuer</label>
+                            <input type="text" id="issuer" name="issuer" class="form-input" 
+                                   value="{{if .Document}}{{.Document.Issuer}}{{end}}" 
+                                   maxlength="100"
+                                   placeholder="e.g. Company name, institution...">
+                        </div>
+                        <div class="form-group">
+                            <label for="issueDate" class="form-label">Issue Date</label>
+                            <input type="date" id="issueDate" name="issueDate" class="form-input" 
+                                   value="{{if .Document}}{{if .Document.IssueDate}}{{.Document.IssueDate.Format "2006-01-02"}}{{end}}{{end}}">
                         </div>
                     </div>
 
@@ -1575,7 +1586,12 @@
             const isModified = note.CreatedAt !== note.ModifiedAt;
             
             noteDiv.innerHTML = `
-                <div class="note-header">
+                <div class="note-content" id="noteContent-${note.Id}">${escapeHtml(note.Content)}</div>
+                <div class="note-footer">
+                    <div class="note-meta">
+                        <div>Created: ${createdDate}</div>
+                        ${isModified ? `<div>Modified: ${modifiedDate}</div>` : ''}
+                    </div>
                     <div class="note-actions-buttons">
                         <button type="button" class="note-action-btn" onclick="editNote('${note.Id}')">
                             <span class="material-icons" style="font-size: 14px;">edit</span>
@@ -1584,11 +1600,6 @@
                             <span class="material-icons" style="font-size: 14px;">delete</span>
                         </button>
                     </div>
-                </div>
-                <div class="note-content" id="noteContent-${note.Id}">${escapeHtml(note.Content)}</div>
-                <div class="note-meta">
-                    <div>Created: ${createdDate}</div>
-                    ${isModified ? `<div>Modified: ${modifiedDate}</div>` : ''}
                 </div>
                 <div class="note-edit-form" id="noteEditForm-${note.Id}">
                     <textarea 

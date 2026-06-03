@@ -10,15 +10,17 @@ import (
 
 // DefaultDocumentFileManager implements DocumentFileManager interface
 type DefaultDocumentFileManager struct {
-	uowFactory  DocumentUnitOfWorkFactory
-	fileCreator DocumentFileCreator
-	logger      ccc.Logger
+	uowFactory           DocumentUnitOfWorkFactory
+	fileCreator          DocumentFileCreator
+	ocrDispatcherFactory OCRDispatcherFactory
+	logger               ccc.Logger
 }
 
 // NewDefaultDocumentFileManager creates a new DefaultDocumentFileManager instance
 func NewDefaultDocumentFileManager(
 	uowFactory DocumentUnitOfWorkFactory,
 	fileCreator DocumentFileCreator,
+	ocrDispatcherFactory OCRDispatcherFactory,
 	logger ccc.Logger,
 ) *DefaultDocumentFileManager {
 	if logger == nil {
@@ -26,9 +28,10 @@ func NewDefaultDocumentFileManager(
 	}
 
 	return &DefaultDocumentFileManager{
-		uowFactory:  uowFactory,
-		fileCreator: fileCreator,
-		logger:      logger,
+		uowFactory:           uowFactory,
+		fileCreator:          fileCreator,
+		ocrDispatcherFactory: ocrDispatcherFactory,
+		logger:               logger,
 	}
 }
 
@@ -53,6 +56,7 @@ func (m *DefaultDocumentFileManager) AddDocumentFile(
 	uow := m.uowFactory.Create()
 	var createdFile *DocumentFile
 	var createdMetadata *DocumentFileMetadata
+	ocrDispatcher := m.ocrDispatcherFactory.Create()
 
 	err := uow.Execute(ctx, func(uow DocumentUnitOfWork) error {
 		// Verify document exists and belongs to user
@@ -75,7 +79,7 @@ func (m *DefaultDocumentFileManager) AddDocumentFile(
 
 		// Create the file using the file creator
 		var createErr error
-		createdFile, createdMetadata, createErr = m.fileCreator.CreateDocumentFile(ctx, uow, createFileReq, dataProtector)
+		createdFile, createdMetadata, createErr = m.fileCreator.CreateDocumentFile(ctx, uow, createFileReq, dataProtector, ocrDispatcher)
 		if createErr != nil {
 			return ccc.NewDatabaseError("failed to create document file", createErr)
 		}
@@ -92,6 +96,7 @@ func (m *DefaultDocumentFileManager) AddDocumentFile(
 	if err != nil {
 		return nil, err
 	}
+	ocrDispatcher.Dispatch()
 
 	// Build and return the DTO
 	return m.buildDocumentFileDto(createdFile, createdMetadata, dataProtector), nil
@@ -317,9 +322,13 @@ func (m *DefaultDocumentFileManager) buildDocumentFileDto(
 	// Add metadata if available
 	if metadata != nil {
 		dto.Confidence = metadata.OcrConfidence
+		dto.OcrStatus = metadata.OcrStatus
+		dto.OcrError = metadata.OcrError
 
 		// Decrypt extracted text
-		if decrypted, err := dataProtector.Unprotect(metadata.ExtractedText); err == nil {
+		if metadata.ExtractedText == "" {
+			dto.ExtractedText = ""
+		} else if decrypted, err := dataProtector.Unprotect(metadata.ExtractedText); err == nil {
 			dto.ExtractedText = decrypted
 		} else {
 			m.logger.Warn("Failed to decrypt extracted text", "fileId", file.Id, "error", err)
@@ -398,9 +407,13 @@ func (m *DefaultDocumentFileManager) buildDocumentFilePreviewDto(
 	// Add metadata if available
 	if metadata != nil {
 		dto.Confidence = metadata.OcrConfidence
+		dto.OcrStatus = metadata.OcrStatus
+		dto.OcrError = metadata.OcrError
 
 		// Decrypt extracted text
-		if decrypted, err := dataProtector.Unprotect(metadata.ExtractedText); err == nil {
+		if metadata.ExtractedText == "" {
+			dto.ExtractedText = ""
+		} else if decrypted, err := dataProtector.Unprotect(metadata.ExtractedText); err == nil {
 			dto.ExtractedText = decrypted
 		} else {
 			m.logger.Warn("Failed to decrypt extracted text", "fileId", file.Id, "error", err)

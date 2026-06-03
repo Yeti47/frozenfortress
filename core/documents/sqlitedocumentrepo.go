@@ -16,7 +16,7 @@ type SQLiteDocumentRepository struct {
 
 const (
 	// Field list for Document table queries
-	documentFieldList = `Id, UserId, Title, Description, CreatedAt, ModifiedAt`
+	documentFieldList = `Id, UserId, Title, Description, Issuer, IssueDate, CreatedAt, ModifiedAt`
 )
 
 // newSQLiteDocumentRepository creates a new SQLiteDocumentRepository instance.
@@ -42,11 +42,14 @@ func (r *SQLiteDocumentRepository) initializeTable(db *sql.DB) error {
 		UserId TEXT NOT NULL,
 		Title TEXT NOT NULL,
 		Description TEXT,
+		Issuer TEXT,
+		IssueDate TIMESTAMP,
 		CreatedAt TIMESTAMP NOT NULL,
 		ModifiedAt TIMESTAMP NOT NULL
 	);
 	CREATE INDEX IF NOT EXISTS idx_document_userid ON Document(UserId);
 	CREATE INDEX IF NOT EXISTS idx_document_created ON Document(CreatedAt);
+	CREATE INDEX IF NOT EXISTS idx_document_issuedate ON Document(IssueDate);
 	`
 	_, err := db.Exec(query)
 	if err != nil {
@@ -68,6 +71,13 @@ func (r *SQLiteDocumentRepository) initializeTable(db *sql.DB) error {
 		// - SQLite was compiled without foreign key support
 		// We continue anyway as this is not critical for basic functionality
 	}
+
+	// Migrate: add Issuer column if it doesn't exist
+	db.Exec(`ALTER TABLE Document ADD COLUMN Issuer TEXT;`)
+	// Migrate: add IssueDate column if it doesn't exist
+	db.Exec(`ALTER TABLE Document ADD COLUMN IssueDate TIMESTAMP;`)
+	// Migrate: add index on IssueDate if it doesn't exist
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_document_issuedate ON Document(IssueDate);`)
 
 	return nil
 }
@@ -101,16 +111,23 @@ func (r *SQLiteDocumentRepository) FindByUserId(ctx context.Context, userId stri
 
 // Add adds a new document.
 func (r *SQLiteDocumentRepository) Add(ctx context.Context, document *Document) error {
-	query := `INSERT INTO Document (` + documentFieldList + `) VALUES (?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO Document (` + documentFieldList + `) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 	createdAtStr := ccc.FormatSQLiteTimestamp(document.CreatedAt)
 	modifiedAtStr := ccc.FormatSQLiteTimestamp(document.ModifiedAt)
+
+	var issueDateStr interface{}
+	if document.IssueDate != nil {
+		issueDateStr = ccc.FormatSQLiteTimestamp(*document.IssueDate)
+	}
 
 	_, err := r.db.ExecContext(ctx, query,
 		document.Id,
 		document.UserId,
 		document.Title,
 		document.Description,
+		document.Issuer,
+		issueDateStr,
 		createdAtStr,
 		modifiedAtStr,
 	)
@@ -119,13 +136,20 @@ func (r *SQLiteDocumentRepository) Add(ctx context.Context, document *Document) 
 
 // Update updates an existing document.
 func (r *SQLiteDocumentRepository) Update(ctx context.Context, document *Document) error {
-	query := `UPDATE Document SET Title = ?, Description = ?, ModifiedAt = ? WHERE Id = ?`
+	query := `UPDATE Document SET Title = ?, Description = ?, Issuer = ?, IssueDate = ?, ModifiedAt = ? WHERE Id = ?`
 
 	modifiedAtStr := ccc.FormatSQLiteTimestamp(document.ModifiedAt)
+
+	var issueDateStr interface{}
+	if document.IssueDate != nil {
+		issueDateStr = ccc.FormatSQLiteTimestamp(*document.IssueDate)
+	}
 
 	_, err := r.db.ExecContext(ctx, query,
 		document.Title,
 		document.Description,
+		document.Issuer,
+		issueDateStr,
 		modifiedAtStr,
 		document.Id,
 	)
@@ -155,7 +179,7 @@ func (r *SQLiteDocumentRepository) FindDetailed(ctx context.Context, userId stri
 	// Build the main query with LEFT JOIN to get tags and file counts
 	queryParts = append(queryParts, `
 		SELECT 
-			d.Id, d.UserId, d.Title, d.Description, d.CreatedAt, d.ModifiedAt,
+			d.Id, d.UserId, d.Title, d.Description, d.Issuer, d.IssueDate, d.CreatedAt, d.ModifiedAt,
 			t.Id as TagId, t.Name as TagName, t.Color as TagColor, t.CreatedAt as TagCreatedAt, t.ModifiedAt as TagModifiedAt,
 			COALESCE(fc.FileCount, 0) as FileCount
 		FROM Document d
@@ -179,6 +203,16 @@ func (r *SQLiteDocumentRepository) FindDetailed(ctx context.Context, userId stri
 	if filters.DateTo != nil {
 		whereParts = append(whereParts, "d.CreatedAt <= ?")
 		args = append(args, ccc.FormatSQLiteTimestamp(*filters.DateTo))
+	}
+
+	// Add issue date range filters
+	if filters.IssueDateFrom != nil {
+		whereParts = append(whereParts, "d.IssueDate >= ?")
+		args = append(args, ccc.FormatSQLiteTimestamp(*filters.IssueDateFrom))
+	}
+	if filters.IssueDateTo != nil {
+		whereParts = append(whereParts, "d.IssueDate <= ?")
+		args = append(args, ccc.FormatSQLiteTimestamp(*filters.IssueDateTo))
 	}
 
 	// Add tag filtering if specified
@@ -212,11 +246,12 @@ func (r *SQLiteDocumentRepository) FindDetailed(ctx context.Context, userId stri
 	for rows.Next() {
 		var doc Document
 		var createdAtStr, modifiedAtStr string
+		var issuerStr, issueDateStr sql.NullString
 		var tagId, tagName, tagColor, tagCreatedAtStr, tagModifiedAtStr sql.NullString
 		var fileCount int
 
 		err := rows.Scan(
-			&doc.Id, &doc.UserId, &doc.Title, &doc.Description, &createdAtStr, &modifiedAtStr,
+			&doc.Id, &doc.UserId, &doc.Title, &doc.Description, &issuerStr, &issueDateStr, &createdAtStr, &modifiedAtStr,
 			&tagId, &tagName, &tagColor, &tagCreatedAtStr, &tagModifiedAtStr,
 			&fileCount,
 		)
@@ -232,6 +267,16 @@ func (r *SQLiteDocumentRepository) FindDetailed(ctx context.Context, userId stri
 		doc.ModifiedAt, err = ccc.ParseSQLiteTimestamp(modifiedAtStr)
 		if err != nil {
 			continue
+		}
+
+		if issuerStr.Valid {
+			doc.Issuer = issuerStr.String
+		}
+		if issueDateStr.Valid {
+			parsed, parseErr := ccc.ParseSQLiteTimestamp(issueDateStr.String)
+			if parseErr == nil {
+				doc.IssueDate = &parsed
+			}
 		}
 
 		// Get or create document details
@@ -290,12 +335,15 @@ func (r *SQLiteDocumentRepository) FindDetailed(ctx context.Context, userId stri
 func scanDocument(scanner ccc.RowScanner) (*Document, error) {
 	doc := &Document{}
 	var createdAtStr, modifiedAtStr string
+	var issuerStr, issueDateStr sql.NullString
 
 	err := scanner.Scan(
 		&doc.Id,
 		&doc.UserId,
 		&doc.Title,
 		&doc.Description,
+		&issuerStr,
+		&issueDateStr,
 		&createdAtStr,
 		&modifiedAtStr,
 	)
@@ -314,6 +362,16 @@ func scanDocument(scanner ccc.RowScanner) (*Document, error) {
 	doc.ModifiedAt, err = ccc.ParseSQLiteTimestamp(modifiedAtStr)
 	if err != nil {
 		return nil, err
+	}
+
+	if issuerStr.Valid {
+		doc.Issuer = issuerStr.String
+	}
+	if issueDateStr.Valid {
+		parsed, parseErr := ccc.ParseSQLiteTimestamp(issueDateStr.String)
+		if parseErr == nil {
+			doc.IssueDate = &parsed
+		}
 	}
 
 	return doc, nil

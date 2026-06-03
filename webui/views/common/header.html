@@ -5,7 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=M+PLUS+Rounded+1c:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         * {
@@ -14,8 +16,12 @@
             box-sizing: border-box;
         }
 
+        input, select, textarea, button {
+            font-family: inherit;
+        }
+
         body {
-            font-family: 'Open Sans', sans-serif;
+            font-family: 'M PLUS Rounded 1c', sans-serif;
             background-color: #8dbfd9;
             min-height: 100vh;
             display: flex;
@@ -208,7 +214,6 @@
 
         /* Style for the dropdown options */
         .search-type-dropdown option {
-            font-family: 'Open Sans', sans-serif;
             font-size: 14px;
             padding: 8px 12px;
             background-color: white;
@@ -239,7 +244,7 @@
             align-items: center;
             margin-right: 15px;
             color: #2c3e50;
-            font-weight: 700;
+            font-weight: 500;
             font-size: 17px;
             text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
         }
@@ -309,7 +314,6 @@
             background: none;
             text-align: left;
             cursor: pointer;
-            font-family: 'Open Sans', sans-serif;
             font-size: 14px;
             transition: background-color 0.2s ease;
         }

@@ -216,7 +216,7 @@ func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documen
 	query := fmt.Sprintf(`
 	SELECT 
 		df.Id, df.DocumentId, df.FileName, df.ContentType, df.FileSize, df.PageCount, df.FileData, df.CreatedAt, df.ModifiedAt,
-		dfm.ExtractedText, dfm.OcrConfidence,
+		dfm.ExtractedText, dfm.OcrConfidence, dfm.OcrStatus, dfm.OcrError, dfm.OcrStartedAt, dfm.OcrCompletedAt,
 		df.PreviewData, df.PreviewType, df.Width, df.Height
 	FROM DocumentFile df
 	LEFT JOIN DocumentFileMetadata dfm ON df.Id = dfm.DocumentFileId
@@ -236,6 +236,10 @@ func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documen
 		var createdAtStr, modifiedAtStr string
 		var extractedText sql.NullString
 		var ocrConfidence sql.NullFloat64
+		var ocrStatus sql.NullString
+		var ocrError sql.NullString
+		var ocrStartedAt sql.NullString
+		var ocrCompletedAt sql.NullString
 		var previewData sql.NullString
 		var previewType sql.NullString
 		var width sql.NullInt64
@@ -255,6 +259,10 @@ func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documen
 			// DocumentFileMetadata fields (nullable)
 			&extractedText,
 			&ocrConfidence,
+			&ocrStatus,
+			&ocrError,
+			&ocrStartedAt,
+			&ocrCompletedAt,
 			// DocumentFilePreview fields (nullable)
 			&previewData,
 			&previewType,
@@ -281,11 +289,15 @@ func (r *SQLiteDocumentFileRepository) FindDetailed(ctx context.Context, documen
 		}
 
 		// Handle metadata (might be null if no metadata exists)
-		if extractedText.Valid || ocrConfidence.Valid {
+		if extractedText.Valid || ocrConfidence.Valid || ocrStatus.Valid {
 			metadata := &DocumentFileMetadata{
 				DocumentFileId: file.Id,
 				ExtractedText:  extractedText.String,
 				OcrConfidence:  float32(ocrConfidence.Float64),
+				OcrStatus:      ocrStatus.String,
+				OcrError:       ocrError.String,
+				OcrStartedAt:   parseOptionalSQLiteTimestamp(ocrStartedAt),
+				OcrCompletedAt: parseOptionalSQLiteTimestamp(ocrCompletedAt),
 			}
 			fileDetail.Metadata = metadata
 		}

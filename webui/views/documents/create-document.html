@@ -548,6 +548,28 @@
                         <div class="char-counter" id="description-counter">0/128</div>
                     </div>
 
+                    <!-- Issuer -->
+                    <div class="form-group">
+                        <label for="issuer" class="form-label">Issuer</label>
+                        <input type="text" 
+                               id="issuer" 
+                               name="issuer" 
+                               class="form-input" 
+                               placeholder="e.g. Company name, institution..."
+                               value="{{.Issuer}}"
+                               maxlength="100">
+                    </div>
+
+                    <!-- Issue Date -->
+                    <div class="form-group">
+                        <label for="issueDate" class="form-label">Issue Date</label>
+                        <input type="date" 
+                               id="issueDate" 
+                               name="issueDate" 
+                               class="form-input" 
+                               value="{{.IssueDate}}">
+                    </div>
+
                     <!-- Tags -->
                     <div class="form-group">
                         {{template "tag-picker" dict "FieldId" "document-tags" "FieldName" "tagIds" "Label" "Tags" "Required" false}}

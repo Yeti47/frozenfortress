@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -126,6 +127,13 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 	tagFilterStr := c.Query("tagIds")
 	deepSearch := c.Query("deepSearch") == "true"
 
+	// Parse date filter parameters
+	dateFromStr := strings.TrimSpace(c.Query("dateFrom"))
+	dateToStr := strings.TrimSpace(c.Query("dateTo"))
+	issueDateFromStr := strings.TrimSpace(c.Query("issueDateFrom"))
+	issueDateToStr := strings.TrimSpace(c.Query("issueDateTo"))
+	issuerFilter := strings.TrimSpace(c.Query("issuer"))
+
 	// Check for success messages
 	var successMessage string
 	if c.Query("created") == "1" {
@@ -173,6 +181,33 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 		TagIds: tagIds,
 	}
 
+	// Parse date filters
+	if dateFromStr != "" {
+		if t, err := time.Parse("2006-01-02", dateFromStr); err == nil {
+			filters.DateFrom = &t
+		}
+	}
+	if dateToStr != "" {
+		if t, err := time.Parse("2006-01-02", dateToStr); err == nil {
+			endOfDay := t.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+			filters.DateTo = &endOfDay
+		}
+	}
+	if issueDateFromStr != "" {
+		if t, err := time.Parse("2006-01-02", issueDateFromStr); err == nil {
+			filters.IssueDateFrom = &t
+		}
+	}
+	if issueDateToStr != "" {
+		if t, err := time.Parse("2006-01-02", issueDateToStr); err == nil {
+			endOfDay := t.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+			filters.IssueDateTo = &endOfDay
+		}
+	}
+	if issuerFilter != "" {
+		filters.Issuer = issuerFilter
+	}
+
 	// Prepare request for document list service
 	documentListRequest := documents.DocumentListRequest{
 		SearchTerm: searchTerm,
@@ -209,24 +244,29 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 
 	// Prepare template data
 	templateData := gin.H{
-		"Title":          "Frozen Fortress - Documents",
-		"Username":       user.UserName,
-		"Version":        ccc.AppVersion,
-		"Documents":      documentListResponse.Items,
-		"TotalCount":     documentListResponse.TotalCount,
-		"Page":           page,
-		"TotalPages":     totalPages,
-		"PageSize":       documentListResponse.PageSize,
-		"SortBy":         sortBy,
-		"SortAsc":        sortAsc,
-		"TagIds":         tagIds,
-		"AllTags":        allTags,
-		"HasPrevious":    page > 1,
-		"HasNext":        page < totalPages,
-		"SuccessMessage": successMessage,
-		"SearchTerm":     searchTerm,
-		"DeepSearch":     deepSearch,
-		"IsSearchResult": searchTerm != "",
+		"Title":           "Frozen Fortress - Documents",
+		"Username":        user.UserName,
+		"Version":         ccc.AppVersion,
+		"Documents":       documentListResponse.Items,
+		"TotalCount":      documentListResponse.TotalCount,
+		"Page":            page,
+		"TotalPages":      totalPages,
+		"PageSize":        documentListResponse.PageSize,
+		"SortBy":          sortBy,
+		"SortAsc":         sortAsc,
+		"TagIds":          tagIds,
+		"AllTags":         allTags,
+		"HasPrevious":     page > 1,
+		"HasNext":         page < totalPages,
+		"SuccessMessage":  successMessage,
+		"SearchTerm":      searchTerm,
+		"DeepSearch":      deepSearch,
+		"IsSearchResult":  searchTerm != "",
+		"DateFrom":        dateFromStr,
+		"DateTo":          dateToStr,
+		"IssueDateFrom":   issueDateFromStr,
+		"IssueDateTo":     issueDateToStr,
+		"IssuerFilter":    issuerFilter,
 	}
 
 	// Render the documents template
@@ -370,7 +410,17 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 	// Parse form data
 	title := strings.TrimSpace(c.PostForm("title"))
 	description := strings.TrimSpace(c.PostForm("description"))
+	issuer := strings.TrimSpace(c.PostForm("issuer"))
+	issueDateStr := strings.TrimSpace(c.PostForm("issueDate"))
 	tagIdsStr := c.PostForm("tagIds")
+
+	// Parse issue date
+	var issueDate *time.Time
+	if issueDateStr != "" {
+		if t, err := time.Parse("2006-01-02", issueDateStr); err == nil {
+			issueDate = &t
+		}
+	}
 
 	// Validate title (required)
 	if title == "" {
@@ -502,6 +552,8 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 	createRequest := documents.CreateDocumentRequest{
 		Title:       title,
 		Description: description,
+		Issuer:      issuer,
+		IssueDate:   issueDate,
 		TagIds:      tagIds,
 		Files:       addFileRequests,
 	}
@@ -569,7 +621,17 @@ func handleEditDocumentSubmit(c *gin.Context, signInManager auth.SignInManager, 
 	// Get form data
 	title := strings.TrimSpace(c.PostForm("title"))
 	description := strings.TrimSpace(c.PostForm("description"))
+	issuer := strings.TrimSpace(c.PostForm("issuer"))
+	issueDateStr := strings.TrimSpace(c.PostForm("issueDate"))
 	tagIdsStr := c.PostForm("tagIds")
+
+	// Parse issue date
+	var issueDate *time.Time
+	if issueDateStr != "" {
+		if t, err := time.Parse("2006-01-02", issueDateStr); err == nil {
+			issueDate = &t
+		}
+	}
 
 	// Validate input
 	if title == "" {
@@ -595,6 +657,8 @@ func handleEditDocumentSubmit(c *gin.Context, signInManager auth.SignInManager, 
 	updateRequest := documents.UpdateDocumentRequest{
 		Title:       title,
 		Description: description,
+		Issuer:      issuer,
+		IssueDate:   issueDate,
 		TagIds:      tagIds,
 	}
 

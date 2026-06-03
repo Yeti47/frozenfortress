@@ -1,12 +1,29 @@
 package documents
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+const (
+	OcrStatusProcessing = "processing"
+	OcrStatusCompleted  = "completed"
+	OcrStatusFailed     = "failed"
+	OcrStatusSkipped    = "skipped"
+)
+
+// ErrOCRSkipped is returned by a DocumentFileProcessor when OCR is not available
+// or has been explicitly disabled, signalling the dispatcher to mark the status
+// as "skipped" rather than "failed".
+var ErrOCRSkipped = errors.New("OCR is disabled or not available")
 
 type Document struct {
 	Id          string
 	UserId      string
 	Title       string // Encrypted title
 	Description string // Encrypted description
+	Issuer      string // Encrypted issuer
+	IssueDate   *time.Time
 	CreatedAt   time.Time
 	ModifiedAt  time.Time
 }
@@ -27,6 +44,10 @@ type DocumentFileMetadata struct {
 	DocumentFileId string
 	ExtractedText  string // Encrypted extracted text
 	OcrConfidence  float32
+	OcrStatus      string
+	OcrError       string
+	OcrStartedAt   *time.Time
+	OcrCompletedAt *time.Time
 }
 
 type Tag struct {
@@ -75,6 +96,10 @@ type ExtendedDocumentFileMetadata struct {
 	ModifiedAt     time.Time
 	ExtractedText  string // Encrypted extracted text
 	OcrConfidence  float32
+	OcrStatus      string
+	OcrError       string
+	OcrStartedAt   *time.Time
+	OcrCompletedAt *time.Time
 }
 
 // DocumentFileDetails combines DocumentFile with its optional metadata

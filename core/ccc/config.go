@@ -32,7 +32,16 @@ const (
 	EnvBackupDirectory      = "FF_BACKUP_DIRECTORY"
 	EnvBackupMaxGenerations = "FF_BACKUP_MAX_GENERATIONS"
 	EnvOcrEnabled           = "FF_OCR_ENABLED"
+	EnvOCRProvider          = "FF_OCR_PROVIDER"
 	EnvOCRLanguages         = "FF_OCR_LANGUAGES"
+	EnvOCROllamaURL         = "FF_OCR_OLLAMA_URL"
+	EnvOCROllamaModel       = "FF_OCR_OLLAMA_MODEL"
+	EnvOCROllamaKeepAlive   = "FF_OCR_OLLAMA_KEEP_ALIVE"
+	EnvOCROllamaTimeout     = "FF_OCR_OLLAMA_TIMEOUT_SECONDS"
+	EnvOCRMaxAttempts       = "FF_OCR_MAX_ATTEMPTS"
+	EnvOCRRetryInitial      = "FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS"
+	EnvOCRRetryMax          = "FF_OCR_RETRY_MAX_BACKOFF_SECONDS"
+	EnvOCRImageMaxDimension = "FF_OCR_IMAGE_MAX_DIMENSION"
 )
 
 // BackupConfig contains all backup-related configuration settings
@@ -45,8 +54,17 @@ type BackupConfig struct {
 
 // OCRConfig contains OCR-related configuration settings
 type OCRConfig struct {
-	Enabled   bool     // Enable/disable OCR functionality
-	Languages []string // OCR languages to use (e.g., ["eng", "deu"] for English and German)
+	Enabled                    bool     // Enable/disable OCR functionality
+	Provider                   string   // OCR provider mode: ollama-tesseract, ollama, tesseract, nop
+	Languages                  []string // OCR languages to use for Tesseract fallback
+	OllamaURL                  string   // Ollama API base URL
+	OllamaModel                string   // Ollama model name for GLM OCR
+	OllamaKeepAlive            string   // Ollama keep_alive value
+	OllamaTimeoutSeconds       int      // Timeout for Ollama requests
+	MaxAttempts                int      // Best-effort OCR attempts per upload goroutine
+	RetryInitialBackoffSeconds int      // Initial retry backoff
+	RetryMaxBackoffSeconds     int      // Maximum retry backoff
+	ImageMaxDimension          int      // Max image width/height before Ollama OCR
 }
 
 type AppConfig struct {
@@ -102,8 +120,17 @@ var DefaultConfig = AppConfig{
 		MaxGenerations: 10,                                         // Keep 10 backup generations
 	},
 	OCR: OCRConfig{
-		Enabled:   true,            // OCR is enabled by default
-		Languages: []string{"eng"}, // English by default
+		Enabled:                    true,
+		Provider:                   "ollama-tesseract",
+		Languages:                  []string{"eng"},
+		OllamaURL:                  "http://ollama:11434",
+		OllamaModel:                "glm-ocr:q8_0",
+		OllamaKeepAlive:            "5m",
+		OllamaTimeoutSeconds:       300,
+		MaxAttempts:                3,
+		RetryInitialBackoffSeconds: 2,
+		RetryMaxBackoffSeconds:     30,
+		ImageMaxDimension:          640,
 	},
 }
 
@@ -193,6 +220,9 @@ func LoadConfigFromEnv() AppConfig {
 	if ocrEnabled := os.Getenv(EnvOcrEnabled); ocrEnabled != "" {
 		config.OCR.Enabled = ocrEnabled == "true"
 	}
+	if ocrProvider := os.Getenv(EnvOCRProvider); ocrProvider != "" {
+		config.OCR.Provider = strings.ToLower(strings.TrimSpace(ocrProvider))
+	}
 	if ocrLanguages := os.Getenv(EnvOCRLanguages); ocrLanguages != "" {
 		// Parse comma-separated languages (e.g., "eng,deu" or "eng+deu")
 		languages := strings.FieldsFunc(ocrLanguages, func(c rune) bool {
@@ -207,6 +237,40 @@ func LoadConfigFromEnv() AppConfig {
 		}
 		if len(cleanLanguages) > 0 {
 			config.OCR.Languages = cleanLanguages
+		}
+	}
+	if ollamaURL := os.Getenv(EnvOCROllamaURL); ollamaURL != "" {
+		config.OCR.OllamaURL = strings.TrimRight(ollamaURL, "/")
+	}
+	if ollamaModel := os.Getenv(EnvOCROllamaModel); ollamaModel != "" {
+		config.OCR.OllamaModel = ollamaModel
+	}
+	if keepAlive := os.Getenv(EnvOCROllamaKeepAlive); keepAlive != "" {
+		config.OCR.OllamaKeepAlive = keepAlive
+	}
+	if timeout := os.Getenv(EnvOCROllamaTimeout); timeout != "" {
+		if seconds, err := strconv.Atoi(timeout); err == nil && seconds > 0 {
+			config.OCR.OllamaTimeoutSeconds = seconds
+		}
+	}
+	if maxAttempts := os.Getenv(EnvOCRMaxAttempts); maxAttempts != "" {
+		if attempts, err := strconv.Atoi(maxAttempts); err == nil && attempts > 0 {
+			config.OCR.MaxAttempts = attempts
+		}
+	}
+	if initialBackoff := os.Getenv(EnvOCRRetryInitial); initialBackoff != "" {
+		if seconds, err := strconv.Atoi(initialBackoff); err == nil && seconds > 0 {
+			config.OCR.RetryInitialBackoffSeconds = seconds
+		}
+	}
+	if maxBackoff := os.Getenv(EnvOCRRetryMax); maxBackoff != "" {
+		if seconds, err := strconv.Atoi(maxBackoff); err == nil && seconds > 0 {
+			config.OCR.RetryMaxBackoffSeconds = seconds
+		}
+	}
+	if imageMaxDimension := os.Getenv(EnvOCRImageMaxDimension); imageMaxDimension != "" {
+		if pixels, err := strconv.Atoi(imageMaxDimension); err == nil && pixels > 0 {
+			config.OCR.ImageMaxDimension = pixels
 		}
 	}
 
