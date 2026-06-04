@@ -47,14 +47,18 @@ The default binary data directory on Linux is `~/.config/frozenfortress/`. Creat
 cp -r ~/.config/frozenfortress/ ~/frozenfortress-backup-$(date +%Y%m%d)
 ```
 
-### 3. Clone the Repository (if needed)
+### 3. Download the Docker Release Archive
 
-If you installed from a release archive rather than a clone, get the repository to obtain `compose.yaml`:
+Download the latest release archive from the [Releases page](https://github.com/Yeti47/frozenfortress/releases) and extract it:
 
 ```bash
-git clone https://github.com/Yeti47/frozenfortress.git
-cd frozenfortress
+# Replace <version> with the actual version, e.g. 1.1.0
+wget https://github.com/Yeti47/frozenfortress/releases/download/v<version>/frozenfortress-docker-v<version>.zip
+unzip frozenfortress-docker-v<version>.zip
+cd frozenfortress-docker-v<version>
 ```
+
+The archive already contains a ready-to-use `compose.yaml` with all images pinned to verified digests, along with `.env.example` and `setup-docker.md`. No repository clone is needed.
 
 ### 4. Prepare the Data Volume
 
