@@ -64,8 +64,8 @@ jobs:
           local remote_name="$2"
           local tag="${REGISTRY}/${remote_name}:${VERSION}"
 
-          docker tag "$local_name" "$tag"
-          docker push "$tag"
+          docker tag "$local_name" "$tag" >&2
+          docker push "$tag" >&2
 
           # Resolve the repo digest (ghcr.io/...@sha256:...)
           digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$tag")
