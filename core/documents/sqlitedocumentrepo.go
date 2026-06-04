@@ -49,7 +49,6 @@ func (r *SQLiteDocumentRepository) initializeTable(db *sql.DB) error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_document_userid ON Document(UserId);
 	CREATE INDEX IF NOT EXISTS idx_document_created ON Document(CreatedAt);
-	CREATE INDEX IF NOT EXISTS idx_document_issuedate ON Document(IssueDate);
 	`
 	_, err := db.Exec(query)
 	if err != nil {
