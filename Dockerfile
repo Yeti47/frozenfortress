@@ -11,12 +11,16 @@ COPY . .
 RUN mkdir -p /out /out-data \
     && ./webui/build-css.sh \
     && CGO_ENABLED=1 GOOS=linux go build -tags notesseract -trimpath -ldflags="-s -w -X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=1.1.0" -o /out/ffwebui ./webui \
+    && CGO_ENABLED=1 GOOS=linux go build -tags notesseract -trimpath -ldflags="-s -w -X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=1.1.0" -o /out/ffcli ./cli \
     && cp -r webui/views /out/views \
     && cp -r webui/img /out/img \
     && cp -r webui/static /out/static
 
-# gcr.io/distroless/base-debian12:nonroot
-FROM gcr.io/distroless/base-debian12@sha256:7a75a36f4bec82a7542c64195e402907486f9a4dd2f8797a976aa0cf31cfb470
+# debian:bookworm-slim
+FROM debian@sha256:0104b334637a5f19aa9c983a91b54c89887c0984081f2068983107a6f6c21eeb
+
+RUN groupadd --system --gid 65532 nonroot \
+    && useradd --system --no-create-home --gid 65532 --uid 65532 nonroot
 
 WORKDIR /app
 
