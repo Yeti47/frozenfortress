@@ -1,0 +1,27 @@
+{{/* Frozen Fortress — shared <head> contents.
+     Emitted by every page template.
+     Expects `.Title` in template data (falls back to "Frozen Fortress").
+*/}}
+{{define "ff-head"}}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{{if .Title}}{{.Title}}{{else}}Frozen Fortress{{end}}</title>
+
+  {{/* Inline boot script: sets <html class="dark"> before paint to avoid FOWT.
+       Keep tiny — duplicates the logic in /static/js/theme.js. */}}
+  <script>(function(){try{var s=localStorage.getItem("ff-theme");var m=(s==="dark"||s==="light")?s:(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");if(m==="dark")document.documentElement.classList.add("dark");}catch(e){}})();</script>
+
+  <link rel="preload" as="font" type="font/woff2" href="/static/fonts/inter-latin-wght-normal.woff2" crossorigin>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="icon" type="image/png" href="/img/ffigloo.png">
+
+  {{/* OS preference live-sync (only if user hasn't picked a mode) */}}
+  <script defer src="/static/js/theme.js"></script>
+  {{/* Alpine.js — deferred so it boots after DOM is parsed; app.js registers the theme store on alpine:init. */}}
+  <script defer src="/static/js/app.js"></script>
+  <script defer src="/static/js/alpine.min.js"></script>
+</head>
+{{end}}

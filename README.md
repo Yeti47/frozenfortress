@@ -1,6 +1,6 @@
-<div align="center" style="background-color: #8dbfd9; padding: 30px; margin-bottom: 30px; border-radius: 15px;">
-  <img src="resources/fflogo01.png" alt="Frozen Fortress Logo" width="200" height="200">
-  <h1 style="margin-top: 2px; margin-bottom: 2px; font-size: 2.5em; color: #2c3e50; text-shadow: 0 0 14px rgba(255, 255, 255, 0.9);">Frozen Fortress</h1>
+<div align="center" style="padding: 4px; margin-bottom: 8px;">
+  <img src="resources/ff_igloo_logo.png" alt="Frozen Fortress Logo" width="400" height="400" style="margin-bottom: -100px">
+  <h1 style="margin-top: 2px; margin-bottom: 0; font-size: 2.5em;">Frozen Fortress</h1>
 </div>
 
 Frozen Fortress is a **lightweight secret and document manager** designed for local self-hosting. Built with **Go**, it provides a secure, simple, and pragmatic solution for storing and managing sensitive information like passwords, secrets, and documents in a local environment.

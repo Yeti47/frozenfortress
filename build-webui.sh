@@ -63,6 +63,11 @@ fi
 # Create bin directory if it doesn't exist
 mkdir -p bin
 
+# Build CSS (Tailwind v4 standalone). The script downloads the pinned binary on
+# first run into webui/.tools/ and reuses it thereafter.
+echo "Building CSS (Tailwind)..."
+./webui/build-css.sh
+
 # Build the webui application
 echo "Compiling webui application..."
 

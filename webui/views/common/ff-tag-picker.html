@@ -1,0 +1,171 @@
+{{/* ff-tag-picker — Alpine-powered multi-select tag picker.
+
+     Args (map):
+       fieldId   (string, required)  HTML id prefix; must be unique on the page
+       fieldName (string, required)  POST field name (single hidden input,
+                                     value is comma-separated tag IDs)
+       allTags   (slice of *TagDto, required)
+       selected  (slice of *TagDto, optional)  pre-selected tags
+       max       (int, optional)     hard cap on count; 0 = unlimited
+       label     (string, optional)  visible label text; omit to skip <label>
+       helper    (string, optional)  helper text shown beneath the picker
+
+     Renders:
+       <label> (optional) → search/filter input → selected pills → available list
+       + hidden <input name="{fieldName}"> holding the CSV value
+*/}}
+{{define "ff-tag-picker"}}
+{{- $fid       := index . "fieldId" -}}
+{{- $fname     := index . "fieldName" -}}
+{{- $allTags   := index . "allTags" -}}
+{{- $selected  := index . "selected" -}}
+{{- $selIds    := index . "selectedIds" -}}
+{{- $max       := index . "max" -}}
+{{- $label     := index . "label" -}}
+{{- $helper    := index . "helper" -}}
+
+{{- /* Build JSON-ish initial state literals safely via template */ -}}
+<div
+  x-data='ffTagPicker({{$fid | printf "%q"}}, {{if $max}}{{$max}}{{else}}0{{end}}, [
+    {{- range $i, $t := $allTags -}}
+      {{if $i}},{{end}}{"id": {{$t.Id | printf "%q"}}, "name": {{$t.Name | printf "%q"}}, "color": {{$t.Color | printf "%q"}}}
+    {{- end -}}
+  ], [
+    {{- if $selected -}}
+      {{- range $i, $t := $selected -}}
+        {{if $i}},{{end}}{{$t.Id | printf "%q"}}
+      {{- end -}}
+    {{- else if $selIds -}}
+      {{- range $i, $id := $selIds -}}
+        {{if $i}},{{end}}{{$id | printf "%q"}}
+      {{- end -}}
+    {{- end -}}
+  ])'
+  class="ff-tag-picker"
+>
+  {{if $label}}<label for="{{$fid}}-search" class="ff-label">{{$label}}{{if $max}} <span class="text-text-subtle font-normal">(max {{$max}})</span>{{end}}</label>{{end}}
+
+  {{/* Selected pills */}}
+  <div class="flex flex-wrap gap-1.5 mb-2 min-h-[1.75rem]" x-show="selected.length > 0" x-cloak>
+    <template x-for="t in selectedTags()" :key="t.id">
+      <span class="ff-badge gap-1" :style="`background-color: ${t.color}20; color: ${t.color}; border-color: ${t.color}66`">
+        <span x-text="t.name"></span>
+        <button type="button" class="hover:opacity-70" @click="toggle(t.id)" :aria-label="`Remove tag ${t.name}`">
+          <svg class="ff-icon size-3" aria-hidden="true"><use href="/static/icons/lucide.svg#i-close"/></svg>
+        </button>
+      </span>
+    </template>
+  </div>
+
+  {{/* Search input */}}
+  <div class="relative">
+    <span class="absolute inset-y-0 left-3 flex items-center text-text-subtle pointer-events-none">
+      <svg class="ff-icon size-4" aria-hidden="true"><use href="/static/icons/lucide.svg#i-search"/></svg>
+    </span>
+    <input
+      type="text"
+      :id="`{{$fid}}-search`"
+      x-model="query"
+      class="ff-input pl-9"
+      placeholder="Search tags…"
+      autocomplete="off"
+    >
+  </div>
+
+  {{/* Available tag list + create-on-the-fly pill (same row) */}}
+  <div class="flex flex-wrap gap-1.5 mt-2" x-show="filtered().length > 0 || (query.trim() && !exactMatch())">
+    <template x-for="t in filtered()" :key="t.id">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
+        :style="isSelected(t.id)
+          ? `background-color: ${t.color}; color: white; border-color: ${t.color}`
+          : `background-color: ${t.color}20; color: ${t.color}; border-color: ${t.color}66`"
+        :aria-pressed="isSelected(t.id)"
+        @click="toggle(t.id)"
+      >
+        <svg class="ff-icon size-3" aria-hidden="true">
+          <use :href="isSelected(t.id) ? '/static/icons/lucide.svg#i-check' : '/static/icons/lucide.svg#i-add'"/>
+        </svg>
+        <span x-text="t.name"></span>
+      </button>
+    </template>
+    <button
+      x-show="query.trim() && !exactMatch()"
+      type="button"
+      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-brand-400 text-brand-600 dark:text-brand-300 hover:bg-brand-500/10 transition-colors"
+      @click="createTag()"
+      :disabled="creating"
+    >
+      <svg class="ff-icon size-3" aria-hidden="true"><use href="/static/icons/lucide.svg#i-add"/></svg>
+      Create "<span x-text="query.trim()"></span>"
+    </button>
+  </div>
+
+  <p class="text-xs text-text-subtle mt-2" x-show="all.length === 0 && !query.trim()">
+    No tags yet — <a href="/edit-tag" class="text-brand-600 hover:underline">create one first</a>.
+  </p>
+  {{if $helper}}<p class="text-xs text-text-subtle mt-1">{{$helper}}</p>{{end}}
+
+  <input type="hidden" name="{{$fname}}" :value="selected.join(',')">
+</div>
+
+<script>
+  // Idempotent: define once per page even if partial used many times.
+  if (typeof window.ffTagPicker !== 'function') {
+    window.ffTagPicker = function (id, max, all, initialSelected) {
+      return {
+        id: id, max: max, all: all,
+        selected: Array.isArray(initialSelected) ? initialSelected.slice() : [],
+        query: '',
+        creating: false,
+        isSelected(tid) { return this.selected.indexOf(tid) !== -1; },
+        toggle(tid) {
+          var i = this.selected.indexOf(tid);
+          if (i === -1) {
+            if (this.max > 0 && this.selected.length >= this.max) return;
+            this.selected.push(tid);
+          } else {
+            this.selected.splice(i, 1);
+          }
+        },
+        selectedTags() {
+          var self = this;
+          return this.selected.map(function (sid) {
+            return self.all.find(function (t) { return t.id === sid; });
+          }).filter(Boolean);
+        },
+        filtered() {
+          var q = (this.query || '').toLowerCase().trim();
+          if (!q) return this.all;
+          return this.all.filter(function (t) { return t.name.toLowerCase().indexOf(q) !== -1; });
+        },
+        exactMatch() {
+          var q = (this.query || '').toLowerCase().trim();
+          if (!q) return true;
+          return this.all.some(function (t) { return t.name.toLowerCase() === q; });
+        },
+        async createTag() {
+          var name = (this.query || '').trim();
+          if (!name || this.creating) return;
+          this.creating = true;
+          try {
+            var resp = await fetch('/api/tags', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: name, color: '#3498db' })
+            });
+            if (!resp.ok) return;
+            var tag = await resp.json();
+            this.all.push(tag);
+            this.toggle(tag.id);
+            this.query = '';
+          } finally {
+            this.creating = false;
+          }
+        }
+      };
+    };
+  }
+</script>
+{{end}}

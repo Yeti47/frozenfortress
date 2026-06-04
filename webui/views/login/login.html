@@ -1,300 +1,88 @@
-<!DOCTYPE html>
+{{define "login.html"}}<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frozen Fortress - Login</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=M+PLUS+Rounded+1c:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{{template "ff-head" (merge . (dict "Title" "Frozen Fortress — Sign in"))}}
+<body class="h-dvh overflow-hidden flex flex-col">
+  {{template "ff-topbar" (merge . (dict "HideNav" true "HideSearch" true))}}
 
-        input, select, textarea, button {
-            font-family: inherit;
-        }
+  <main class="flex-1 overflow-y-auto">
+    <div class="min-h-full flex flex-col items-center justify-center px-4 py-10">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <a href="/" class="inline-flex justify-center group">
+          {{template "ff-logo" (dict "size" "xl" "class" "transition-transform group-hover:scale-105")}}
+        </a>
+        <h1 class="ff-brand text-3xl font-semibold mt-4 text-text">Frozen Fortress</h1>
+        <p class="text-text-muted text-sm mt-1">Sign in to your vault</p>
+      </div>
 
-        body {
-            background-color: #8dbfd9;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+      <div class="ff-card-glass p-7 sm:p-8">
+        {{template "ff-flash" .}}
 
-        .login-container {
-            background-color: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            padding: 40px;
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }
+        <form id="login-form" action="/login" method="POST" class="space-y-5">
+          <div>
+            <label for="username" class="ff-label">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value="{{.Username}}"
+              required
+              autocomplete="username"
+              autofocus
+              class="ff-input"
+            >
+          </div>
 
-        .logo {
-            width: 160px;
-            height: 160px;
-            margin: 0 auto 20px;
-            display: block;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-
-        .logo:hover {
-            transform: scale(1.05);
-        }
-
-        .app-title {
-            font-family: 'Cinzel', serif;
-            font-size: 36px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 40px;
-            text-shadow: 
-                0 0 5px rgba(255, 255, 255, 1),
-                0 0 10px rgba(255, 255, 255, 1),
-                0 0 15px rgba(255, 255, 255, 0.9),
-                0 0 20px rgba(255, 255, 255, 0.8),
-                0 0 35px rgba(255, 255, 255, 0.7),
-                0 0 50px rgba(255, 255, 255, 0.5),
-                0 2px 4px rgba(0, 0, 0, 0.2);
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #34495e;
-            font-weight: 500;
-            font-size: 14px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e8f4f8;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background-color: #f8fbfc;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #3498db;
-            background-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-
-        .login-button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 25px;
-        }
-
-        .login-button:hover {
-            background: linear-gradient(135deg, #2980b9, #21618c);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(52, 152, 219, 0.3);
-        }
-
-        .login-button:active {
-            transform: translateY(0);
-        }
-
-        .register-link {
-            color: #7f8c8d;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .register-link a {
-            color: #3498db;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .register-link a:hover {
-            color: #2980b9;
-            text-decoration: underline;
-        }
-
-        .error-message {
-            background-color: #ffeaa7;
-            border: 1px solid #fdcb6e;
-            color: #6c5ce7;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .success-message {
-            background-color: #d5f4e6;
-            border: 1px solid #80cbc4;
-            color: #2e7d32;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .error-message.show, .success-message.show {
-            display: block;
-        }
-
-        .version-info {
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 12px;
-            text-align: center;
-            margin-top: 20px;
-            font-weight: 400;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Responsive design */
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 30px 25px;
-                margin: 10px;
-            }
-
-            .app-title {
-                font-size: 28px;
-                margin-bottom: 30px;
-            }
-
-            .logo {
-                width: 100px;
-                height: 100px;
-            }
-        }
-
-        /* Animation for container */
-        .login-container {
-            animation: fadeInUp 0.6s ease-out;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
-</head>
-<body>
-    <a href="/">
-        <img src="/img/fflogo01.png" alt="Frozen Fortress Logo" class="logo">
-    </a>
-    <h1 class="app-title">Frozen Fortress</h1>
-    <div class="login-container">
-        
-        <div id="error-message" class="error-message{{if .ErrorMessage}} show{{end}}">{{.ErrorMessage}}</div>
-        <div id="success-message" class="success-message{{if .SuccessMessage}} show{{end}}">{{.SuccessMessage}}</div>
-        
-        <form id="login-form" action="/login" method="POST">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" value="{{.Username}}" required autocomplete="username">
+          <div x-data="{ show: false }">
+            <label for="password" class="ff-label">Password</label>
+            <div class="relative">
+              <input
+                :type="show ? 'text' : 'password'"
+                id="password"
+                name="password"
+                required
+                autocomplete="current-password"
+                class="ff-input pr-11"
+              >
+              <button
+                type="button"
+                class="absolute inset-y-0 right-0 px-3 flex items-center text-text-subtle hover:text-text"
+                @click="show = !show"
+                :aria-label="show ? 'Hide password' : 'Show password'"
+              >
+                <template x-if="!show">
+                  {{template "ff-icon" (dict "name" "visibility" "class" "ff-icon")}}
+                </template>
+                <template x-if="show">
+                  {{template "ff-icon" (dict "name" "visibility_off" "class" "ff-icon")}}
+                </template>
+              </button>
             </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
-            </div>
-            
-            <button type="submit" class="login-button">Sign In</button>
+          </div>
+
+          <button type="submit" class="ff-btn ff-btn-primary ff-btn-block ff-btn-lg">
+            {{template "ff-icon" (dict "name" "lock_open" "class" "ff-icon")}}
+            <span>Sign in</span>
+          </button>
         </form>
-        
-        <div class="register-link">
-            Don't have an account yet?<br><a href="/register">Request access here</a><br>
-            <a style="display: inline-block; margin-top: 8px;" href="/recovery">Forgot your password?</a>
+
+        <hr class="ff-divider">
+
+        <div class="text-center text-sm text-text-muted space-y-2">
+          <p>
+            Don't have an account?
+            <a href="/register" class="text-brand-600 hover:text-brand-700 dark:text-brand-300 dark:hover:text-brand-200 font-medium">Request access</a>
+          </p>
+          <p>
+            <a href="/recovery" class="text-brand-600 hover:text-brand-700 dark:text-brand-300 dark:hover:text-brand-200">Forgot your password?</a>
+          </p>
         </div>
+      </div>
     </div>
-
-    {{if .Version}}
-    <div class="version-info">
-        Version {{.Version}}
     </div>
-    {{end}}
+  </main>
 
-    <script>
-        document.getElementById('login-form').addEventListener('submit', function(e) {
-            const errorDiv = document.getElementById('error-message');
-            const successDiv = document.getElementById('success-message');
-            errorDiv.classList.remove('show');
-            successDiv.classList.remove('show');
-        });
-
-        // Clear navigation history if this is a logout success page
-        document.addEventListener('DOMContentLoaded', function() {
-            const successMessage = document.getElementById('success-message');
-            if (successMessage && successMessage.classList.contains('show')) {
-                clearNavigationHistoryOnLogout();
-            }
-        });
-
-        function clearNavigationHistoryOnLogout() {
-            try {
-                // For security: clear browser history after logout
-                if ('history' in window && 'replaceState' in window.history) {
-                    // Replace the current history entry to prevent going back to authenticated pages
-                    window.history.replaceState(null, '', '/login');
-                    
-                    // Clear session storage and local storage
-                    if (typeof(Storage) !== "undefined") {
-                        sessionStorage.clear();
-                        localStorage.clear();
-                    }
-                    
-                    // Clear any cached data
-                    if ('caches' in window) {
-                        caches.keys().then(function(names) {
-                            for (let name of names) {
-                                caches.delete(name);
-                            }
-                        });
-                    }
-                    
-                    // Prevent navigation using browser back/forward buttons to authenticated content
-                    window.addEventListener('popstate', function(event) {
-                        // Force redirect to login if user tries to navigate back
-                        window.location.replace('/login');
-                    });
-                }
-            } catch (e) {
-                console.log('History clearing not fully supported in this browser');
-            }
-        }
-    </script>
+  {{template "ff-footer" .}}
 </body>
 </html>
+{{end}}

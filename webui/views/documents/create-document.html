@@ -1,796 +1,142 @@
-{{template "header" .}}
-    <style>
-        /* Override body and main content layout */
-        body {
-            min-height: 100vh !important;
-            height: auto !important;
-            overflow: auto !important;
-        }
-        
-        .main-content {
-            align-items: flex-start !important;
-            padding: 20px 15px !important;
-            flex: 1 !important;
-            min-height: calc(100vh - 200px) !important;
-            overflow: visible !important;
-        }
-        
-        .content-container {
-            max-width: 800px !important;
-            padding: 30px !important;
-            margin: 0 auto;
-            min-height: calc(100vh - 240px);
-            display: flex;
-            flex-direction: column;
-            background-color: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-        }
+{{define "create-document.html"}}<!DOCTYPE html>
+<html lang="en">
+{{template "ff-head" (merge . (dict "Title" "New document · Frozen Fortress"))}}
+<body class="h-dvh overflow-hidden flex flex-col">
+  {{template "ff-topbar" (merge . (dict "Active" "documents"))}}
 
-        .create-document-container {
-            width: 100%;
-            padding: 0;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .create-document-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        .create-document-title {
-            color: #2c3e50;
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .back-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #7f8c8d;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .back-btn:hover {
-            color: #2c3e50;
-            background: rgba(52, 152, 219, 0.1);
-            text-decoration: none;
-        }
-
-        .form-container {
-            background: #fafbfc;
-            border: 2px solid #e3f2fd;
-            border-radius: 15px;
-            padding: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #2c3e50;
-            font-size: 14px;
-        }
-
-        .required-asterisk {
-            color: #e74c3c;
-            margin-left: 4px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e1e8ed;
-            border-radius: 12px;
-            font-size: 14px;
-            background: white;
-            transition: all 0.3s ease;
-            box-sizing: border-box;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-
-        .form-textarea {
-            min-height: 80px;
-            resize: vertical;
-            font-family: inherit;
-        }
-
-        .char-counter {
-            font-size: 12px;
-            color: #95a5a6;
-            margin-top: 4px;
-            text-align: right;
-        }
-
-        .char-counter.warning {
-            color: #f39c12;
-        }
-
-        .char-counter.error {
-            color: #e74c3c;
-        }
-
-        .file-upload-section {
-            border: 2px dashed #bdc3c7;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            background: #f8f9fa;
-            transition: all 0.3s ease;
-            position: relative;
-            cursor: pointer;
-        }
-
-        .file-upload-section:hover {
-            border-color: #3498db;
-            background: #ebf3fd;
-        }
-
-        .file-upload-section.dragover {
-            border-color: #2ecc71;
-            background: #e8f8f5;
-        }
-
-        .file-upload-icon {
-            font-size: 48px;
-            color: #bdc3c7;
-            margin-bottom: 15px;
-        }
-
-        .file-upload-text {
-            color: #2c3e50;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .file-upload-hint {
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-
-        .file-input {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .upload-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .upload-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-
-        .upload-btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-        }
-
-        .selected-files {
-            margin-top: 20px;
-        }
-
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            background: white;
-            border: 1px solid #e1e8ed;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-
-        .file-icon {
-            font-size: 24px;
-            color: #3498db;
-        }
-
-        .file-info {
-            flex: 1;
-        }
-
-        .file-name {
-            font-weight: 600;
-            color: #2c3e50;
-            font-size: 14px;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            line-height: 1.3;
-        }
-
-        .file-size {
-            font-size: 12px;
-            color: #7f8c8d;
-        }
-
-        .remove-file {
-            color: #e74c3c;
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 4px;
-            transition: background 0.2s ease;
-        }
-
-        .remove-file:hover {
-            background: rgba(231, 76, 60, 0.1);
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 15px;
-            justify-content: flex-end;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #ecf0f1;
-        }
-
-        .btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-
-        .btn-secondary {
-            background: #ecf0f1;
-            color: #2c3e50;
-        }
-
-        .btn-secondary:hover {
-            background: #d5dbdb;
-            text-decoration: none;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #229954, #27ae60);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-            box-shadow: none !important;
-        }
-
-        .error-message {
-            background: #ffe6e6;
-            color: #c0392b;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #fadbd8;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .success-message {
-            background: #e8f5e8;
-            color: #27ae60;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #d5f4d5;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* Mobile responsiveness */
-        @media (max-width: 768px) {
-            .content-container {
-                padding: 20px !important;
-            }
-            
-            .form-container {
-                padding: 20px;
-            }
-            
-            .create-document-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            
-            .create-document-title {
-                font-size: 24px;
-            }
-            
-            .form-input {
-                font-size: 16px; /* Prevents zoom on iOS */
-            }
-            
-            .file-upload-section {
-                padding: 20px;
-            }
-            
-            .file-upload-icon {
-                font-size: 36px;
-            }
-            
-            .upload-buttons {
-                flex-direction: column;
-            }
-            
-            .form-actions {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .file-item {
-                padding: 10px 12px;
-                gap: 10px;
-            }
-            
-            .file-icon {
-                font-size: 24px;
-                flex-shrink: 0;
-            }
-            
-            .file-name {
-                font-size: 13px;
-                /* Ensure text breaks properly on mobile */
-                word-break: break-all;
-                hyphens: auto;
-                max-width: calc(100% - 20px);
-            }
-            
-            .file-size {
-                font-size: 11px;
-                margin-top: 2px;
-            }
-            
-            .remove-file {
-                flex-shrink: 0;
-                padding: 6px;
-                margin-left: auto;
-            }
-        }
-
-        /* Very small screens */
-        @media (max-width: 480px) {
-            .main-content {
-                padding: 10px 8px !important;
-            }
-            
-            .content-container {
-                padding: 15px !important;
-                margin: 0 !important;
-                min-height: calc(100vh - 100px);
-                border-radius: 15px;
-            }
-            
-            .form-container {
-                padding: 15px;
-            }
-            
-            .create-document-header {
-                margin-bottom: 20px;
-                gap: 10px;
-            }
-            
-            .create-document-title {
-                font-size: 22px;
-            }
-            
-            .form-group {
-                margin-bottom: 20px;
-            }
-            
-            .file-upload-section {
-                padding: 15px;
-            }
-            
-            .form-actions {
-                margin-top: 20px;
-                padding-top: 15px;
-            }
-            
-            .file-item {
-                padding: 8px 10px;
-                flex-wrap: wrap;
-                min-height: auto;
-            }
-            
-            .file-icon {
-                font-size: 22px;
-            }
-            
-            .file-info {
-                flex: 1;
-                min-width: 0; /* Allow flex item to shrink below content size */
-                max-width: calc(100% - 70px); /* Account for icon and remove button */
-            }
-            
-            .file-name {
-                font-size: 12px;
-                line-height: 1.2;
-                /* More aggressive text breaking for very small screens */
-                word-break: break-all;
-                overflow-wrap: anywhere;
-            }
-            
-            .file-size {
-                font-size: 10px;
-                margin-top: 1px;
-            }
-            
-            .remove-file {
-                position: absolute;
-                right: 8px;
-                top: 50%;
-                transform: translateY(-50%);
-                font-size: 18px;
-            }
-            
-            .file-item {
-                position: relative;
-                padding-right: 35px; /* Make room for absolutely positioned remove button */
-            }
-        }
-    </style>
-
-    <div class="create-document-container">
-        <!-- Header -->
-        <div class="create-document-header">
-            <h1 class="create-document-title">Create New Document</h1>
-            <a href="/documents" class="back-btn">
-                <span class="material-icons">arrow_back</span>
-                Back to Documents
-            </a>
-        </div>
-
-            <!-- Error/Success Messages -->
-            {{if .ErrorMessage}}
-            <div class="error-message">
-                <span class="material-icons">error</span>
-                {{.ErrorMessage}}
-            </div>
-            {{end}}
-
-            {{if .SuccessMessage}}
-            <div class="success-message">
-                <span class="material-icons">check_circle</span>
-                {{.SuccessMessage}}
-            </div>
-            {{end}}
-
-            <!-- Form -->
-            <form method="POST" action="/create-document" enctype="multipart/form-data" class="create-document-form">
-                <div class="form-container">
-                    <!-- Title -->
-                    <div class="form-group">
-                        <label for="title" class="form-label">
-                            Document Title<span class="required-asterisk">*</span>
-                        </label>
-                        <input type="text" 
-                               id="title" 
-                               name="title" 
-                               class="form-input" 
-                               placeholder="Enter document title..."
-                               value="{{.DocumentTitle}}"
-                               maxlength="50"
-                               required>
-                        <div class="char-counter" id="title-counter">0/50</div>
-                    </div>
-
-                    <!-- Description -->
-                    <div class="form-group">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea id="description" 
-                                  name="description" 
-                                  class="form-input form-textarea" 
-                                  placeholder="Optional description..."
-                                  maxlength="128">{{.Description}}</textarea>
-                        <div class="char-counter" id="description-counter">0/128</div>
-                    </div>
-
-                    <!-- Issuer -->
-                    <div class="form-group">
-                        <label for="issuer" class="form-label">Issuer</label>
-                        <input type="text" 
-                               id="issuer" 
-                               name="issuer" 
-                               class="form-input" 
-                               placeholder="e.g. Company name, institution..."
-                               value="{{.Issuer}}"
-                               maxlength="100">
-                    </div>
-
-                    <!-- Issue Date -->
-                    <div class="form-group">
-                        <label for="issueDate" class="form-label">Issue Date</label>
-                        <input type="date" 
-                               id="issueDate" 
-                               name="issueDate" 
-                               class="form-input" 
-                               value="{{.IssueDate}}">
-                    </div>
-
-                    <!-- Tags -->
-                    <div class="form-group">
-                        {{template "tag-picker" dict "FieldId" "document-tags" "FieldName" "tagIds" "Label" "Tags" "Required" false}}
-                    </div>
-
-                    <!-- File Upload -->
-                    <div class="form-group">
-                        <label class="form-label">Files</label>
-                        <div class="file-upload-section" id="file-upload-area">
-                            <div class="file-upload-icon">
-                                <span class="material-icons">cloud_upload</span>
-                            </div>
-                            <div class="file-upload-text">Drop files here or click to browse</div>
-                            <div class="file-upload-hint">Supported formats: PNG, JPG, JPEG, PDF (Max {{.MaxFileSizeText}} each)<br>
-                                <small>On mobile devices, you can also take photos directly</small>
-                            </div>
-                            
-                            <div class="upload-buttons">
-                                <button type="button" class="upload-btn" onclick="document.getElementById('file-input').click()">
-                                    <span class="material-icons">attach_file</span>
-                                    Choose Files
-                                </button>
-                            </div>
-                            
-                            <input type="file" 
-                                   id="file-input" 
-                                   name="files" 
-                                   class="file-input"
-                                   multiple 
-                                   accept="image/png,image/jpeg,image/jpg,application/pdf">
-                        </div>
-                        
-                        <div class="selected-files" id="selected-files">
-                            <!-- Selected files will be displayed here -->
-                        </div>
-                    </div>
-
-                    <!-- Form Actions -->
-                    <div class="form-actions">
-                        <a href="/documents" class="btn btn-secondary">
-                            <span class="material-icons">cancel</span>
-                            Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary" id="submit-btn">
-                            <span class="material-icons">add</span>
-                            Create Document
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
+  <main class="flex-1 overflow-y-auto">
+    <div class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8">
+    <div class="mb-6">
+      <a href="/documents" class="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text">
+        {{template "ff-icon" (dict "name" "arrow_back" "class" "ff-icon size-4")}}
+        <span>Back to documents</span>
+      </a>
+      <h1 class="text-2xl sm:text-3xl font-semibold text-text mt-3">New document</h1>
     </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const titleInput = document.getElementById('title');
-    const descriptionInput = document.getElementById('description');
-    const titleCounter = document.getElementById('title-counter');
-    const descriptionCounter = document.getElementById('description-counter');
-    const fileUploadArea = document.getElementById('file-upload-area');
-    const fileInput = document.getElementById('file-input');
-    const selectedFilesContainer = document.getElementById('selected-files');
-    const submitBtn = document.getElementById('submit-btn');
-    
-    let selectedFiles = [];
-    
-    // Character counting
-    function updateCharCount(input, counter, maxLength) {
-        const currentLength = input.value.length;
-        counter.textContent = `${currentLength}/${maxLength}`;
-        
-        if (currentLength > maxLength * 0.8) {
-            counter.classList.add('warning');
-        } else {
-            counter.classList.remove('warning');
-        }
-        
-        if (currentLength >= maxLength) {
-            counter.classList.add('error');
-        } else {
-            counter.classList.remove('error');
-        }
-    }
-    
-    titleInput.addEventListener('input', () => updateCharCount(titleInput, titleCounter, 50));
-    descriptionInput.addEventListener('input', () => updateCharCount(descriptionInput, descriptionCounter, 128));
-    
-    // Initialize counters
-    updateCharCount(titleInput, titleCounter, 50);
-    updateCharCount(descriptionInput, descriptionCounter, 128);
-    
-    // File handling
-    
-    function getFileIcon(fileName) {
-        const extension = fileName.split('.').pop().toLowerCase();
-        switch(extension) {
-            case 'pdf':
-                return 'picture_as_pdf';
-            case 'jpg':
-            case 'jpeg':
-            case 'png':
-                return 'image';
-            default:
-                return 'description';
-        }
-    }
-    
-    function validateFile(file) {
-        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
-        const maxSize = {{.MaxFileSize}}; // From Go template
-        
-        if (!allowedTypes.includes(file.type)) {
-            alert(`File type ${file.type} is not supported. Please select PNG, JPG, JPEG, or PDF files.`);
-            return false;
-        }
-        
-        if (file.size > maxSize) {
-            alert(`File ${file.name} is too large. Maximum file size is {{.MaxFileSizeText}}.`);
-            return false;
-        }
-        
-        return true;
-    }
-    
-    function addFiles(files) {
-        Array.from(files).forEach(file => {
-            if (validateFile(file)) {
-                // Check if file already exists
-                if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
-                    selectedFiles.push(file);
-                }
-            }
-        });
-        updateFileDisplay();
-        updateSubmitButton();
-    }
-    
-    function removeFile(index) {
-        selectedFiles.splice(index, 1);
-        updateFileDisplay();
-        updateSubmitButton();
-    }
-    
-    function updateFileDisplay() {
-        if (selectedFiles.length === 0) {
-            selectedFilesContainer.innerHTML = '';
-            return;
-        }
-        
-        selectedFilesContainer.innerHTML = selectedFiles.map((file, index) => `
-            <div class="file-item">
-                <span class="material-icons file-icon">${getFileIcon(file.name)}</span>
-                <div class="file-info">
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-size">${formatFileSize(file.size)}</div>
-                </div>
-                <span class="material-icons remove-file" onclick="removeFile(${index})">close</span>
-            </div>
-        `).join('');
-    }
-    
-    function updateSubmitButton() {
-        const hasTitle = titleInput.value.trim().length > 0;
-        submitBtn.disabled = !hasTitle;
-    }
-    
-    // File input change handler
-    function handleFileSelect(event) {
-        addFiles(event.target.files);
-        // Reset file input so same file can be selected again
-        event.target.value = '';
-    }
-    
-    // Add event listener for file input
-    fileInput.addEventListener('change', handleFileSelect);
-    
-    // Drag and drop
-    fileUploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        fileUploadArea.classList.add('dragover');
-    });
-    
-    fileUploadArea.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        fileUploadArea.classList.remove('dragover');
-    });
-    
-    fileUploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        fileUploadArea.classList.remove('dragover');
-        addFiles(e.dataTransfer.files);
-    });
-    
-    // Global function for file removal
-    window.removeFile = removeFile;
-    
-    // Title validation
-    titleInput.addEventListener('input', updateSubmitButton);
-    
-    // Form submission handling
-    document.querySelector('.create-document-form').addEventListener('submit', function(e) {
-        if (!titleInput.value.trim()) {
-            e.preventDefault();
-            alert('Please enter a document title.');
-            titleInput.focus();
-            return;
-        }
-        
-        // Update file input with selected files
-        const dt = new DataTransfer();
-        selectedFiles.forEach(file => dt.items.add(file));
-        fileInput.files = dt.files;
-        
-        // Disable submit button during submission
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="material-icons">hourglass_empty</span>Creating...';
-    });
-    
-    // Initialize
-    updateSubmitButton();
-});
-</script>
+    {{template "ff-flash" .}}
 
-{{template "footer" .}}
+    <form
+      action="/create-document"
+      method="POST"
+      enctype="multipart/form-data"
+      class="space-y-6"
+      x-data="ffCreateDoc()"
+    >
+      <div class="ff-card p-6 sm:p-8 space-y-5">
+        <div>
+          <label for="title" class="ff-label">Title <span class="text-danger-500">*</span></label>
+          <input type="text" id="title" name="title" value="{{.DocumentTitle}}" required maxlength="200" class="ff-input" autofocus placeholder="e.g. Electricity bill — Jan 2025">
+        </div>
+
+        <div>
+          <label for="description" class="ff-label">Description</label>
+          <textarea id="description" name="description" rows="3" class="ff-textarea" placeholder="Optional notes about this document">{{.Description}}</textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="issuer" class="ff-label">Issuer</label>
+            <input type="text" id="issuer" name="issuer" value="{{.Issuer}}" class="ff-input" placeholder="e.g. ConEdison, IRS, Bank XYZ">
+          </div>
+          <div>
+            <label for="issueDate" class="ff-label">Issue date</label>
+            <input type="date" id="issueDate" name="issueDate" value="{{.IssueDate}}" class="ff-input">
+          </div>
+        </div>
+
+        {{template "ff-tag-picker" (dict "fieldId" "createTags" "fieldName" "tagIds" "allTags" .AllTags "label" "Tags")}}
+      </div>
+
+      {{/* Drop zone */}}
+      <div class="ff-card p-6 sm:p-8">
+        <label class="ff-label">Files</label>
+        <p class="text-xs text-text-subtle mb-3">PNG, JPG, or PDF · up to {{.MaxFileSizeText}} each.</p>
+
+        <label
+          for="files"
+          class="block border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:bg-surface-sunken transition-colors"
+          :class="dragging ? 'border-brand-500 bg-brand-500/5' : ''"
+          @dragover.prevent="dragging = true"
+          @dragleave.prevent="dragging = false"
+          @drop.prevent="dragging = false; addDroppedFiles($event.dataTransfer.files)"
+        >
+          {{template "ff-icon" (dict "name" "upload" "class" "ff-icon size-10 text-text-subtle mx-auto")}}
+          <p class="mt-3 text-sm text-text-muted">
+            <span class="text-brand-600 font-medium">Click to browse</span> or drag &amp; drop files here.
+          </p>
+          <input
+            type="file"
+            id="files"
+            name="files"
+            multiple
+            accept="image/png,image/jpeg,image/jpg,application/pdf"
+            class="sr-only"
+            x-ref="fileInput"
+            @change="addInputFiles($event.target.files)"
+          >
+        </label>
+
+        <ul class="mt-4 space-y-1.5" x-show="files.length > 0" x-cloak>
+          <template x-for="(f, i) in files" :key="i">
+            <li class="flex items-center justify-between gap-3 px-3 py-2 rounded-md bg-surface-sunken text-sm">
+              <div class="flex items-center gap-2 min-w-0">
+                {{template "ff-icon" (dict "name" "attach_file" "class" "ff-icon size-4 text-text-subtle")}}
+                <span class="truncate" x-text="f.name"></span>
+                <span class="text-text-subtle text-xs whitespace-nowrap" x-text="formatFileSize(f.size)"></span>
+              </div>
+              <button type="button" class="text-text-subtle hover:text-danger-500" @click="removeFile(i)" :aria-label="`Remove ${f.name}`">
+                {{template "ff-icon" (dict "name" "close" "class" "ff-icon size-4")}}
+              </button>
+            </li>
+          </template>
+        </ul>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <a href="/documents" class="ff-btn ff-btn-secondary">Cancel</a>
+        <button type="submit" class="ff-btn ff-btn-primary">
+          {{template "ff-icon" (dict "name" "save" "class" "ff-icon")}}
+          <span>Create document</span>
+        </button>
+      </div>
+    </form>
+    </div>
+  </main>
+
+  {{template "ff-footer" .}}
+
+  <script>
+    function ffCreateDoc() {
+      return {
+        dragging: false,
+        files: [],
+        addInputFiles(list) {
+          this.files = Array.from(list || []);
+        },
+        addDroppedFiles(list) {
+          // Append dropped files to the file input via DataTransfer.
+          var dt = new DataTransfer();
+          var input = this.$refs.fileInput;
+          if (input.files) {
+            Array.from(input.files).forEach(function (f) { dt.items.add(f); });
+          }
+          Array.from(list || []).forEach(function (f) { dt.items.add(f); });
+          input.files = dt.files;
+          this.files = Array.from(input.files);
+        },
+        removeFile(idx) {
+          var input = this.$refs.fileInput;
+          var dt = new DataTransfer();
+          Array.from(input.files).forEach(function (f, i) {
+            if (i !== idx) dt.items.add(f);
+          });
+          input.files = dt.files;
+          this.files = Array.from(input.files);
+        }
+      };
+    }
+  </script>
+</body>
+</html>
+{{end}}

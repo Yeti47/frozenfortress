@@ -1,0 +1,132 @@
+{{/* Frozen Fortress — reusable template components.
+
+     All blocks are namespaced with "ff-" so page templates don't accidentally
+     collide with them. Render via `{{template "ff-NAME" arg}}` from any page.
+
+     Convention: components that need arguments expect a single map (from the
+     `dict` template func, e.g. `(dict "name" "search" "class" "ff-icon")`).
+*/}}
+
+{{/* -------------------------------------------------------------------------
+     ff-icon — render an SVG icon from the Lucide sprite.
+     Args:
+       name   (string, required)   sprite id (e.g. "search")
+       class  (string, optional)   extra CSS classes (default "ff-icon")
+       title  (string, optional)   accessible title; if absent icon is aria-hidden
+------------------------------------------------------------------------- */}}
+{{define "ff-icon"}}{{- $class := index . "class" -}}{{- if not $class -}}{{- $class = "ff-icon" -}}{{- end -}}{{- $title := index . "title" -}}<svg class="{{$class}}" {{if $title}}role="img" aria-label="{{$title}}"{{else}}aria-hidden="true" focusable="false"{{end}}><use href="/static/icons/lucide.svg#i-{{index . "name"}}"/></svg>{{end}}
+
+{{/* -------------------------------------------------------------------------
+     ff-flash — render success/error/warning/info messages from template data.
+     Reads `.SuccessMessage`, `.ErrorMessage`, `.WarningMessage`, `.InfoMessage`.
+     Renders nothing if all are empty.
+     Pass the page's root context: `{{template "ff-flash" .}}`.
+------------------------------------------------------------------------- */}}
+{{define "ff-flash"}}
+{{- if or .SuccessMessage .ErrorMessage .WarningMessage .InfoMessage -}}
+<div class="space-y-2 mb-6">
+  {{if .SuccessMessage}}
+  <div class="ff-flash ff-flash-success" role="status">
+    {{template "ff-icon" (dict "name" "check_circle" "class" "ff-icon")}}
+    <span class="flex-1">{{.SuccessMessage}}</span>
+  </div>
+  {{end}}
+  {{if .ErrorMessage}}
+  <div class="ff-flash ff-flash-error" role="alert" data-persist>
+    {{template "ff-icon" (dict "name" "error" "class" "ff-icon")}}
+    <span class="flex-1">{{.ErrorMessage}}</span>
+  </div>
+  {{end}}
+  {{if .WarningMessage}}
+  <div class="ff-flash ff-flash-warning" role="alert">
+    {{template "ff-icon" (dict "name" "warning" "class" "ff-icon")}}
+    <span class="flex-1">{{.WarningMessage}}</span>
+  </div>
+  {{end}}
+  {{if .InfoMessage}}
+  <div class="ff-flash ff-flash-info" role="status">
+    {{template "ff-icon" (dict "name" "info" "class" "ff-icon")}}
+    <span class="flex-1">{{.InfoMessage}}</span>
+  </div>
+  {{end}}
+</div>
+{{- end -}}
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+     ff-logo — standalone logo image with glow effect. Args:
+       size   (string)  "sm" | "md" | "lg" | "xl" (default "md")
+       class  (string)  extra CSS classes appended to the img
+------------------------------------------------------------------------- */}}
+{{define "ff-logo"}}{{- $size := index . "size" -}}{{- if not $size -}}{{- $size = "md" -}}{{- end -}}{{- $class := index . "class" -}}{{- if eq $size "sm" -}}<img src="/img/ffigloo.png" alt="Frozen Fortress" class="h-14 w-auto {{$class}}" style="filter:drop-shadow(0 0 8px rgba(96,165,250,0.5))">{{- else if eq $size "lg" -}}<img src="/img/ffigloo.png" alt="Frozen Fortress" class="h-36 w-auto {{$class}}" style="filter:drop-shadow(0 0 14px rgba(96,165,250,0.55))">{{- else if eq $size "xl" -}}<img src="/img/ffigloo.png" alt="Frozen Fortress" class="h-52 w-auto max-w-full {{$class}}" style="filter:drop-shadow(0 0 20px rgba(96,165,250,0.6))">{{- else -}}<img src="/img/ffigloo.png" alt="Frozen Fortress" class="h-16 w-auto {{$class}}" style="filter:drop-shadow(0 0 10px rgba(96,165,250,0.5))">{{- end -}}{{end}}
+
+{{/* -------------------------------------------------------------------------
+     ff-brand — logo + app name. Args:
+       size  (string)  "sm" | "md" | "lg" (default "md")
+       href  (string)  link target (default "/")
+------------------------------------------------------------------------- */}}
+{{define "ff-brand"}}{{- $size := index . "size" -}}{{- if not $size -}}{{- $size = "md" -}}{{- end -}}{{- $href := index . "href" -}}{{- if not $href -}}{{- $href = "/" -}}{{- end -}}
+<a href="{{$href}}" class="inline-flex items-center gap-3 group">
+  {{if eq $size "lg"}}
+  {{template "ff-logo" (dict "size" "lg" "class" "transition-transform group-hover:scale-105")}}
+  <span class="ff-brand text-3xl font-semibold text-text">Frozen Fortress</span>
+  {{else if eq $size "sm"}}
+  {{template "ff-logo" (dict "size" "sm" "class" "")}}
+  <span class="ff-brand text-base font-semibold text-text hidden sm:inline">Frozen Fortress</span>
+  {{else}}
+  {{template "ff-logo" (dict "size" "md" "class" "transition-transform group-hover:scale-105")}}
+  <span class="ff-brand text-lg font-semibold text-text hidden sm:inline">Frozen Fortress</span>
+  {{end}}
+</a>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+     ff-theme-toggle — button that flips light/dark via Alpine store.
+------------------------------------------------------------------------- */}}
+{{define "ff-theme-toggle"}}
+<button
+  type="button"
+  class="ff-btn ff-btn-ghost ff-btn-icon"
+  aria-label="Toggle color theme"
+  @click="$store.theme.toggle()"
+  x-data
+>
+  <template x-if="$store.theme.isDark()">
+    {{template "ff-icon" (dict "name" "sun" "class" "ff-icon")}}
+  </template>
+  <template x-if="!$store.theme.isDark()">
+    {{template "ff-icon" (dict "name" "moon" "class" "ff-icon")}}
+  </template>
+</button>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+     ff-pagination — render pagination controls.
+     Args (map):
+       page        (int)    1-based current page
+       totalPages  (int)    total number of pages
+       baseUrl     (string) URL prefix; "?" or "&" is appended automatically
+                            with "page=N". Example: "/secrets?searchTerm=foo"
+------------------------------------------------------------------------- */}}
+{{define "ff-pagination"}}{{- $page := index . "page" -}}{{- $totalPages := index . "totalPages" -}}{{- $baseUrl := index . "baseUrl" -}}
+{{- if gt $totalPages 1 -}}
+<nav class="flex items-center justify-center gap-1 mt-6" aria-label="Pagination">
+  {{- $sep := "?" -}}{{- if contains $baseUrl "?" -}}{{- $sep = "&" -}}{{- end -}}
+  {{if gt $page 1}}
+    <a href="{{$baseUrl}}{{$sep}}page=1" class="ff-btn ff-btn-secondary ff-btn-sm ff-btn-icon" aria-label="First page">{{template "ff-icon" (dict "name" "first_page" "class" "ff-icon")}}</a>
+    <a href="{{$baseUrl}}{{$sep}}page={{sub $page 1}}" class="ff-btn ff-btn-secondary ff-btn-sm ff-btn-icon" aria-label="Previous page">{{template "ff-icon" (dict "name" "chevron_left" "class" "ff-icon")}}</a>
+  {{else}}
+    <span class="ff-btn ff-btn-secondary ff-btn-sm ff-btn-icon" aria-disabled="true">{{template "ff-icon" (dict "name" "first_page" "class" "ff-icon")}}</span>
+    <span class="ff-btn ff-btn-secondary ff-btn-sm ff-btn-icon" aria-disabled="true">{{template "ff-icon" (dict "name" "chevron_left" "class" "ff-icon")}}</span>
+  {{end}}
+  <span class="px-3 text-sm text-text-muted whitespace-nowrap">Page <strong class="text-text">{{$page}}</strong> of <strong class="text-text">{{$totalPages}}</strong></span>
+  {{if lt $page $totalPages}}
+    <a href="{{$baseUrl}}{{$sep}}page={{add $page 1}}" class="ff-btn ff-btn-secondary ff-btn-sm ff-btn-icon" aria-label="Next page">{{template "ff-icon" (dict "name" "chevron_right" "class" "ff-icon")}}</a>
+    <a href="{{$baseUrl}}{{$sep}}page={{$totalPages}}" class="ff-btn ff-btn-secondary ff-btn-sm ff-btn-icon" aria-label="Last page">{{template "ff-icon" (dict "name" "last_page" "class" "ff-icon")}}</a>
+  {{else}}
+    <span class="ff-btn ff-btn-secondary ff-btn-sm ff-btn-icon" aria-disabled="true">{{template "ff-icon" (dict "name" "chevron_right" "class" "ff-icon")}}</span>
+    <span class="ff-btn ff-btn-secondary ff-btn-sm ff-btn-icon" aria-disabled="true">{{template "ff-icon" (dict "name" "last_page" "class" "ff-icon")}}</span>
+  {{end}}
+</nav>
+{{- end -}}
+{{end}}

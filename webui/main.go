@@ -6,6 +6,8 @@ import (
 	"html/template"
 	"os"
 	"os/signal"
+	"reflect"
+	"strings"
 	"syscall"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
@@ -94,6 +96,25 @@ func registerRoutes(router *gin.Engine, svc services) {
 			}
 			return dict
 		},
+		// merge shallowly combines maps into a new map. Later sources win.
+		// Used by templates to inject layout-specific keys, e.g.:
+		//   {{template "ff-topbar" (merge . (dict "Active" "secrets"))}}
+		// Uses reflect so named map types (e.g. gin.H = map[string]any) are handled.
+		"merge": func(maps ...any) map[string]any {
+			out := make(map[string]any)
+			for _, m := range maps {
+				v := reflect.ValueOf(m)
+				if v.Kind() == reflect.Map {
+					for _, key := range v.MapKeys() {
+						out[key.String()] = v.MapIndex(key).Interface()
+					}
+				}
+			}
+			return out
+		},
+		"hasPrefix": strings.HasPrefix,
+		"hasSuffix": strings.HasSuffix,
+		"contains":  strings.Contains,
 	}
 
 	// Load HTML templates with functions
@@ -102,6 +123,7 @@ func registerRoutes(router *gin.Engine, svc services) {
 
 	// Serve static files
 	router.Static("/img", "./img")
+	router.Static("/static", "./static")
 
 	// Register routes from modules
 	secretsview.RegisterRoutes(router, svc.SignInManager, svc.SecretManager, svc.MekStore, svc.EncryptionService, svc.Logger)
