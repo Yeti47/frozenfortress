@@ -47,12 +47,16 @@ jobs:
       run: docker compose build
 
     - name: Log in to GHCR
-      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Push images to GHCR and capture digests
       id: push_images
       run: |
-        REGISTRY="ghcr.io/${{ github.repository_owner }}"
+        REGISTRY="ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
         VERSION="${{ steps.extract_version.outputs.version }}"
 
         push_image() {
