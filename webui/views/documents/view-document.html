@@ -1,2018 +1,238 @@
-{{template "header" .}}
-    <style>
-        /* Override body and main content layout for better space utilization */
-        body {
-            min-height: 100vh !important;
-            height: auto !important;
-            overflow: auto !important;
-        }
-        
-        .main-content {
-            align-items: flex-start !important;
-            padding: 20px 15px !important;
-            flex: 1 !important;
-            min-height: calc(100vh - 200px) !important;
-            overflow: visible !important;
-        }
-        
-        .content-container {
-            max-width: 1200px !important;
-            padding: 30px !important;
-            margin: 0 auto;
-            min-height: calc(100vh - 240px);
-            display: flex;
-            flex-direction: column;
-            background-color: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-        }
-
-        .view-document-container {
-            width: 100%;
-            padding: 0;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .document-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #e1e8ed;
-        }
-
-        .document-title-section {
-            flex: 1;
-        }
-
-        .document-title {
-            color: #2c3e50;
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0 0 8px 0;
-            line-height: 1.2;
-            word-wrap: break-word;
-        }
-
-        .document-metadata {
-            color: #7f8c8d;
-            font-size: 14px;
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .metadata-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .document-actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .action-btn {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            text-decoration: none;
-        }
-
-        .action-btn:hover {
-            background: linear-gradient(135deg, #2980b9, #1f618d);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-        }
-
-        .action-btn.secondary {
-            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-        }
-
-        .action-btn.secondary:hover {
-            background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
-        }
-
-        .action-btn.edit {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-        }
-
-        .action-btn.edit:hover {
-            background: linear-gradient(135deg, #e67e22, #d35400);
-            box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
-        }
-
-        /* Tab System */
-        .tab-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tab-navigation {
-            display: flex;
-            border-bottom: 2px solid #e1e8ed;
-            margin-bottom: 30px;
-        }
-
-        .tab-button {
-            background: none;
-            border: none;
-            padding: 15px 25px;
-            font-size: 16px;
-            font-weight: 600;
-            color: #7f8c8d;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            border-bottom: 3px solid transparent;
-        }
-
-        .tab-button:hover {
-            color: #3498db;
-            background: rgba(52, 152, 219, 0.05);
-        }
-
-        .tab-button.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
-        }
-
-        .tab-content {
-            flex: 1;
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* General Tab Styles */
-        .general-info {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 25px;
-        }
-
-        .info-section {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            border: 1px solid #f1f3f4;
-        }
-
-        .info-section h3 {
-            color: #2c3e50;
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0 0 15px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .description-text {
-            color: #5a6c7d;
-            font-size: 16px;
-            line-height: 1.6;
-            margin: 0;
-        }
-
-        .tags-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 5px;
-        }
-
-        .document-tag {
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 13px;
-            font-weight: 600;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .no-tags {
-            color: #95a5a6;
-            font-style: italic;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #3498db;
-            margin-bottom: 5px;
-            position: relative;
-        }
-
-        .stat-value.clickable {
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-radius: 6px;
-            padding: 4px 8px;
-            margin: -4px -8px 1px -8px;
-        }
-
-        .stat-value.clickable:hover {
-            background: rgba(52, 152, 219, 0.1);
-            transform: scale(1.05);
-            color: #2980b9;
-        }
-
-        .stat-value.clickable .material-icons {
-            animation: pulse 2s infinite;
-        }
-
-        .stat-value.clickable:hover .material-icons {
-            animation: spin 1s linear infinite;
-        }
-
-        .stat-value .material-icons {
-            font-size: 24px;
-            vertical-align: middle;
-        }
-
-        .stat-value.loading .sync-icon {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        /* Files Tab Styles */
-        .files-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .files-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .files-count {
-            color: #7f8c8d;
-            font-size: 14px;
-        }
-
-        .files-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .file-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            overflow: hidden;
-            border: 1px solid #f1f3f4;
-        }
-
-        .file-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-        }
-
-        .file-preview {
-            height: 160px;
-            background: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .file-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: cover;
-        }
-
-        .file-preview .pdf-icon {
-            font-size: 48px;
-            color: #e74c3c;
-        }
-
-        .file-preview .generic-icon {
-            font-size: 48px;
-            color: #95a5a6;
-        }
-
-        .file-info {
-            padding: 16px;
-        }
-
-        .file-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin: 0 0 8px 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .file-details {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            font-size: 12px;
-            color: #95a5a6;
-        }
-
-        .file-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .file-btn {
-            background: none;
-            border: 1px solid #e1e8ed;
-            border-radius: 6px;
-            padding: 6px 10px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            text-decoration: none;
-            color: #6c757d;
-        }
-
-        .file-btn:hover {
-            background-color: #f8f9fa;
-            border-color: #3498db;
-            color: #3498db;
-        }
-
-        .file-btn.primary {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            border-color: #3498db;
-        }
-
-        .file-btn.primary:hover {
-            background: linear-gradient(135deg, #2980b9, #1f618d);
-        }
-
-        /* Empty state for files */
-        .files-empty {
-            text-align: center;
-            padding: 60px 20px;
-            color: #7f8c8d;
-        }
-
-        .files-empty .material-icons {
-            font-size: 64px;
-            color: #bdc3c7;
-            margin-bottom: 20px;
-        }
-
-        .files-empty h3 {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
-        }
-
-        .files-empty p {
-            margin: 0;
-            font-size: 16px;
-        }
-
-        /* Notes Tab Styles */
-        .notes-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .notes-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .notes-count {
-            color: #7f8c8d;
-            font-size: 14px;
-        }
-
-        .notes-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .note-item {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            border: 1px solid #f1f3f4;
-            transition: all 0.3s ease;
-        }
-
-        .note-item:hover {
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            transform: translateY(-1px);
-        }
-
-        .note-content {
-            color: #2c3e50;
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 15px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .note-timestamp {
-            color: #7f8c8d;
-            font-size: 14px;
-        }
-
-        .note-timestamp div {
-            line-height: 1.4;
-        }
-
-        .notes-empty {
-            text-align: center;
-            padding: 60px 20px;
-            color: #7f8c8d;
-        }
-
-        .notes-empty .material-icons {
-            font-size: 64px;
-            color: #bdc3c7;
-            margin-bottom: 20px;
-        }
-
-        .notes-empty h3 {
-            margin: 0 0 10px 0;
-            color: #2c3e50;
-        }
-
-        .notes-empty p {
-            margin: 0;
-            font-size: 16px;
-        }
-
-        /* Success/Error Messages */
-        .success-message {
-            background: rgba(46, 204, 113, 0.1);
-            color: #27ae60;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(46, 204, 113, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            animation: fadeIn 0.5s ease;
-            transition: all 0.4s ease;
-            overflow: hidden;
-        }
-
-        .success-message.fadeOut {
-            opacity: 0;
-            max-height: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            margin-bottom: 0;
-            border-width: 0;
-        }
-
-        .error-message {
-            background: rgba(231, 76, 60, 0.1);
-            color: #e74c3c;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(231, 76, 60, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            animation: fadeIn 0.5s ease;
-            transition: all 0.4s ease;
-            overflow: hidden;
-        }
-
-        .error-message.fadeOut {
-            opacity: 0;
-            max-height: 0;
-            padding-top: 0;
-            padding-bottom: 0;
-            margin-bottom: 0;
-            border-width: 0;
-        }
-
-        /* Enhanced extracted text styling */
-        .extracted-text-container {
-            border: 1px solid #e1e8ed;
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .extracted-text {
-            background: #f8f9fa;
-            border: 1px solid #e1e8ed;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: 'Segoe UI', sans-serif;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            /* max-height: 300px; */
-            overflow-y: auto;
-            min-height: 100px;
-        }
-
-        /* Remove old collapsible styles */
-        .extracted-text-container {
-            margin-top: 15px;
-        }
-
-        .extracted-text-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .extracted-text-header h4 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .no-text-message {
-            text-align: center;
-            padding: 30px 15px;
-            color: #7f8c8d;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .no-text-message .material-icons {
-            font-size: 32px;
-            color: #bdc3c7;
-            margin-bottom: 10px;
-        }
-
-        .no-text-message p {
-            margin: 0;
-            font-style: italic;
-        }
-
-        .ocr-pending-overlay {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            min-height: 200px;
-            padding: 24px;
-            text-align: center;
-            color: #2c3e50;
-            background: rgba(248, 249, 250, 0.92);
-            backdrop-filter: blur(2px);
-        }
-
-        .ocr-pending-overlay .material-icons {
-            font-size: 36px;
-            color: #2f5f9e;
-        }
-
-        .ocr-pending-overlay strong {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .ocr-pending-overlay p {
-            margin: 0;
-            color: #5a6c7d;
-        }
-
-        @media (max-width: 768px) {
-            .file-modal-content {
-                margin: 10px;
-                padding: 20px;
-                width: calc(100% - 20px);
-                height: 85vh;
-                max-height: 85vh;
-                border-radius: 8px;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-            }
-            .file-modal-tabs {
-                margin-bottom: 15px;
-                margin-top: 15px;
-                flex-shrink: 0;
-            }
-            .file-modal-tab-content {
-                flex: 1;
-                min-height: 0;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-            .file-modal-tab-content.active {
-                display: flex;
-                flex-direction: column;
-            }
-            .metadata-section {
-                margin-bottom: 20px;
-                flex-shrink: 0;
-            }
-            .metadata-section:last-child {
-                margin-bottom: 0;
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-            }
-            .extracted-text {
-                flex: 1;
-                min-height: 150px;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-        }
-
-        /* File Metadata Modal - Simplified approach matching global modal exactly */
-        .file-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9500;
-            /* Force no blur with highest specificity */
-            filter: none !important;
-            backdrop-filter: none !important;
-            /* Ensure modal captures all mouse events and prevents background interaction */
-            pointer-events: auto;
-            overflow: hidden;
-        }
-
-        .file-modal-overlay.show {
-            display: flex;
-        }
-
-        .file-modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            height: 80vh;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-            transform: scale(0.8);
-            transition: transform 0.3s ease;
-            position: relative;
-            pointer-events: auto;
-            user-select: text;
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-            /* Ensure this content is always on top and interactive */
-            z-index: 9999;
-            overflow: hidden;
-        }
-
-        /* Desktop modal size - larger on desktop screens */
-        @media (min-width: 768px) {
-            .file-modal-content {
-                max-width: 750px;
-                width: 85%;
-                height: 80vh;
-                max-height: 80vh;
-            }
-        }
-
-        .file-modal-overlay.show .file-modal-content {
-            transform: scale(1);
-        }
-
-        .file-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e1e8ed;
-            flex-shrink: 0;
-        }
-
-        .file-modal-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #2c3e50;
-            margin: 0;
-        }
-
-        /* Tab system for file modal */
-        .file-modal-tabs {
-            display: flex;
-            border-bottom: 2px solid #e1e8ed;
-            margin-bottom: 20px;
-            margin-top: 20px;
-            flex-shrink: 0;
-        }
-
-        .file-modal-tab {
-            background: none;
-            border: none;
-            padding: 12px 20px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #7f8c8d;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
-            flex: 1;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .file-modal-tab:hover {
-            color: #3498db;
-            background: rgba(52, 152, 219, 0.05);
-        }
-
-        .file-modal-tab.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
-        }
-
-        .file-modal-tab-content {
-            display: none;
-            flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            min-height: 0;
-        }
-
-        .file-modal-tab-content.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .file-modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: #7f8c8d;
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        .file-modal-close:hover {
-            background: #f8f9fa;
-            color: #e74c3c;
-        }
-
-        .metadata-section {
-            margin-bottom: 25px;
-            flex-shrink: 0;
-        }
-
-        .metadata-section:last-child {
-            margin-bottom: 0;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .metadata-section h3 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin: 0 0 15px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .metadata-grid {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 12px 20px;
-            align-items: start;
-        }
-
-        .metadata-label {
-            font-weight: 600;
-            color: #5a6c7d;
-        }
-
-        .metadata-value {
-            color: #2c3e50;
-            word-break: break-word;
-        }
-
-        .metadata-value.code {
-            font-family: 'Courier New', monospace;
-            background: #f8f9fa;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .ocr-status-pill {
-            display: inline-flex;
-            align-items: center;
-            border-radius: 999px;
-            padding: 4px 10px;
-            font-size: 13px;
-            font-weight: 600;
-            background: #eef4ff;
-            color: #2f5f9e;
-        }
-
-        .ocr-status-pill.completed {
-            background: #e8f7ef;
-            color: #247346;
-        }
-
-        .ocr-status-pill.failed {
-            background: #fdecec;
-            color: #b13a31;
-        }
-
-        .ocr-status-pill.skipped {
-            background: #f3f4f6;
-            color: #6b7280;
-        }
-
-        .extracted-text {
-            background: #f8f9fa;
-            border: none;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: 'Segoe UI', sans-serif;
-            line-height: 1.6;
-            flex: 1;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            min-height: 200px;
-        }
-
-        .extracted-text-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
-
-        .confidence-bar {
-            width: 100%;
-            height: 20px;
-            background: #e1e8ed;
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .confidence-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #e74c3c 0%, #f39c12 50%, #27ae60 100%);
-            transition: width 0.5s ease;
-            border-radius: 10px;
-        }
-
-        .confidence-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 12px;
-            font-weight: 600;
-            color: white;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Loading state */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-        }
-
-        .loading .material-icons {
-            font-size: 48px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-
-
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            .main-content {
-                padding: 15px 10px !important;
-            }
-
-            .content-container {
-                padding: 15px !important;
-                margin: 0;
-                min-height: calc(100vh - 160px);
-                border-radius: 15px;
-            }
-
-            .document-header {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 15px;
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-            }
-
-            .document-actions {
-                justify-content: space-between;
-            }
-
-            .document-title {
-                font-size: 24px;
-            }
-
-            .tab-navigation {
-                overflow-x: auto;
-                margin-bottom: 20px;
-            }
-
-            .tab-button {
-                white-space: nowrap;
-                min-width: 100px;
-                padding: 12px 18px;
-                font-size: 14px;
-            }
-
-            .info-section {
-                padding: 20px;
-                margin-bottom: 15px;
-            }
-
-            .files-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .notes-list {
-                gap: 12px;
-            }
-
-            .note-item {
-                padding: 15px;
-            }
-
-            .note-content {
-                font-size: 15px;
-                margin-bottom: 12px;
-            }
-
-            .note-timestamp {
-                font-size: 13px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .main-content {
-                padding: 10px 8px !important;
-            }
-
-            .content-container {
-                padding: 12px !important;
-                margin: 0;
-                min-height: calc(100vh - 120px);
-                border-radius: 12px;
-            }
-
-            .document-header {
-                margin-bottom: 15px;
-                padding-bottom: 12px;
-            }
-
-            .document-metadata {
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .file-actions {
-                flex-direction: column;
-                gap: 6px;
-            }
-
-            .action-btn {
-                padding: 8px 12px;
-                font-size: 13px;
-            }
-
-            .tab-navigation {
-                margin-bottom: 15px;
-            }
-
-            .tab-button {
-                padding: 10px 15px;
-                font-size: 13px;
-                min-width: 90px;
-            }
-
-            .info-section {
-                padding: 15px;
-                margin-bottom: 12px;
-            }
-
-            .note-item {
-                padding: 12px;
-            }
-
-            .note-content {
-                font-size: 14px;
-                margin-bottom: 10px;
-            }
-
-            .note-timestamp {
-                font-size: 12px;
-            }
-            
-            /* Extra small screen file modal optimizations */
-            .file-modal-content {
-                margin: 8px;
-                padding: 16px;
-                width: calc(100% - 16px);
-                height: 88vh;
-                max-height: 88vh;
-                border-radius: 6px;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
-            }
-            
-            .file-modal-header {
-                margin-bottom: 12px;
-                padding-bottom: 8px;
-                flex-shrink: 0;
-            }
-            
-            .file-modal-title {
-                font-size: 18px;
-                padding-right: 35px; /* Space for close button */
-            }
-            
-            .file-modal-close {
-                font-size: 18px;
-                padding: 6px;
-            }
-            
-            .file-modal-tabs {
-                flex-shrink: 0;
-                margin-bottom: 12px;
-                margin-top: 8px;
-            }
-            
-            .file-modal-tab-content {
-                flex: 1;
-                min-height: 0;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-            
-            .file-modal-tab-content.active {
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .metadata-section {
-                margin-bottom: 15px;
-                flex-shrink: 0;
-            }
-            
-            .metadata-section:last-child {
-                margin-bottom: 0;
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .metadata-section h3 {
-                font-size: 15px;
-                margin-bottom: 10px;
-            }
-            
-            .metadata-grid {
-                gap: 8px 15px;
-            }
-            
-            .metadata-label {
-                font-size: 13px;
-            }
-            
-            .metadata-value {
-                font-size: 13px;
-            }
-            
-            .extracted-text {
-                font-size: 13px;
-                padding: 12px;
-                flex: 1;
-                min-height: 120px;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-            
-            .extracted-text-container {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                min-height: 0;
-            }
-            
-            .confidence-bar {
-                height: 18px;
-            }
-            
-            .confidence-text {
-                font-size: 10px;
-            }
-        }
-
-        /* File modal ID-specific overrides for clean appearance */
-        #fileMetadataModal,
-        #fileMetadataModal * {
-            filter: none !important;
-            backdrop-filter: none !important;
-        }
-
-        #fileMetadataModal .file-modal-content {
-            background: white !important;
-        }
-
-        #fileMetadataModal .file-modal-header {
-            background: white !important;
-        }
-
-        #fileMetadataModal .file-modal-title {
-            background: transparent !important;
-        }
-
-        /* Prevent background scrolling when modal is open */
-        body.modal-open {
-            overflow: hidden;
-        }
-
-        /* Ensure modal content captures all events */
-        .file-modal-content {
-            position: relative;
-            pointer-events: auto;
-            user-select: text;
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-            /* Ensure this content is always on top and interactive */
-            z-index: 9999;
-            overflow: visible;
-        }
-
-        /* Specifically ensure extracted text is selectable and scrollable */
-        .file-modal-content .extracted-text {
-            user-select: text !important;
-            -webkit-user-select: text !important;
-            -moz-user-select: text !important;
-            -ms-user-select: text !important;
-            pointer-events: auto !important;
-            overflow-y: auto !important;
-            cursor: text;
-        }
-
-        /* Ensure all modal content areas are interactive */
-        .file-modal-content * {
-            pointer-events: auto;
-        }
-    </style>
-
-    <div class="view-document-container">
-        {{if .SuccessMessage}}
-        <div class="success-message">
-            <span class="material-icons">check_circle</span>
-            {{.SuccessMessage}}
-        </div>
-        {{end}}
-
-        {{if .ErrorMessage}}
-        <div class="error-message">
-            <span class="material-icons">error</span>
-            {{.ErrorMessage}}
-        </div>
-        {{end}}
-
-        <div class="document-header">
-            <div class="document-title-section">
-                <h1 class="document-title">{{.Document.Title}}</h1>
-                <div class="document-metadata">
-                    <div class="metadata-item">
-                        <span class="material-icons" style="font-size: 16px;">event</span>
-                        <span>Created: <time class="local-time" datetime="{{.Document.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Document.CreatedAt.Format "2006-01-02 15:04"}}</time></span>
-                    </div>
-                    <div class="metadata-item">
-                        <span class="material-icons" style="font-size: 16px;">update</span>
-                        <span>Modified: <time class="local-time" datetime="{{.Document.ModifiedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Document.ModifiedAt.Format "2006-01-02 15:04"}}</time></span>
-                    </div>
-                    <div class="metadata-item">
-                        <span class="material-icons" style="font-size: 16px;">attach_file</span>
-                        <span>{{.Document.FileCount}} file{{if ne .Document.FileCount 1}}s{{end}}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="document-actions">
-                <a href="/edit-document?id={{.Document.Id}}&returnTo=view-document" class="action-btn edit">
-                    <span class="material-icons">edit</span>
-                    Edit
-                </a>
-                <a href="/documents" class="action-btn secondary">
-                    <span class="material-icons">arrow_back</span>
-                    Back to Documents
-                </a>
-            </div>
-        </div>
-
-        <div class="tab-container">
-            <div class="tab-navigation">
-                <button class="tab-button active" onclick="switchTab('general')">
-                    <span class="material-icons" style="font-size: 18px; margin-right: 5px;">info</span>
-                    General
-                </button>
-                <button class="tab-button" onclick="switchTab('files')">
-                    <span class="material-icons" style="font-size: 18px; margin-right: 5px;">attach_file</span>
-                    Files ({{.Document.FileCount}})
-                </button>
-                <button class="tab-button" onclick="switchTab('notes')">
-                    <span class="material-icons" style="font-size: 18px; margin-right: 5px;">sticky_note_2</span>
-                    Notes
-                </button>
-            </div>
-
-            <!-- General Tab -->
-            <div id="general-tab" class="tab-content active">
-                <div class="general-info">
-                    <div class="info-section">
-                        <h3>
-                            <span class="material-icons">description</span>
-                            Description
-                        </h3>
-                        {{if .Document.Description}}
-                            <p class="description-text">{{.Document.Description}}</p>
-                        {{else}}
-                            <p class="description-text" style="color: #95a5a6; font-style: italic;">No description provided</p>
-                        {{end}}
-                    </div>
-
-                    {{if or .Document.Issuer .Document.IssueDate}}
-                    <div class="info-section">
-                        <h3>
-                            <span class="material-icons">badge</span>
-                            Issuer Information
-                        </h3>
-                        <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px;">
-                            {{if .Document.Issuer}}
-                            <span style="font-weight: 600; color: #5a6c7d;">Issuer</span>
-                            <span style="color: #2c3e50;">{{.Document.Issuer}}</span>
-                            {{end}}
-                            {{if .Document.IssueDate}}
-                            <span style="font-weight: 600; color: #5a6c7d;">Issue Date</span>
-                            <span style="color: #2c3e50;"><time class="local-date" datetime="{{.Document.IssueDate.Format "2006-01-02"}}">{{.Document.IssueDate.Format "2006-01-02"}}</time></span>
-                            {{end}}
-                        </div>
-                    </div>
-                    {{end}}
-
-                    <div class="info-section">
-                        <h3>
-                            <span class="material-icons">label</span>
-                            Tags
-                        </h3>
-                        {{if .Document.Tags}}
-                            <div class="tags-container">
-                                {{range .Document.Tags}}
-                                    <span class="document-tag" style="background-color: {{.Color}};">
-                                        {{.Name}}
-                                    </span>
-                                {{end}}
-                            </div>
-                        {{else}}
-                            <p class="no-tags">No tags assigned</p>
-                        {{end}}
-                    </div>
-
-                    <div class="info-section">
-                        <h3>
-                            <span class="material-icons">analytics</span>
-                            Statistics
-                        </h3>
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <div class="stat-value">{{.Document.FileCount}}</div>
-                                <div class="stat-label">Files</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value">{{len .Document.Tags}}</div>
-                                <div class="stat-label">Tags</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="total-size-stat-value">
-                                    <span class="material-icons">sync</span>
-                                </div>
-                                <div class="stat-label">Total Size</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value">{{if .Document.Preview}}Yes{{else}}No{{end}}</div>
-                                <div class="stat-label">Preview</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Files Tab -->
-            <div id="files-tab" class="tab-content">
-                <div class="files-container">
-                    <div class="files-header">
-                        <div class="files-count" id="files-count-display">
-                            Loading files...
-                        </div>
-                    </div>
-                    <div id="files-content">
-                        <div class="loading">
-                            <span class="material-icons">hourglass_empty</span>
-                            <p>Loading files...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notes Tab -->
-            <div id="notes-tab" class="tab-content">
-                <div class="notes-container">
-                    <div class="notes-header">
-                        <div class="notes-count" id="notes-count-display">
-                            Loading notes...
-                        </div>
-                    </div>
-                    <div id="notes-content">
-                        <div class="loading">
-                            <span class="material-icons">hourglass_empty</span>
-                            <p>Loading notes...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+{{define "view-document.html"}}<!DOCTYPE html>
+<html lang="en">
+{{template "ff-head" (merge . (dict "Title" (printf "%s · Frozen Fortress" .Document.Title)))}}
+<body class="h-dvh overflow-hidden flex flex-col">
+  {{template "ff-topbar" (merge . (dict "Active" "documents"))}}
+
+  <main class="flex-1 overflow-y-auto">
+    <div class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8">
+    <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <a href="/documents" class="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text">
+          {{template "ff-icon" (dict "name" "arrow_back" "class" "ff-icon size-4")}}
+          <span>Back to documents</span>
+        </a>
+        <h1 class="text-2xl sm:text-3xl font-semibold text-text mt-3 flex items-center gap-2">
+          {{template "ff-icon" (dict "name" "description" "class" "ff-icon size-7")}}
+          {{.Document.Title}}
+        </h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/edit-document?id={{.Document.Id}}" class="ff-btn ff-btn-secondary">
+          {{template "ff-icon" (dict "name" "edit" "class" "ff-icon")}}
+          <span>Edit</span>
+        </a>
+      </div>
     </div>
 
-    <script>
-        let filesLoaded = false;
-        let notesLoaded = false;
+    {{template "ff-flash" .}}
 
-        // Initialize the Total Size statistic as clickable
-        document.addEventListener('DOMContentLoaded', function() {
-            const totalSizeStatValue = document.getElementById('total-size-stat-value');
-            if (totalSizeStatValue && !filesLoaded) {
-                totalSizeStatValue.classList.add('clickable');
-                totalSizeStatValue.setAttribute('title', 'Click to load files and calculate total size');
-                totalSizeStatValue.onclick = function() {
-                    if (!filesLoaded) {
-
-                        const currentContent = totalSizeStatValue.innerHTML;
-                        totalSizeStatValue.innerHTML = '<span class="material-symbols-outlined sync-icon">sync</span>';
-                        totalSizeStatValue.classList.add('loading');
-                        
-                        loadDocumentFiles();
-                        filesLoaded = true;
-                    }
-                };
-            }
-        });
-
-        function switchTab(tabName) {
-            // Remove active class from all tabs and buttons
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            // Add active class to selected tab and button
-            document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-
-            // Load files when Files tab is clicked for the first time
-            if (tabName === 'files' && !filesLoaded) {
-                loadDocumentFiles();
-                filesLoaded = true;
-            }
-
-            // Load notes when Notes tab is clicked for the first time
-            if (tabName === 'notes' && !notesLoaded) {
-                loadDocumentNotes();
-                notesLoaded = true;
-            }
-        }
-
-        function loadDocumentFiles() {
-            const documentId = '{{.Document.Id}}';
-            const filesContent = document.getElementById('files-content');
-            const filesCountDisplay = document.getElementById('files-count-display');
-
-            fetch(`/api/documents/${documentId}/files`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Always call renderFiles regardless of whether files array is empty
-                        const files = data.files || [];
-                        renderFiles(files);
-                        filesCountDisplay.textContent = `${files.length} file${files.length !== 1 ? 's' : ''}`;
-                    } else {
-                        showFilesError(data.error || 'Failed to load files');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading files:', error);
-                    showFilesError('Failed to load files. Please try again.');
-                });
-        }
-
-        function renderFiles(files) {
-            const filesContent = document.getElementById('files-content');
-            
-            // Store files data globally for metadata modal access
-            window.currentDocumentFiles = files;
-            
-            // Calculate and update total file size in statistics
-            const totalSize = files.reduce((sum, file) => sum + (file.FileSize || 0), 0);
-            const totalSizeFormatted = formatFileSize(totalSize);
-            const totalSizeStatValue = document.getElementById('total-size-stat-value');
-            if (totalSizeStatValue) {
-                // Simple update without animation
-                totalSizeStatValue.innerHTML = totalSizeFormatted;
-                totalSizeStatValue.classList.remove('clickable', 'loading');
-                totalSizeStatValue.removeAttribute('title');
-                totalSizeStatValue.onclick = null;
-            }
-            
-            if (files.length === 0) {
-                filesContent.innerHTML = `
-                    <div class="files-empty">
-                        <span class="material-icons">folder_open</span>
-                        <h3>No Files</h3>
-                        <p>This document doesn't have any files attached.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const filesGrid = files.map(file => {
-                const sizeFormatted = formatFileSize(file.FileSize);
-                const previewHtml = getFilePreviewHtml(file);
-                
-                return `
-                    <div class="file-card">
-                        <div class="file-preview">
-                            ${previewHtml}
-                        </div>
-                        <div class="file-info">
-                            <h4 class="file-name" title="${file.FileName}">${file.FileName}</h4>
-                            <div class="file-details">
-                                <span>${file.ContentType}</span>
-                                <span>${sizeFormatted}</span>
-                            </div>
-                            <div class="file-actions">
-                                <a href="/api/documents/${file.DocumentId}/files/${file.Id}/download" 
-                                   target="_blank" class="file-btn primary">
-                                    <span class="material-icons" style="font-size: 14px;">download</span>
-                                    Download
-                                </a>
-                                <button onclick="showFileMetadata('${file.Id}')" class="file-btn">
-                                    <span class="material-icons" style="font-size: 14px;">info</span>
-                                    Details
-                                </button>
-                                ${canOpenInNewTab(file.ContentType) ? 
-                                    `<a href="/api/documents/${file.DocumentId}/files/${file.Id}/view" 
-                                       target="_blank" class="file-btn">
-                                        <span class="material-icons" style="font-size: 14px;">open_in_new</span>
-                                        View
-                                    </a>` : ''
-                                }
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            filesContent.innerHTML = `<div class="files-grid">${filesGrid}</div>`;
-        }
-
-        function getFilePreviewHtml(file) {
-            if (file.Preview && file.Preview.PreviewData) {
-                if (file.Preview.PreviewType === 'application/pdf') {
-                    return '<span class="material-icons pdf-icon">picture_as_pdf</span>';
-                } else {
-                    return `<img src="data:${file.Preview.PreviewType};base64,${file.Preview.PreviewData}" alt="File preview">`;
-                }
-            } else {
-                // Fallback icons based on content type
-                if (file.ContentType.startsWith('image/')) {
-                    return '<span class="material-icons generic-icon">image</span>';
-                } else if (file.ContentType === 'application/pdf') {
-                    return '<span class="material-icons pdf-icon">picture_as_pdf</span>';
-                } else {
-                    return '<span class="material-icons generic-icon">description</span>';
-                }
-            }
-        }
-
-        function canOpenInNewTab(contentType) {
-            return contentType.startsWith('image/') || contentType === 'application/pdf';
-        }
-
-        function loadDocumentNotes() {
-            const documentId = '{{.Document.Id}}';
-            const notesContent = document.getElementById('notes-content');
-            const notesCountDisplay = document.getElementById('notes-count-display');
-
-            fetch(`/api/documents/${documentId}/notes`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        const notes = data.notes || [];
-                        renderNotes(notes);
-                        notesCountDisplay.textContent = `${notes.length} note${notes.length !== 1 ? 's' : ''}`;
-                    } else {
-                        showNotesError(data.error || 'Failed to load notes');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading notes:', error);
-                    showNotesError('Failed to load notes. Please try again.');
-                });
-        }
-
-        function renderNotes(notes) {
-            const notesContent = document.getElementById('notes-content');
-            
-            if (notes.length === 0) {
-                notesContent.innerHTML = `
-                    <div class="notes-empty">
-                        <span class="material-icons">sticky_note_2</span>
-                        <h3>No Notes</h3>
-                        <p>This document doesn't have any notes yet.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const notesList = notes.map(note => {
-                const createdDate = formatTimestamp(note.CreatedAt);
-                const modifiedDate = formatTimestamp(note.ModifiedAt);
-                
-                return `
-                    <div class="note-item">
-                        <div class="note-content">${note.Content}</div>
-                        <div class="note-timestamp">
-                            <div>Created: ${createdDate}</div>
-                            ${note.CreatedAt !== note.ModifiedAt ? `<div>Modified: ${modifiedDate}</div>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            notesContent.innerHTML = `<div class="notes-list">${notesList}</div>`;
-        }
-
-        function showNotesError(message) {
-            const notesContent = document.getElementById('notes-content');
-            
-            notesContent.innerHTML = `
-                <div class="notes-empty">
-                    <span class="material-icons">error</span>
-                    <h3>Error Loading Notes</h3>
-                    <p>${message}</p>
-                    <button onclick="loadDocumentNotes()" class="action-btn" style="margin-top: 15px;">
-                        <span class="material-icons">refresh</span>
-                        Retry
-                    </button>
-                </div>
-            `;
-        }
-
-
-
-
-
-        function showFileMetadata(fileId) {
-            // Find the file data from the already loaded files
-            const filesContent = document.getElementById('files-content');
-            if (!filesContent) return;
-
-            // We need to store the files data when they're loaded
-            const files = window.currentDocumentFiles || [];
-            const file = files.find(f => f.Id === fileId);
-            
-            if (!file) {
-                alert('File data not found. Please refresh the page and try again.');
-                return;
-            }
-
-            showFileMetadataModal(file);
-        }
-
-        function showFileMetadataModal(file) {
-            const modal = document.getElementById('fileMetadataModal');
-            const infoContent = document.getElementById('file-tab-info');
-            const textContent = document.getElementById('file-tab-text');
-            
-            // Format dates using the consistent application format "2006-01-02 15:04"
-            const createdDate = formatTimestamp(file.CreatedAt);
-            const modifiedDate = formatTimestamp(file.ModifiedAt);
-            
-            // Format file size
-            const sizeFormatted = formatFileSize(file.FileSize);
-            const ocrStatus = (file.OcrStatus || '').toLowerCase();
-            const ocrStatusLabel = ocrStatus ? ocrStatus.charAt(0).toUpperCase() + ocrStatus.slice(1) : 'Not started';
-            const hasExtractedText = file.ExtractedText && file.ExtractedText.trim();
-            const showConfidence = ocrStatus === 'completed' && file.Confidence !== undefined;
-            
-            // Calculate confidence percentage
-            const confidencePercent = Math.round((file.Confidence || 0) * 100);
-            
-            // Populate the Information tab
-            infoContent.innerHTML = `
-                <div class="metadata-section">
-                    <h3><span class="material-icons">description</span>File Information</h3>
-                    <div class="metadata-grid">
-                        <div class="metadata-label">File Name:</div>
-                        <div class="metadata-value">${file.FileName}</div>
-                        
-                        <div class="metadata-label">File Type:</div>
-                        <div class="metadata-value">${file.ContentType}</div>
-                        
-                        <div class="metadata-label">File Size:</div>
-                        <div class="metadata-value">${sizeFormatted}</div>
-                        
-                        <div class="metadata-label">Page Count:</div>
-                        <div class="metadata-value">${file.PageCount || 'N/A'}</div>
-                        
-                        <div class="metadata-label">File ID:</div>
-                        <div class="metadata-value code">${file.Id}</div>
-                        
-                        <div class="metadata-label">Document ID:</div>
-                        <div class="metadata-value code">${file.DocumentId}</div>
-                    </div>
-                </div>
-                
-                <div class="metadata-section">
-                    <h3><span class="material-icons">schedule</span>Timestamps</h3>
-                    <div class="metadata-grid">
-                        <div class="metadata-label">Created:</div>
-                        <div class="metadata-value">${createdDate}</div>
-                        
-                        <div class="metadata-label">Modified:</div>
-                        <div class="metadata-value">${modifiedDate}</div>
-                    </div>
-                </div>
-            `;
-            
-            // Populate the Extracted Text tab
-            if (ocrStatus || hasExtractedText || file.Confidence !== undefined) {
-                textContent.innerHTML = `
-                <div class="metadata-section">
-                    <h3><span class="material-icons">text_fields</span>Extracted Text</h3>
-                    <div class="metadata-grid" style="margin-bottom: 15px;">
-                        <div class="metadata-label">Status:</div>
-                        <div class="metadata-value"><span class="ocr-status-pill ${ocrStatus}">${ocrStatusLabel}</span></div>
-                        ${file.OcrError ? `
-                        <div class="metadata-label">Error:</div>
-                        <div class="metadata-value">${file.OcrError}</div>
-                        ` : ''}
-                    </div>
-                    ${showConfidence ? `
-                    <div class="metadata-grid" style="margin-bottom: 15px;">
-                        <div class="metadata-label">Confidence:</div>
-                        <div class="metadata-value">
-                            <div class="confidence-bar">
-                                <div class="confidence-fill" style="width: ${confidencePercent}%"></div>
-                                <div class="confidence-text">${confidencePercent}%</div>
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
-                    ${ocrStatus === 'processing' ? `
-                    <div class="extracted-text-container">
-                        <div class="extracted-text" aria-hidden="true"></div>
-                        <div class="ocr-pending-overlay" role="status" aria-live="polite">
-                            <span class="material-icons">hourglass_empty</span>
-                            <strong>OCR is still in progress.</strong>
-                            <p>Check back later to view extracted text.</p>
-                        </div>
-                    </div>
-                    ` : hasExtractedText ? `
-                    <div class="extracted-text-container">
-                        <div class="extracted-text">${file.ExtractedText}</div>
-                    </div>
-                    ` : `
-                    <div class="no-text-message">
-                        <span class="material-icons">text_snippet</span>
-                        <p>No text was extracted from this file.</p>
-                    </div>
-                    `}
-                </div>
-                `;
-            } else {
-                textContent.innerHTML = `
-                    <div class="metadata-section">
-                        <div class="no-text-message">
-                            <span class="material-icons">text_snippet</span>
-                            <p>No text was extracted from this file.</p>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Reset to the first tab
-            switchModalTab('info');
-            
-            // Show the modal using direct element manipulation instead of CSS classes
-            modal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-            document.body.classList.add('modal-open');
-            
-            // Add event handlers to prevent background interaction
-            modal.addEventListener('wheel', function(e) {
-                e.stopPropagation();
-            }, { passive: false });
-            
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    closeFileMetadataModal();
-                }
-                e.stopPropagation();
-            });
-            
-            // Prevent any interaction with background elements
-            document.addEventListener('wheel', preventBackgroundScroll, { passive: false });
-            document.addEventListener('touchmove', preventBackgroundScroll, { passive: false });
-            
-            // Apply blur only on desktop to avoid mobile issues
-            if (window.innerWidth > 768) {
-                const elementsToBlur = [
-                    document.querySelector('.header'),
-                    document.querySelector('.main-nav'),
-                    document.querySelector('.footer'),
-                    document.querySelector('.view-document-container')
-                ];
-                
-                elementsToBlur.forEach(element => {
-                    if (element) {
-                        element.style.filter = 'blur(3px)';
-                        element.style.pointerEvents = 'none';
-                        element.style.transition = 'filter 0.3s ease';
-                        element.setAttribute('data-modal-blurred', 'true');
-                    }
-                });
-            }
-        }
-
-        function closeFileMetadataModal() {
-            const modal = document.getElementById('fileMetadataModal');
-            modal.classList.remove('show');
-            document.body.style.overflow = '';
-            document.body.classList.remove('modal-open');
-            
-            // Remove event listeners
-            document.removeEventListener('wheel', preventBackgroundScroll);
-            document.removeEventListener('touchmove', preventBackgroundScroll);
-            
-            // Clear any modal-specific event listeners
-            modal.onclick = null;
-            
-            // Remove blur only if it was applied (desktop only)
-            const elementsToUnblur = document.querySelectorAll('[data-modal-blurred="true"]');
-            elementsToUnblur.forEach(element => {
-                element.style.filter = '';
-                element.style.pointerEvents = '';
-                element.style.transition = '';
-                element.removeAttribute('data-modal-blurred');
-            });
-            
-            modal.onclick = null;
-        }
-
-        function switchModalTab(tabName) {
-            // Remove active class from all tabs and tab contents
-            document.querySelectorAll('.file-modal-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.file-modal-tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Add active class to selected tab and content
-            const tabButtons = document.querySelectorAll('.file-modal-tab');
-            const targetContent = document.getElementById(`file-tab-${tabName}`);
-            
-            // Find and activate the corresponding tab button
-            tabButtons.forEach(tab => {
-                if (tab.onclick.toString().includes(`'${tabName}'`)) {
-                    tab.classList.add('active');
-                }
-            });
-            
-            // Activate the target content
-            if (targetContent) {
-                targetContent.classList.add('active');
-            }
-        }
-
-        // Add keyboard support for closing modal and tab switching
-        document.addEventListener('keydown', function(e) {
-            const modal = document.getElementById('fileMetadataModal');
-            if (modal.classList.contains('show')) {
-                if (e.key === 'Escape') {
-                    closeFileMetadataModal();
-                } else if (e.key === '1' && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault();
-                    switchModalTab('info');
-                } else if (e.key === '2' && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault();
-                    switchModalTab('text');
-                }
-            }
-        });
-
-        // Function to prevent background scrolling when modal is open
-        function preventBackgroundScroll(e) {
-            const modal = document.getElementById('fileMetadataModal');
-            if (modal && modal.classList.contains('show')) {
-                // Only allow scrolling if the event target is within the modal
-                if (!modal.contains(e.target)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            }
-        }
-
-        function showFilesError(message) {
-            const filesContent = document.getElementById('files-content');
-            
-            // Update the statistics section to show sync icon on error
-            const totalSizeStatValue = document.getElementById('total-size-stat-value');
-            if (totalSizeStatValue) {
-                totalSizeStatValue.innerHTML = '<span class="material-icons">sync_problem</span>';
-                totalSizeStatValue.classList.remove('loading'); // Remove loading state
-                // Keep it clickable so user can retry
-                totalSizeStatValue.classList.add('clickable');
-                totalSizeStatValue.setAttribute('title', 'Error loading files - Click to retry');
-                totalSizeStatValue.onclick = function() {
-                    loadDocumentFiles();
-                    filesLoaded = true;
-                };
-            }
-            
-            filesContent.innerHTML = `
-                <div class="files-empty">
-                    <span class="material-icons">error</span>
-                    <h3>Error Loading Files</h3>
-                    <p>${message}</p>
-                    <button onclick="loadDocumentFiles()" class="action-btn" style="margin-top: 15px;">
-                        <span class="material-icons">refresh</span>
-                        Retry
-                    </button>
-                </div>
-            `;
-        }
-
-        // Auto-dismiss messages
-        setTimeout(() => {
-            const messages = document.querySelectorAll('.success-message, .error-message');
-            messages.forEach(msg => {
-                msg.classList.add('fadeOut');
-                setTimeout(() => msg.remove(), 400);
-            });
-        }, 3000);
-    </script>
-
-{{template "footer" .}}
-
-    <!-- File Metadata Modal - placed after footer to avoid ALL blur effects -->
-    <div id="fileMetadataModal" class="file-modal-overlay">
-        <div class="file-modal-content">
-            <div class="file-modal-header">
-                <h2 class="file-modal-title">File Details</h2>
-                <button class="file-modal-close" onclick="closeFileMetadataModal()">
-                    <span class="material-icons">close</span>
-                </button>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-data="ffViewDoc('{{.Document.Id}}')">
+      {{/* Left: metadata */}}
+      <aside class="lg:col-span-1 space-y-4">
+        <div class="ff-card p-5">
+          <h2 class="font-semibold text-text mb-3">Details</h2>
+          <dl class="space-y-2 text-sm">
+            {{if .Document.Description}}
+            <div>
+              <dt class="text-text-subtle">Description</dt>
+              <dd class="text-text whitespace-pre-wrap">{{.Document.Description}}</dd>
             </div>
-            <div class="file-modal-tabs">
-                <button class="file-modal-tab active" onclick="switchModalTab('info')">
-                    <span class="material-icons">info</span>
-                    Information
-                </button>
-                <button class="file-modal-tab" onclick="switchModalTab('text')">
-                    <span class="material-icons">text_fields</span>
-                    Extracted Text
-                </button>
+            {{end}}
+            {{if .Document.Issuer}}
+            <div>
+              <dt class="text-text-subtle">Issuer</dt>
+              <dd class="text-text">{{.Document.Issuer}}</dd>
             </div>
-            <div id="file-tab-info" class="file-modal-tab-content active">
-                <!-- File information and timestamps will be populated here -->
+            {{end}}
+            {{if .Document.IssueDate}}
+            <div>
+              <dt class="text-text-subtle">Issue date</dt>
+              <dd class="text-text"><time data-date="{{.Document.IssueDate.Format "2006-01-02"}}">{{.Document.IssueDate.Format "2006-01-02"}}</time></dd>
             </div>
-            <div id="file-tab-text" class="file-modal-tab-content">
-                <!-- Extracted text content will be populated here -->
+            {{end}}
+            <div>
+              <dt class="text-text-subtle">Created</dt>
+              <dd class="text-text"><time data-ts="{{.Document.CreatedAt.Format "2006-01-02 15:04:05"}}">{{.Document.CreatedAt.Format "2006-01-02 15:04:05"}}</time></dd>
             </div>
+            {{if ne .Document.CreatedAt .Document.ModifiedAt}}
+            <div>
+              <dt class="text-text-subtle">Modified</dt>
+              <dd class="text-text"><time data-ts="{{.Document.ModifiedAt.Format "2006-01-02 15:04:05"}}">{{.Document.ModifiedAt.Format "2006-01-02 15:04:05"}}</time></dd>
+            </div>
+            {{end}}
+          </dl>
+          {{if .Document.Tags}}
+          <div class="mt-4 pt-4 border-t border-border">
+            <div class="text-xs text-text-subtle mb-2">Tags</div>
+            <div class="flex flex-wrap gap-1.5">
+              {{range .Document.Tags}}
+              <span class="ff-badge" style="background-color: {{.Color}}20; color: {{.Color}}; border-color: {{.Color}}66">{{.Name}}</span>
+              {{end}}
+            </div>
+          </div>
+          {{end}}
         </div>
+
+        {{/* Notes */}}
+        <div class="ff-card p-5">
+          <h2 class="font-semibold text-text mb-3 flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5">
+              {{template "ff-icon" (dict "name" "sticky_note_2" "class" "ff-icon size-4")}}
+              Notes
+            </span>
+            <span class="text-xs text-text-subtle font-normal" x-text="notes.length"></span>
+          </h2>
+          <div class="space-y-2" x-show="notes.length > 0" x-cloak>
+            <template x-for="n in notes" :key="n.Id">
+              <div class="rounded-md bg-surface-sunken p-3 text-sm">
+                <p class="whitespace-pre-wrap text-text" x-text="n.Content"></p>
+                <div class="text-xs text-text-subtle mt-1.5">
+                  <time :data-ts="n.CreatedAt" x-text="window.formatTimestamp(n.CreatedAt)"></time>
+                </div>
+              </div>
+            </template>
+          </div>
+          <p class="text-sm text-text-subtle" x-show="!loadingNotes && notes.length === 0" x-cloak>No notes yet.</p>
+          <p class="text-sm text-text-subtle" x-show="loadingNotes"><span class="ff-spinner inline-block" style="width:1rem;height:1rem;border-width:2px;vertical-align:-3px"></span> Loading…</p>
+        </div>
+      </aside>
+
+      {{/* Right: files */}}
+      <section class="lg:col-span-2">
+        <div class="ff-card p-5">
+          <h2 class="font-semibold text-text mb-3 flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5">
+              {{template "ff-icon" (dict "name" "attach_file" "class" "ff-icon size-4")}}
+              Files
+            </span>
+            <span class="text-xs text-text-subtle font-normal" x-text="files.length"></span>
+          </h2>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" x-show="files.length > 0" x-cloak>
+            <template x-for="f in files" :key="f.Id">
+              <div class="rounded-lg border border-border overflow-hidden bg-surface-sunken">
+                <div class="aspect-[4/3] bg-page flex items-center justify-center overflow-hidden">
+                  <template x-if="f.Preview">
+                    <img :src="`data:${f.Preview.PreviewType};base64,${f.Preview.PreviewData}`" alt="" class="max-w-full max-h-full object-contain">
+                  </template>
+                  <template x-if="!f.Preview">
+                    <svg class="ff-icon size-12 text-text-subtle"><use href="/static/icons/lucide.svg#i-attach_file"/></svg>
+                  </template>
+                </div>
+                <div class="p-3">
+                  <div class="font-medium text-sm text-text truncate" x-text="f.FileName" :title="f.FileName"></div>
+                  <div class="text-xs text-text-subtle mt-0.5">
+                    <span x-text="formatFileSize(f.FileSize)"></span>
+                    <template x-if="f.PageCount > 0"> · <span x-text="f.PageCount + ' page' + (f.PageCount === 1 ? '' : 's')"></span></template>
+                  </div>
+                  <div class="flex gap-1 mt-2">
+                    <a :href="`/api/documents/${docId}/files/${f.Id}/view`" target="_blank" rel="noopener" class="ff-btn ff-btn-ghost ff-btn-sm flex-1" title="Open in new tab">
+                      <svg class="ff-icon size-4"><use href="/static/icons/lucide.svg#i-visibility"/></svg>
+                      <span>View</span>
+                    </a>
+                    <a :href="`/api/documents/${docId}/files/${f.Id}/download`" class="ff-btn ff-btn-ghost ff-btn-sm flex-1" title="Download">
+                      <svg class="ff-icon size-4"><use href="/static/icons/lucide.svg#i-download"/></svg>
+                      <span>Download</span>
+                    </a>
+                  </div>
+                  <template x-if="f.OcrStatus === 'processing'">
+                    <div class="mt-2 border-t border-border pt-2">
+                      <span class="inline-flex items-center gap-1 text-xs text-text-subtle">
+                        <span class="ff-spinner inline-block flex-shrink-0" style="width:0.75rem;height:0.75rem;border-width:2px"></span>
+                        Extracting text…
+                      </span>
+                    </div>
+                  </template>
+                  <template x-if="f.OcrStatus === 'failed'">
+                    <div class="mt-2 border-t border-border pt-2">
+                      <span class="inline-flex items-center gap-1 text-xs text-danger-500">
+                        <svg class="ff-icon size-3.5"><use href="/static/icons/lucide.svg#i-error"/></svg>
+                        OCR failed
+                      </span>
+                    </div>
+                  </template>
+                  <template x-if="f.ExtractedText">
+                    <div class="mt-2 border-t border-border pt-2">
+                      <button type="button" @click="openOcrModal(f)" class="inline-flex items-center gap-1 text-xs text-brand-500 hover:text-brand-600">
+                        <svg class="ff-icon size-3.5"><use href="/static/icons/lucide.svg#i-description"/></svg>
+                        View extracted text
+                      </button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+          <p class="text-sm text-text-subtle" x-show="!loadingFiles && files.length === 0" x-cloak>No files attached.</p>
+          <p class="text-sm text-text-subtle" x-show="loadingFiles"><span class="ff-spinner inline-block" style="width:1rem;height:1rem;border-width:2px;vertical-align:-3px"></span> Loading files…</p>
+        </div>
+      </section>
+
+    {{/* OCR extracted text modal */}}
+    <div
+      x-show="ocrModal.open"
+      x-cloak
+      @keydown.escape.window="ocrModal.open = false"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog" aria-modal="true" :aria-label="'Extracted text — ' + ocrModal.fileName"
+    >
+      <div class="absolute inset-0 bg-black/60" @click="ocrModal.open = false"></div>
+      <div class="relative ff-card w-full max-w-2xl max-h-[80dvh] flex flex-col shadow-2xl">
+        <div class="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
+          <div>
+            <h3 class="font-semibold text-text text-sm" x-text="ocrModal.fileName"></h3>
+            <p class="text-xs text-text-subtle mt-0.5" x-show="ocrModal.confidence > 0" x-text="'OCR confidence: ' + Math.round(ocrModal.confidence * 100) + '%'"></p>
+          </div>
+          <button type="button" @click="ocrModal.open = false" class="ff-btn ff-btn-ghost ff-btn-sm ff-btn-icon" title="Close">
+            <svg class="ff-icon size-4"><use href="/static/icons/lucide.svg#i-close"/></svg>
+          </button>
+        </div>
+        <div class="overflow-y-auto p-4 flex-1">
+          <pre class="text-xs text-text font-mono whitespace-pre-wrap leading-relaxed" x-text="ocrModal.text"></pre>
+        </div>
+        <div class="flex justify-end gap-2 p-3 border-t border-border flex-shrink-0">
+          <button type="button" @click="copyToClipboard(ocrModal.text, 'Extracted text')" class="ff-btn ff-btn-ghost ff-btn-sm">
+            <svg class="ff-icon size-4"><use href="/static/icons/lucide.svg#i-content_copy"/></svg>
+            <span>Copy text</span>
+          </button>
+          <button type="button" @click="ocrModal.open = false" class="ff-btn ff-btn-primary ff-btn-sm">Close</button>
+        </div>
+      </div>
     </div>
+    </div>
+    </div>
+  </main>
+
+  {{template "ff-footer" .}}
+
+  <script>
+    function ffViewDoc(id) {
+      return {
+        docId: id,
+        files: [], notes: [],
+        loadingFiles: true, loadingNotes: true,
+        ocrModal: { open: false, fileName: '', text: '', confidence: 0 },
+        openOcrModal(f) {
+          this.ocrModal = { open: true, fileName: f.FileName, text: f.ExtractedText, confidence: f.Confidence || 0 };
+        },
+        async init() {
+          try {
+            var fr = await fetch('/api/documents/' + encodeURIComponent(id) + '/files');
+            var fj = await fr.json();
+            this.files = (fj.files || []).slice();
+          } catch (_) {}
+          this.loadingFiles = false;
+          try {
+            var nr = await fetch('/api/documents/' + encodeURIComponent(id) + '/notes');
+            var nj = await nr.json();
+            this.notes = (nj.notes || []).slice();
+          } catch (_) {}
+          this.loadingNotes = false;
+        }
+      };
+    }
+  </script>
+</body>
+</html>
+{{end}}

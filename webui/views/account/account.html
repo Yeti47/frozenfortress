@@ -1,334 +1,201 @@
-{{template "header" .}}
-    <style>
-        /* Override body and main content layout for better space utilization */
-        body {
-            min-height: 100vh !important;
-            height: auto !important;
-            overflow: auto !important;
-        }
-        
-        .main-content {
-            align-items: flex-start !important;
-            padding: 20px 15px !important;
-            flex: 1 !important;
-            min-height: calc(100vh - 140px) !important; /* Account for header and footer */
-            overflow: visible !important;
-        }
-        
-        .content-container {
-            max-width: 800px !important;
-            padding: 30px !important;
-            margin: 0 auto;
-            background-color: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
-        }
+{{define "account.html"}}<!DOCTYPE html>
+<html lang="en">
+{{template "ff-head" (merge . (dict "Title" "Account · Frozen Fortress"))}}
+<body class="h-dvh overflow-hidden flex flex-col">
+  {{template "ff-topbar" (merge . (dict "Active" "account"))}}
 
-        .account-container {
-            width: 100%;
-            padding: 0;
-        }
-
-        .account-title {
-            color: #2c3e50;
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0 0 30px 0;
-        }
-
-        .section {
-            margin-bottom: 40px;
-            padding: 25px;
-            border: 2px solid #e3f2fd;
-            border-radius: 15px;
-            background-color: #fafbfc;
-        }
-
-        .section h2 {
-            color: #34495e;
-            margin-bottom: 15px;
-            font-size: 1.4em;
-            font-weight: 600;
-        }
-
-        .section p {
-            color: #7f8c8d;
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #2c3e50;
-            font-weight: 500;
-        }
-
-        .section input[type="password"], .section input[type="text"] {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
-            background-color: white;
-        }
-
-        .section input[type="password"]:focus, .section input[type="text"]:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-primary {
-            background-color: #3498db;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #2980b9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-        }
-
-        .btn-warning {
-            background-color: #f39c12;
-            color: white;
-        }
-
-        .btn-warning:hover {
-            background-color: #e67e22;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
-        }
-
-        .btn-danger {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background-color: #c0392b;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
-        }
-
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid transparent;
-            border-radius: 8px;
-        }
-
-        .alert-success {
-            color: #155724;
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-        }
-
-        .alert-danger {
-            color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-        }
-
-        .warning-box {
-            background-color: #fef5e7;
-            border: 2px solid #f39c12;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .danger-box {
-            background-color: #fdf2f2;
-            border: 2px solid #e74c3c;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 15px;
-        }
-
-        .form-row .form-group {
-            flex: 1;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                padding: 10px 5px !important;
-                min-height: calc(100vh - 120px) !important;
-            }
-            
-            .content-container {
-                max-width: 100% !important;
-                padding: 15px !important;
-                margin: 0 !important;
-                border-radius: 10px;
-            }
-            
-            .form-row {
-                flex-direction: column;
-            }
-            
-            .section {
-                padding: 15px;
-                margin-bottom: 20px;
-            }
-            
-            .account-title {
-                font-size: 24px;
-                margin-bottom: 20px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .main-content {
-                padding: 5px !important;
-            }
-            
-            .content-container {
-                padding: 10px !important;
-                border-radius: 5px;
-            }
-            
-            .section {
-                padding: 10px;
-                margin-bottom: 15px;
-            }
-            
-            .account-title {
-                font-size: 22px;
-                margin-bottom: 15px;
-            }
-        }
-    </style>
-
-    <div class="account-container">
-        <h1 class="account-title">Account Settings</h1>
-
-        <!-- Change Password Section -->
-        <div class="section">
-            <h2>🔒 Change Password</h2>
-            <p>Update your account password to keep your account secure.</p>
-            
-            {{if .passwordError}}
-                <div class="alert alert-danger">{{.passwordError}}</div>
-            {{end}}
-            {{if .passwordSuccess}}
-                <div class="alert alert-success">{{.passwordSuccess}}</div>
-            {{end}}
-
-            <form method="POST" action="/account/change-password">
-                <div class="form-group">
-                    <label for="current_password">Current Password</label>
-                    <input type="password" id="current_password" name="current_password" required>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="new_password">New Password</label>
-                        <input type="password" id="new_password" name="new_password" required minlength="8">
-                    </div>
-                    <div class="form-group">
-                        <label for="confirm_password">Confirm New Password</label>
-                        <input type="password" id="confirm_password" name="confirm_password" required minlength="8">
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary">Change Password</button>
-            </form>
-        </div>
-
-        <!-- Generate Recovery Code Section -->
-        <div class="section">
-            <h2>🔑 Recovery Code</h2>
-            <p>Generate a new recovery code that can be used to regain access to your account if you forget your password.</p>
-            
-            {{if .RecoveryError}}
-                <div class="alert alert-danger">{{.RecoveryError}}</div>
-            {{end}}
-            {{if .RecoverySuccess}}
-                <div class="alert alert-success">{{.RecoverySuccess}}</div>
-            {{end}}
-            {{if .RecoveryCode}}
-                {{template "recovery-code" .}}
-            {{end}}
-
-            <form method="POST" action="/account/generate-recovery-code">
-                <div class="form-group">
-                    <label for="recovery_password">Enter Your Password</label>
-                    <input type="password" id="recovery_password" name="password" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Generate Recovery Code</button>
-            </form>
-        </div>
-
-        <!-- Deactivate Account Section -->
-        <div class="section">
-            <h2>⏸️ Deactivate Account</h2>
-            <p>Temporarily deactivate your account. You can reactivate it later by logging in again.</p>
-            
-            {{if .DeactivateError}}
-                <div class="alert alert-danger">{{.DeactivateError}}</div>
-            {{end}}
-
-            <div class="warning-box">
-                <strong>⚠️ Warning:</strong> Deactivating your account will log you out and prevent you from accessing your secrets until you reactivate it.
-            </div>
-
-            <form method="POST" action="/account/deactivate" onsubmit="return confirm('Are you sure you want to deactivate your account?');">
-                <div class="form-group">
-                    <label for="deactivate_password">Enter Your Password</label>
-                    <input type="password" id="deactivate_password" name="password" required>
-                </div>
-                <button type="submit" class="btn btn-warning">Deactivate Account</button>
-            </form>
-        </div>
-
-        <!-- Delete Account Section -->
-        <div class="section">
-            <h2>🗑️ Delete Account</h2>
-            <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
-            
-            {{if .DeleteError}}
-                <div class="alert alert-danger">{{.DeleteError}}</div>
-            {{end}}
-
-            <div class="danger-box">
-                <strong>🚨 Danger Zone:</strong> This will permanently delete your account and all your secrets. This action cannot be undone!
-            </div>
-
-            <form method="POST" action="/account/delete" onsubmit="return confirm('Are you absolutely sure you want to delete your account? All your data will be permanently lost!');">
-                <div class="form-group">
-                    <label for="delete_password">Enter Your Password</label>
-                    <input type="password" id="delete_password" name="password" required>
-                </div>
-                <div class="form-group">
-                    <label for="confirmation">Type "DELETE" to confirm</label>
-                    <input type="text" id="confirmation" name="confirmation" required placeholder="Type DELETE to confirm">
-                </div>
-                <button type="submit" class="btn btn-danger">Delete Account Permanently</button>
-            </form>
-        </div>
+  <main class="flex-1 overflow-y-auto">
+    <div class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-semibold text-text flex items-center gap-2">
+        {{template "ff-icon" (dict "name" "account_circle" "class" "ff-icon size-7")}}
+        Account
+      </h1>
+      <p class="text-text-muted text-sm mt-1">Signed in as <strong class="text-text">{{.Username}}</strong>.</p>
     </div>
 
-{{template "footer" .}}
+    {{/* --- Change password --- */}}
+    <section class="ff-card p-6 sm:p-8" x-data="{ pwd: '', confirm: '' }">
+      <header class="flex items-start gap-3 mb-5">
+        <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-brand-500/10 text-brand-600 flex-shrink-0">
+          {{template "ff-icon" (dict "name" "lock" "class" "ff-icon")}}
+        </span>
+        <div>
+          <h2 class="font-semibold text-text">Change password</h2>
+          <p class="text-sm text-text-muted">Your password protects every secret in your vault. Pick a strong one.</p>
+        </div>
+      </header>
+
+      {{if .passwordSuccess}}
+      <div class="ff-flash ff-flash-success mb-4" role="status">
+        {{template "ff-icon" (dict "name" "check_circle" "class" "ff-icon")}}
+        <span class="flex-1">{{.passwordSuccess}}</span>
+      </div>
+      {{end}}
+      {{if .passwordError}}
+      <div class="ff-flash ff-flash-error mb-4" role="alert" data-persist>
+        {{template "ff-icon" (dict "name" "error" "class" "ff-icon")}}
+        <span class="flex-1">{{.passwordError}}</span>
+      </div>
+      {{end}}
+
+      <form action="/account/change-password" method="POST" class="space-y-4" autocomplete="off">
+        <div>
+          <label for="current_password" class="ff-label">Current password</label>
+          <input type="password" id="current_password" name="current_password" required class="ff-input" autocomplete="current-password">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="new_password" class="ff-label">New password</label>
+            <input type="password" id="new_password" name="new_password" required minlength="8" class="ff-input" autocomplete="new-password" x-model="pwd">
+          </div>
+          <div>
+            <label for="confirm_password" class="ff-label">Confirm</label>
+            <input type="password" id="confirm_password" name="confirm_password" required minlength="8" class="ff-input" autocomplete="new-password" x-model="confirm" :class="confirm && pwd !== confirm ? '!border-danger-500' : ''">
+            <p x-show="confirm && pwd !== confirm" x-cloak class="ff-field-error">Passwords do not match</p>
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" class="ff-btn ff-btn-primary" :disabled="!pwd || pwd !== confirm">
+            {{template "ff-icon" (dict "name" "save" "class" "ff-icon")}}
+            <span>Update password</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    {{/* --- Recovery code --- */}}
+    <section class="ff-card p-6 sm:p-8">
+      <header class="flex items-start gap-3 mb-5">
+        <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-accent-500/10 text-accent-600 flex-shrink-0">
+          {{template "ff-icon" (dict "name" "key" "class" "ff-icon")}}
+        </span>
+        <div>
+          <h2 class="font-semibold text-text">Recovery code</h2>
+          <p class="text-sm text-text-muted">Generate a one-time code you can use to reset your password if you ever forget it.</p>
+        </div>
+      </header>
+
+      {{if and .RecoveryCode (eq .RecoveryContext "account")}}
+        {{template "recovery-code" .}}
+      {{else}}
+        {{if .RecoverySuccess}}
+        <div class="ff-flash ff-flash-success mb-4" role="status">
+          {{template "ff-icon" (dict "name" "check_circle" "class" "ff-icon")}}
+          <span class="flex-1">{{.RecoverySuccess}}</span>
+        </div>
+        {{end}}
+        {{if .RecoveryError}}
+        <div class="ff-flash ff-flash-error mb-4" role="alert" data-persist>
+          {{template "ff-icon" (dict "name" "error" "class" "ff-icon")}}
+          <span class="flex-1">{{.RecoveryError}}</span>
+        </div>
+        {{end}}
+
+        <div class="ff-flash ff-flash-warning mb-4" role="alert" data-persist>
+          {{template "ff-icon" (dict "name" "warning" "class" "ff-icon")}}
+          <span class="flex-1"><strong>Generating a new code invalidates any previous one.</strong> Save the new code somewhere safe.</span>
+        </div>
+
+        <form action="/account/generate-recovery-code" method="POST" class="space-y-4" autocomplete="off">
+          <div>
+            <label for="recovery_password" class="ff-label">Confirm with your password</label>
+            <input type="password" id="recovery_password" name="password" required class="ff-input" autocomplete="current-password">
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="ff-btn ff-btn-secondary">
+              {{template "ff-icon" (dict "name" "key" "class" "ff-icon")}}
+              <span>Generate recovery code</span>
+            </button>
+          </div>
+        </form>
+      {{end}}
+    </section>
+
+    {{/* --- Danger zone --- */}}
+    <section class="ff-card border-danger-500/40 dark:border-danger-500/30 p-6 sm:p-8">
+      <header class="flex items-start gap-3 mb-5">
+        <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-danger-500/15 text-danger-500 flex-shrink-0">
+          {{template "ff-icon" (dict "name" "warning" "class" "ff-icon")}}
+        </span>
+        <div>
+          <h2 class="font-semibold text-text">Danger zone</h2>
+          <p class="text-sm text-text-muted">Irreversible actions. Read carefully before proceeding.</p>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {{/* Deactivate */}}
+        <div class="rounded-lg border border-border p-4" x-data="{ open: false }">
+          <h3 class="font-semibold text-text">Deactivate account</h3>
+          <p class="text-sm text-text-muted mt-1">Locks sign-in. Your data is preserved and an admin can re-enable later.</p>
+
+          {{if .DeactivateError}}
+          <div class="ff-flash ff-flash-error mt-3" role="alert" data-persist>
+            {{template "ff-icon" (dict "name" "error" "class" "ff-icon")}}
+            <span class="flex-1">{{.DeactivateError}}</span>
+          </div>
+          {{end}}
+
+          <button type="button" class="ff-btn ff-btn-secondary mt-3" @click="open = !open" x-show="!open">
+            {{template "ff-icon" (dict "name" "lock" "class" "ff-icon")}}
+            <span>Deactivate</span>
+          </button>
+          <form action="/account/deactivate" method="POST" class="space-y-3 mt-3" x-show="open" x-cloak autocomplete="off">
+            <div>
+              <label for="deactivate_password" class="ff-label">Confirm with your password</label>
+              <input type="password" id="deactivate_password" name="password" required class="ff-input" autocomplete="current-password">
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" class="ff-btn ff-btn-ghost" @click="open = false">Cancel</button>
+              <button type="submit" class="ff-btn ff-btn-danger">
+                {{template "ff-icon" (dict "name" "lock" "class" "ff-icon")}}
+                <span>Confirm deactivate</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {{/* Delete */}}
+        <div class="rounded-lg border border-danger-500/40 dark:border-danger-500/30 p-4" x-data="{ open: false, confirm: '' }">
+          <h3 class="font-semibold text-danger-600 dark:text-danger-400">Delete account</h3>
+          <p class="text-sm text-text-muted mt-1">Permanently wipes your account and all data. <strong>Cannot be undone.</strong></p>
+
+          {{if .DeleteError}}
+          <div class="ff-flash ff-flash-error mt-3" role="alert" data-persist>
+            {{template "ff-icon" (dict "name" "error" "class" "ff-icon")}}
+            <span class="flex-1">{{.DeleteError}}</span>
+          </div>
+          {{end}}
+
+          <button type="button" class="ff-btn ff-btn-danger mt-3" @click="open = !open" x-show="!open">
+            {{template "ff-icon" (dict "name" "delete" "class" "ff-icon")}}
+            <span>Delete forever</span>
+          </button>
+          <form action="/account/delete" method="POST" class="space-y-3 mt-3" x-show="open" x-cloak autocomplete="off">
+            <div>
+              <label for="delete_password" class="ff-label">Password</label>
+              <input type="password" id="delete_password" name="password" required class="ff-input" autocomplete="current-password">
+            </div>
+            <div>
+              <label for="delete_confirmation" class="ff-label">Type <code class="font-mono text-text">DELETE</code> to confirm</label>
+              <input type="text" id="delete_confirmation" name="confirmation" required pattern="DELETE" class="ff-input font-mono" x-model="confirm" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" class="ff-btn ff-btn-ghost" @click="open = false">Cancel</button>
+              <button type="submit" class="ff-btn ff-btn-danger" :disabled="confirm !== 'DELETE'">
+                {{template "ff-icon" (dict "name" "delete" "class" "ff-icon")}}
+                <span>Permanently delete</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+    </div>
+  </main>
+
+  {{template "ff-footer" .}}
+</body>
+</html>
+{{end}}

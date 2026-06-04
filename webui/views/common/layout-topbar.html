@@ -1,0 +1,105 @@
+{{/* Frozen Fortress — top navigation bar.
+
+     Required template data:
+       .Username           (string)   — current user; topbar collapses to brand-only if empty.
+
+     Optional template data:
+       .Active             (string)   — one of "secrets" | "documents" | "tags" | "account".
+                                        Pages set this via `(merge . (dict "Active" "secrets"))`.
+       .SearchTerm         (string)   — pre-fills the search box.
+       .HideNav            (bool)     — true on auth pages.
+*/}}
+{{define "ff-topbar"}}
+<header
+  class="sticky top-0 z-30 ff-card-glass border-l-0 border-r-0 border-t-0 rounded-none"
+  x-data="{ mobileOpen: false, userOpen: false }"
+  @keydown.escape.window="mobileOpen=false; userOpen=false"
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="flex items-center gap-3 sm:gap-5 h-16">
+      {{template "ff-brand" (dict "size" "sm")}}
+
+      {{if and .Username (not .HideNav)}}
+      <nav class="hidden md:flex items-center gap-1 ml-2" aria-label="Primary">
+        <a href="/" class="ff-btn ff-btn-ghost {{if eq .Active "secrets"}}!bg-brand-500/15 !text-brand-700 dark:!text-brand-300{{end}}">
+          {{template "ff-icon" (dict "name" "key" "class" "ff-icon")}}<span>Secrets</span>
+        </a>
+        <a href="/documents" class="ff-btn ff-btn-ghost {{if eq .Active "documents"}}!bg-brand-500/15 !text-brand-700 dark:!text-brand-300{{end}}">
+          {{template "ff-icon" (dict "name" "description" "class" "ff-icon")}}<span>Documents</span>
+        </a>
+        <a href="/tags" class="ff-btn ff-btn-ghost {{if eq .Active "tags"}}!bg-brand-500/15 !text-brand-700 dark:!text-brand-300{{end}}">
+          {{template "ff-icon" (dict "name" "label" "class" "ff-icon")}}<span>Tags</span>
+        </a>
+      </nav>
+      {{end}}
+
+      <div class="flex-1"></div>
+
+      {{template "ff-theme-toggle" .}}
+
+      {{if and .Username (not .HideNav)}}
+      <div class="relative">
+        <button
+          type="button"
+          class="ff-btn ff-btn-ghost gap-2"
+          aria-haspopup="menu"
+          :aria-expanded="userOpen.toString()"
+          @click="userOpen = !userOpen"
+        >
+          {{template "ff-icon" (dict "name" "account_circle" "class" "ff-icon")}}
+          <span class="hidden sm:inline max-w-[10rem] truncate">{{.Username}}</span>
+        </button>
+        <div
+          x-show="userOpen"
+          x-cloak
+          x-transition.opacity.duration.150ms
+          @click.outside="userOpen=false"
+          class="absolute right-0 mt-2 w-56 ff-card p-1 z-40"
+          role="menu"
+        >
+          <a href="/account" class="ff-btn ff-btn-ghost ff-btn-block justify-start" role="menuitem">
+            {{template "ff-icon" (dict "name" "settings" "class" "ff-icon")}}<span>Account settings</span>
+          </a>
+          <hr class="ff-divider !my-1">
+          <a href="/logout" class="ff-btn ff-btn-ghost ff-btn-block justify-start !text-danger-500 hover:!bg-danger-500/10" role="menuitem" onclick="signOut(event)">
+            {{template "ff-icon" (dict "name" "logout" "class" "ff-icon")}}<span>Sign out</span>
+          </a>
+        </div>
+      </div>
+      {{end}}
+
+      {{if and .Username (not .HideNav)}}
+      <button
+        type="button"
+        class="md:hidden ff-btn ff-btn-ghost ff-btn-icon"
+        aria-label="Toggle navigation menu"
+        @click="mobileOpen = !mobileOpen"
+      >
+        {{template "ff-icon" (dict "name" "menu" "class" "ff-icon")}}
+      </button>
+      {{end}}
+    </div>
+
+    {{if and .Username (not .HideNav)}}
+    <div
+      x-show="mobileOpen"
+      x-cloak
+      x-transition
+      class="md:hidden pb-3"
+    >
+      <nav class="flex flex-col gap-1" aria-label="Primary (mobile)">
+        <a href="/" class="ff-btn ff-btn-ghost ff-btn-block justify-start {{if eq .Active "secrets"}}!bg-brand-500/15 !text-brand-700 dark:!text-brand-300{{end}}">
+          {{template "ff-icon" (dict "name" "key" "class" "ff-icon")}}<span>Secrets</span>
+        </a>
+        <a href="/documents" class="ff-btn ff-btn-ghost ff-btn-block justify-start {{if eq .Active "documents"}}!bg-brand-500/15 !text-brand-700 dark:!text-brand-300{{end}}">
+          {{template "ff-icon" (dict "name" "description" "class" "ff-icon")}}<span>Documents</span>
+        </a>
+        <a href="/tags" class="ff-btn ff-btn-ghost ff-btn-block justify-start {{if eq .Active "tags"}}!bg-brand-500/15 !text-brand-700 dark:!text-brand-300{{end}}">
+          {{template "ff-icon" (dict "name" "label" "class" "ff-icon")}}<span>Tags</span>
+        </a>
+      </nav>
+    </div>
+    {{end}}
+  </div>
+</header>
+{{end}}

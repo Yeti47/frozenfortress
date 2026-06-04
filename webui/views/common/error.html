@@ -19,11 +19,12 @@
         }
         
         .logo {
-            max-width: 160px;
+            max-width: 280px;
             height: auto;
             margin-bottom: 2rem;
             cursor: pointer;
             transition: transform 0.3s ease;
+            filter: drop-shadow(0 0 14px rgba(96,165,250,0.55));
         }
         
         .error-container {
@@ -58,7 +59,7 @@
 </head>
 <body>
     <a href="/">
-        <img src="/img/fflogo01.png" alt="Frozen Fortress Logo" class="logo">
+        <img src="/img/ffigloo.png" alt="Frozen Fortress Logo" class="logo">
     </a>
     <div class="error-container">
         <h1 class="status-code">{{.StatusCode}}</h1>

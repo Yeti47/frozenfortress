@@ -1,0 +1,20 @@
+{{/* Frozen Fortress — page footer.
+     Renders a minimal version display. Pages should call this before the
+     closing </body>. The full version with credits is used for the app shell;
+     ff-footer-min omits even the spacing for auth pages.
+*/}}
+{{define "ff-footer"}}
+<footer class="mt-6 py-2 text-center text-xs text-text-subtle">
+  {{if .Version}}
+    <span class="opacity-70">Frozen Fortress · v{{.Version}}</span>
+  {{end}}
+</footer>
+{{end}}
+
+{{define "ff-footer-min"}}
+{{if .Version}}
+<div class="fixed bottom-3 left-1/2 -translate-x-1/2 text-xs text-text-subtle/70 select-none pointer-events-none">
+  v{{.Version}}
+</div>
+{{end}}
+{{end}}
