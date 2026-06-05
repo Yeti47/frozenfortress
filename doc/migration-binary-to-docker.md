@@ -62,17 +62,21 @@ The Docker stack expects all application state under a single directory (or name
 
 **Option A — Bind mount the entire directory** (simplest):
 
-Your existing `~/.config/frozenfortress/` maps directly to `/data`. Add bind mounts in a `compose.override.yaml` (so your changes survive `docker compose pull`):
+Your existing `~/.config/frozenfortress/` maps directly to `/data`. Add a bind mount in a `compose.override.yaml` (so your changes survive `docker compose pull`):
 
 ```yaml
 services:
   webui:
     volumes:
-      - ~/.config/frozenfortress/frozenfortress.db:/data/frozenfortress.db
-      - ~/.config/frozenfortress/keys:/data/keys
-      - ~/.config/frozenfortress/backups:/data/backups
+      - ~/.config/frozenfortress:/data
+  nginx:
+    volumes:
       - ~/.config/frozenfortress/certs:/data/certs
 ```
+
+> **Important**: mount the whole directory, not individual files. SQLite creates `-wal` and `-shm` files next to the database at runtime. If you mount only `frozenfortress.db` as a single file, those files end up in the named volume (`frozenfortress-data`) whose `/data/` directory is owned by root — causing SQLite to report the database as read-only. Mounting the entire directory avoids this conflict entirely.
+>
+> **How the override works with the named volume**: Docker Compose merges volumes from both files, so the container ends up with both `frozenfortress-data:/data` (from `compose.yaml`) and `~/.config/frozenfortress:/data` (from your override). The named volume is still created, but the bind mount is applied last and shadows it entirely on the Linux mount stack. In practice the container only sees your host directory at `/data`.
 
 **Option B — Copy to a new host directory**:
 
