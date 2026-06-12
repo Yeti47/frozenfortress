@@ -1,13 +1,16 @@
 package backup
 
 import (
+	"database/sql"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 )
@@ -309,23 +312,16 @@ func (s *FileBasedBackupService) parseBackupFile(filename string) (*BackupInfo, 
 	}, nil
 }
 
-// copyDatabase copies the SQLite database file to the backup location
+// copyDatabase creates a consistent backup of the SQLite database using VACUUM INTO
 func (s *FileBasedBackupService) copyDatabase(sourcePath, destPath string) error {
-	sourceFile, err := os.Open(sourcePath)
+	db, err := sql.Open("sqlite3", sourcePath)
 	if err != nil {
 		return fmt.Errorf("failed to open source database: %w", err)
 	}
-	defer sourceFile.Close()
+	defer db.Close()
 
-	destFile, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("failed to create backup file: %w", err)
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return fmt.Errorf("failed to copy database: %w", err)
+	if _, err := db.Exec(fmt.Sprintf("VACUUM INTO '%s'", strings.ReplaceAll(destPath, "'", "''"))); err != nil {
+		return fmt.Errorf("failed to vacuum database into backup: %w", err)
 	}
 
 	return nil
