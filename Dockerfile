@@ -10,8 +10,8 @@ COPY . .
 
 RUN mkdir -p /out /out-data \
     && ./webui/build-css.sh \
-    && CGO_ENABLED=1 GOOS=linux go build -tags notesseract -trimpath -ldflags="-s -w -X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=1.1.0" -o /out/ffwebui ./webui \
-    && CGO_ENABLED=1 GOOS=linux go build -tags notesseract -trimpath -ldflags="-s -w -X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=1.1.0" -o /out/ffcli ./cli \
+    && CGO_ENABLED=1 GOOS=linux go build -tags notesseract -trimpath -ldflags="-s -w -X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=1.1.2" -o /out/ffwebui ./webui \
+    && CGO_ENABLED=1 GOOS=linux go build -tags notesseract -trimpath -ldflags="-s -w -X github.com/Yeti47/frozenfortress/frozenfortress/core/ccc.AppVersion=1.1.2" -o /out/ffcli ./cli \
     && cp -r webui/views /out/views \
     && cp -r webui/img /out/img \
     && cp -r webui/static /out/static
