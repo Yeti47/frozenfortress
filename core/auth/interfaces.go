@@ -84,15 +84,6 @@ type MekStore interface {
 	Delete(w http.ResponseWriter, r *http.Request) error
 }
 
-// ScanKeyStore stores the short-lived, per-handoff scan encryption key used by the
-// companion app scan handoff (see core/scanhandoff). Unlike MekStore, entries are keyed
-// per-token and carry their own tight expiry, independent of the session's own MaxAge.
-type ScanKeyStore interface {
-	Store(w http.ResponseWriter, r *http.Request, token, key string) error
-	Retrieve(w http.ResponseWriter, r *http.Request, token string) (string, error)
-	Delete(w http.ResponseWriter, r *http.Request, token string) error
-}
-
 // SessionKeyProvider is responsible for providing session signing and encryption keys.
 type SessionKeyProvider interface {
 	GetSigningKey() ([]byte, error)

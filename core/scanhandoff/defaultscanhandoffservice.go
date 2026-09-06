@@ -9,33 +9,40 @@ import (
 )
 
 // handoffTTL is how long a pending handoff, and a completed-but-unfetched scan,
-// stays valid before expiring.
+// stays valid before expiring. The scan key (ScanKeyStore) is kept on the same
+// schedule: given its own TTL at StartHandoff and refreshed to it again on UploadScan.
 const handoffTTL = 5 * time.Minute
 
 // DefaultScanHandoffService implements ScanHandoffService.
 type DefaultScanHandoffService struct {
 	store             ScanHandoffStore
+	keyStore          ScanKeyStore
 	encryptionService encryption.EncryptionService
 	logger            ccc.Logger
 }
 
 // NewDefaultScanHandoffService creates a new DefaultScanHandoffService.
-func NewDefaultScanHandoffService(store ScanHandoffStore, encryptionService encryption.EncryptionService, logger ccc.Logger) *DefaultScanHandoffService {
+func NewDefaultScanHandoffService(store ScanHandoffStore, keyStore ScanKeyStore, encryptionService encryption.EncryptionService, logger ccc.Logger) *DefaultScanHandoffService {
 	if logger == nil {
 		logger = ccc.NopLogger
 	}
 
 	return &DefaultScanHandoffService{
 		store:             store,
+		keyStore:          keyStore,
 		encryptionService: encryptionService,
 		logger:            logger,
 	}
 }
 
-// StartHandoff creates a new pending handoff owned by userId and returns its token.
-func (s *DefaultScanHandoffService) StartHandoff(ctx context.Context, userId string) (string, error) {
+// StartHandoff creates a new pending handoff owned by userId, stores key for later
+// decryption, and returns the handoff's token.
+func (s *DefaultScanHandoffService) StartHandoff(ctx context.Context, userId, key string) (string, error) {
 	if userId == "" {
 		return "", ccc.NewInvalidInputError("userId", "must not be empty")
+	}
+	if key == "" {
+		return "", ccc.NewInvalidInputError("key", "must not be empty")
 	}
 
 	token, err := GenerateToken()
@@ -53,6 +60,16 @@ func (s *DefaultScanHandoffService) StartHandoff(ctx context.Context, userId str
 
 	if err := s.store.Save(ctx, record, handoffTTL); err != nil {
 		s.logger.Error("Failed to save new scan handoff", "token", token, "error", err)
+		return "", ccc.NewInternalError("failed to start scan handoff", err)
+	}
+
+	if err := s.keyStore.Store(ctx, token, key, handoffTTL); err != nil {
+		s.logger.Error("Failed to save scan key for new handoff", "token", token, "error", err)
+		// Roll back the handoff record so we don't leave an orphaned pending record that
+		// could never be decrypted if a scan were later uploaded to it.
+		if delErr := s.store.Delete(ctx, token); delErr != nil {
+			s.logger.Error("Failed to roll back scan handoff after key save failure", "token", token, "error", delErr)
+		}
 		return "", ccc.NewInternalError("failed to start scan handoff", err)
 	}
 
@@ -94,6 +111,15 @@ func (s *DefaultScanHandoffService) UploadScan(ctx context.Context, token, fileN
 		return ccc.NewInternalError("failed to save uploaded scan", err)
 	}
 
+	// Keep the key's expiry in step with the ciphertext record's freshly-refreshed TTL,
+	// so the browser's later fetch has the full handoffTTL window to complete, not just
+	// whatever was left of the key's original TTL from StartHandoff. Best-effort: losing
+	// this refresh just means the key expires a little earlier than ideal, which surfaces
+	// as a clear "expired, please rescan" error rather than data loss.
+	if err := s.keyStore.Refresh(ctx, token, handoffTTL); err != nil {
+		s.logger.Error("Failed to refresh scan key expiry after upload", "token", token, "error", err)
+	}
+
 	s.logger.Info("Scan uploaded for handoff", "token", token)
 
 	return nil
@@ -109,14 +135,25 @@ func (s *DefaultScanHandoffService) GetStatus(ctx context.Context, token, userId
 	return record.State, nil
 }
 
-// FetchAndConsume decrypts and returns the staged scan, then deletes the record.
-func (s *DefaultScanHandoffService) FetchAndConsume(ctx context.Context, token, userId, key string) (string, []byte, error) {
+// FetchAndConsume decrypts and returns the staged scan, then deletes both the
+// ciphertext record and the key.
+func (s *DefaultScanHandoffService) FetchAndConsume(ctx context.Context, token, userId string) (string, []byte, error) {
 	record, err := s.getOwnedRecord(ctx, token, userId)
 	if err != nil {
 		return "", nil, err
 	}
 	if record.State != ScanHandoffStateReady {
 		s.logger.Warn("Scan fetch attempted before upload completed", "token", token)
+		return "", nil, ccc.NewResourceNotFoundError(token, "scan handoff")
+	}
+
+	key, err := s.keyStore.Retrieve(ctx, token)
+	if err != nil {
+		s.logger.Error("Failed to look up scan key", "token", token, "error", err)
+		return "", nil, ccc.NewInternalError("failed to look up scan key", err)
+	}
+	if key == "" {
+		s.logger.Warn("Scan key missing or expired for a ready handoff", "token", token)
 		return "", nil, ccc.NewResourceNotFoundError(token, "scan handoff")
 	}
 
@@ -130,6 +167,9 @@ func (s *DefaultScanHandoffService) FetchAndConsume(ctx context.Context, token, 
 		// The scan was already decrypted and is about to be returned to the caller;
 		// log but don't fail the request over a best-effort cleanup step.
 		s.logger.Error("Failed to delete consumed scan handoff", "token", token, "error", err)
+	}
+	if err := s.keyStore.Delete(ctx, token); err != nil {
+		s.logger.Error("Failed to delete consumed scan key", "token", token, "error", err)
 	}
 
 	s.logger.Info("Scan handoff fetched and consumed", "token", token)
