@@ -8,10 +8,12 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 )
 
-// handoffTTL is how long a pending handoff, and a completed-but-unfetched scan,
+// HandoffTTL is how long a pending handoff, and a completed-but-unfetched scan,
 // stays valid before expiring. The scan key (ScanKeyStore) is kept on the same
 // schedule: given its own TTL at StartHandoff and refreshed to it again on UploadScan.
-const handoffTTL = 5 * time.Minute
+// Exported so callers (e.g. the webui layer) can report it to clients without
+// duplicating the value.
+const HandoffTTL = 5 * time.Minute
 
 // DefaultScanHandoffService implements ScanHandoffService.
 type DefaultScanHandoffService struct {
@@ -58,12 +60,12 @@ func (s *DefaultScanHandoffService) StartHandoff(ctx context.Context, userId, ke
 		CreatedAt: time.Now().UTC(),
 	}
 
-	if err := s.store.Save(ctx, record, handoffTTL); err != nil {
+	if err := s.store.Save(ctx, record, HandoffTTL); err != nil {
 		s.logger.Error("Failed to save new scan handoff", "token", token, "error", err)
 		return "", ccc.NewInternalError("failed to start scan handoff", err)
 	}
 
-	if err := s.keyStore.Store(ctx, token, key, handoffTTL); err != nil {
+	if err := s.keyStore.Store(ctx, token, key, HandoffTTL); err != nil {
 		s.logger.Error("Failed to save scan key for new handoff", "token", token, "error", err)
 		// Roll back the handoff record so we don't leave an orphaned pending record that
 		// could never be decrypted if a scan were later uploaded to it.
@@ -106,17 +108,17 @@ func (s *DefaultScanHandoffService) UploadScan(ctx context.Context, token, fileN
 	record.CipherBlob = cipherBlob
 	record.State = ScanHandoffStateReady
 
-	if err := s.store.Save(ctx, record, handoffTTL); err != nil {
+	if err := s.store.Save(ctx, record, HandoffTTL); err != nil {
 		s.logger.Error("Failed to save uploaded scan", "token", token, "error", err)
 		return ccc.NewInternalError("failed to save uploaded scan", err)
 	}
 
 	// Keep the key's expiry in step with the ciphertext record's freshly-refreshed TTL,
-	// so the browser's later fetch has the full handoffTTL window to complete, not just
+	// so the browser's later fetch has the full HandoffTTL window to complete, not just
 	// whatever was left of the key's original TTL from StartHandoff. Best-effort: losing
 	// this refresh just means the key expires a little earlier than ideal, which surfaces
 	// as a clear "expired, please rescan" error rather than data loss.
-	if err := s.keyStore.Refresh(ctx, token, handoffTTL); err != nil {
+	if err := s.keyStore.Refresh(ctx, token, HandoffTTL); err != nil {
 		s.logger.Error("Failed to refresh scan key expiry after upload", "token", token, "error", err)
 	}
 
