@@ -8,6 +8,7 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/documents"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/scanhandoff"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/secrets"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/workers"
 )
@@ -30,6 +31,7 @@ type services struct {
 	DocumentSearchEngine    documents.DocumentSearchEngine
 	DocumentListService     documents.DocumentListService
 	NoteManager             documents.NoteManager
+	ScanHandoffService      scanhandoff.ScanHandoffService
 }
 
 // configureServices configures the services used by the web UI.
@@ -142,6 +144,15 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 	// Create note manager
 	noteManager := documents.NewDefaultNoteManager(uowFactory, idGenerator, logger)
 
+	// Create scan handoff service (companion app document scanning)
+	scanHandoffStore, err := scanhandoff.NewRedisScanHandoffStore(config, logger)
+	if err != nil {
+		logger.Error("Failed to create scan handoff store", "error", err)
+		panic("Failed to create scan handoff store: " + err.Error())
+	}
+	scanKeyStore := scanhandoff.NewRedisScanKeyStore(config, logger)
+	scanHandoffService := scanhandoff.NewDefaultScanHandoffService(scanHandoffStore, scanKeyStore, encryptionService, logger)
+
 	return services{
 		SignInManager:           signInManager,
 		EncryptionService:       encryptionService,
@@ -160,5 +171,6 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		DocumentSearchEngine:    documentSearchEngine,
 		DocumentListService:     documentListService,
 		NoteManager:             noteManager,
+		ScanHandoffService:      scanHandoffService,
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/login"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/recovery"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/views/register"
+	scanhandoffview "github.com/Yeti47/frozenfortress/frozenfortress/webui/views/scanhandoff"
 	secretsview "github.com/Yeti47/frozenfortress/frozenfortress/webui/views/secrets"
 	tagsview "github.com/Yeti47/frozenfortress/frozenfortress/webui/views/tags"
 	"github.com/gin-gonic/gin"
@@ -138,6 +139,7 @@ func registerRoutes(router *gin.Engine, svc services) {
 		NoteManager:         svc.NoteManager,
 	}
 	documentsview.RegisterRoutes(router, svc.SignInManager, docServices, svc.MekStore, svc.EncryptionService, svc.Logger)
+	scanhandoffview.RegisterRoutes(router, svc.SignInManager, svc.ScanHandoffService, svc.Logger)
 
 	login.RegisterRoutes(router, svc.SignInManager)
 	register.RegisterRoutes(router, svc.UserManager)
