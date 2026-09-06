@@ -51,14 +51,55 @@ func (s *inMemoryScanHandoffStore) Delete(ctx context.Context, token string) err
 	return nil
 }
 
-func newTestService(store ScanHandoffStore) *DefaultScanHandoffService {
-	return NewDefaultScanHandoffService(store, encryption.NewDefaultEncryptionService(), ccc.NopLogger)
+// inMemoryScanKeyStore is a minimal fake ScanKeyStore for service-level tests. It
+// ignores TTLs entirely (no expiry simulation) - expiry behavior of the real
+// implementation is covered by redisscankeystore_test.go against a real Redis.
+type inMemoryScanKeyStore struct {
+	mu   sync.Mutex
+	keys map[string]string
+}
+
+func newInMemoryScanKeyStore() *inMemoryScanKeyStore {
+	return &inMemoryScanKeyStore{keys: make(map[string]string)}
+}
+
+func (s *inMemoryScanKeyStore) Store(ctx context.Context, token, key string, ttl time.Duration) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.keys[token] = key
+	return nil
+}
+
+func (s *inMemoryScanKeyStore) Retrieve(ctx context.Context, token string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.keys[token], nil
+}
+
+func (s *inMemoryScanKeyStore) Refresh(ctx context.Context, token string, ttl time.Duration) error {
+	return nil
+}
+
+func (s *inMemoryScanKeyStore) Delete(ctx context.Context, token string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.keys, token)
+	return nil
+}
+
+func newTestService(store ScanHandoffStore, keyStore ScanKeyStore) *DefaultScanHandoffService {
+	return NewDefaultScanHandoffService(store, keyStore, encryption.NewDefaultEncryptionService(), ccc.NopLogger)
 }
 
 func TestStartHandoff_CreatesRetrievablePendingRecord(t *testing.T) {
-	svc := newTestService(newInMemoryScanHandoffStore())
+	svc := newTestService(newInMemoryScanHandoffStore(), newInMemoryScanKeyStore())
+	enc := encryption.NewDefaultEncryptionService()
+	key, _ := enc.GenerateKey()
 
-	token, err := svc.StartHandoff(context.Background(), "user-1")
+	token, err := svc.StartHandoff(context.Background(), "user-1", key)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -76,15 +117,15 @@ func TestStartHandoff_CreatesRetrievablePendingRecord(t *testing.T) {
 }
 
 func TestUploadScan_TransitionsToReady(t *testing.T) {
-	svc := newTestService(newInMemoryScanHandoffStore())
+	svc := newTestService(newInMemoryScanHandoffStore(), newInMemoryScanKeyStore())
 	enc := encryption.NewDefaultEncryptionService()
 
-	token, err := svc.StartHandoff(context.Background(), "user-1")
+	key, _ := enc.GenerateKey()
+	token, err := svc.StartHandoff(context.Background(), "user-1", key)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
 
-	key, _ := enc.GenerateKey()
 	cipherBlob, err := enc.EncryptBytes([]byte("scan bytes"), key)
 	if err != nil {
 		t.Fatalf("failed to encrypt test payload: %v", err)
@@ -104,7 +145,7 @@ func TestUploadScan_TransitionsToReady(t *testing.T) {
 }
 
 func TestUploadScan_RejectsUnknownToken(t *testing.T) {
-	svc := newTestService(newInMemoryScanHandoffStore())
+	svc := newTestService(newInMemoryScanHandoffStore(), newInMemoryScanKeyStore())
 
 	err := svc.UploadScan(context.Background(), "does-not-exist", "scan.jpg", []byte("cipher"))
 	if err == nil {
@@ -116,15 +157,15 @@ func TestUploadScan_RejectsUnknownToken(t *testing.T) {
 }
 
 func TestUploadScan_RejectsAlreadyReadyToken(t *testing.T) {
-	svc := newTestService(newInMemoryScanHandoffStore())
+	svc := newTestService(newInMemoryScanHandoffStore(), newInMemoryScanKeyStore())
 	enc := encryption.NewDefaultEncryptionService()
 
-	token, err := svc.StartHandoff(context.Background(), "user-1")
+	key, _ := enc.GenerateKey()
+	token, err := svc.StartHandoff(context.Background(), "user-1", key)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
 
-	key, _ := enc.GenerateKey()
 	cipherBlob, _ := enc.EncryptBytes([]byte("scan bytes"), key)
 
 	if err := svc.UploadScan(context.Background(), token, "scan.jpg", cipherBlob); err != nil {
@@ -138,9 +179,11 @@ func TestUploadScan_RejectsAlreadyReadyToken(t *testing.T) {
 }
 
 func TestGetStatus_ReturnsNotFoundForMismatchedOwner(t *testing.T) {
-	svc := newTestService(newInMemoryScanHandoffStore())
+	svc := newTestService(newInMemoryScanHandoffStore(), newInMemoryScanKeyStore())
+	enc := encryption.NewDefaultEncryptionService()
+	key, _ := enc.GenerateKey()
 
-	token, err := svc.StartHandoff(context.Background(), "user-1")
+	token, err := svc.StartHandoff(context.Background(), "user-1", key)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -155,15 +198,15 @@ func TestGetStatus_ReturnsNotFoundForMismatchedOwner(t *testing.T) {
 }
 
 func TestFetchAndConsume_DecryptsAndDeletesRecord(t *testing.T) {
-	svc := newTestService(newInMemoryScanHandoffStore())
+	svc := newTestService(newInMemoryScanHandoffStore(), newInMemoryScanKeyStore())
 	enc := encryption.NewDefaultEncryptionService()
 
-	token, err := svc.StartHandoff(context.Background(), "user-1")
+	key, _ := enc.GenerateKey()
+	token, err := svc.StartHandoff(context.Background(), "user-1", key)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
 
-	key, _ := enc.GenerateKey()
 	plainData := []byte("scanned document bytes")
 	cipherBlob, err := enc.EncryptBytes(plainData, key)
 	if err != nil {
@@ -174,7 +217,7 @@ func TestFetchAndConsume_DecryptsAndDeletesRecord(t *testing.T) {
 		t.Fatalf("UploadScan returned error: %v", err)
 	}
 
-	fileName, gotData, err := svc.FetchAndConsume(context.Background(), token, "user-1", key)
+	fileName, gotData, err := svc.FetchAndConsume(context.Background(), token, "user-1")
 	if err != nil {
 		t.Fatalf("FetchAndConsume returned error: %v", err)
 	}
@@ -186,22 +229,23 @@ func TestFetchAndConsume_DecryptsAndDeletesRecord(t *testing.T) {
 	}
 
 	// Fetch-and-burn: a second fetch of the same token must fail.
-	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1", key); err == nil {
+	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1"); err == nil {
 		t.Fatal("expected an error fetching an already-consumed token")
 	}
 }
 
-func TestFetchAndConsume_FailsWithWrongKey(t *testing.T) {
-	svc := newTestService(newInMemoryScanHandoffStore())
+func TestFetchAndConsume_FailsWhenKeyMissing(t *testing.T) {
+	handoffStore := newInMemoryScanHandoffStore()
+	keyStore := newInMemoryScanKeyStore()
+	svc := newTestService(handoffStore, keyStore)
 	enc := encryption.NewDefaultEncryptionService()
 
-	token, err := svc.StartHandoff(context.Background(), "user-1")
+	key, _ := enc.GenerateKey()
+	token, err := svc.StartHandoff(context.Background(), "user-1", key)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
 
-	key, _ := enc.GenerateKey()
-	wrongKey, _ := enc.GenerateKey()
 	cipherBlob, err := enc.EncryptBytes([]byte("scan bytes"), key)
 	if err != nil {
 		t.Fatalf("failed to encrypt test payload: %v", err)
@@ -211,7 +255,47 @@ func TestFetchAndConsume_FailsWithWrongKey(t *testing.T) {
 		t.Fatalf("UploadScan returned error: %v", err)
 	}
 
-	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1", wrongKey); err == nil {
-		t.Fatal("expected an error decrypting with the wrong key")
+	// Simulate the key having independently expired out of Redis (native TTL) even
+	// though the ciphertext record is still present.
+	if err := keyStore.Delete(context.Background(), token); err != nil {
+		t.Fatalf("failed to simulate key expiry: %v", err)
+	}
+
+	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1"); err == nil {
+		t.Fatal("expected an error fetching a handoff whose key is missing")
+	} else if !ccc.IsNotFound(err) {
+		t.Fatalf("expected a not-found error, got %v", err)
+	}
+}
+
+func TestFetchAndConsume_FailsWhenStoredKeyDoesNotMatchCiphertext(t *testing.T) {
+	handoffStore := newInMemoryScanHandoffStore()
+	keyStore := newInMemoryScanKeyStore()
+	svc := newTestService(handoffStore, keyStore)
+	enc := encryption.NewDefaultEncryptionService()
+
+	key, _ := enc.GenerateKey()
+	token, err := svc.StartHandoff(context.Background(), "user-1", key)
+	if err != nil {
+		t.Fatalf("StartHandoff returned error: %v", err)
+	}
+
+	cipherBlob, err := enc.EncryptBytes([]byte("scan bytes"), key)
+	if err != nil {
+		t.Fatalf("failed to encrypt test payload: %v", err)
+	}
+
+	if err := svc.UploadScan(context.Background(), token, "scan.jpg", cipherBlob); err != nil {
+		t.Fatalf("UploadScan returned error: %v", err)
+	}
+
+	// Overwrite the stored key so it no longer matches what encrypted the ciphertext.
+	wrongKey, _ := enc.GenerateKey()
+	if err := keyStore.Store(context.Background(), token, wrongKey, time.Minute); err != nil {
+		t.Fatalf("failed to overwrite stored key: %v", err)
+	}
+
+	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1"); err == nil {
+		t.Fatal("expected an error decrypting with a mismatched key")
 	}
 }

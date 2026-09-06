@@ -32,26 +32,9 @@ func NewRedisScanHandoffStore(config ccc.AppConfig, logger ccc.Logger) (*RedisSc
 
 	logger.Info("Creating Redis scan handoff store", "redis_address", config.RedisAddress, "redis_network", config.RedisNetwork, "pool_size", config.RedisSize)
 
-	pool := &redis.Pool{
-		MaxIdle:     config.RedisSize,
-		IdleTimeout: 240 * time.Second,
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-		Dial: func() (redis.Conn, error) {
-			return redis.Dial(
-				config.RedisNetwork,
-				config.RedisAddress,
-				redis.DialUsername(config.RedisUser),
-				redis.DialPassword(config.RedisPassword),
-			)
-		},
-	}
-
 	logger.Info("Redis scan handoff store created successfully")
 
-	return &RedisScanHandoffStore{pool: pool, logger: logger}, nil
+	return &RedisScanHandoffStore{pool: newRedisPool(config), logger: logger}, nil
 }
 
 func redisKey(token string) string {
@@ -69,12 +52,7 @@ func (s *RedisScanHandoffStore) Save(ctx context.Context, record *StagedScan, tt
 	conn := s.pool.Get()
 	defer conn.Close()
 
-	ttlSeconds := int(ttl.Seconds())
-	if ttlSeconds <= 0 {
-		ttlSeconds = 1
-	}
-
-	if _, err := conn.Do("SET", redisKey(record.Token), data, "EX", ttlSeconds); err != nil {
+	if _, err := conn.Do("SET", redisKey(record.Token), data, "EX", ttlSeconds(ttl)); err != nil {
 		s.logger.Error("Failed to save scan handoff record", "token", record.Token, "error", err)
 		return fmt.Errorf("failed to save scan handoff record: %w", err)
 	}
