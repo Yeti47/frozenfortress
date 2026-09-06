@@ -22,6 +22,7 @@
       enctype="multipart/form-data"
       class="space-y-6"
       x-data="ffCreateDoc()"
+      x-init="init()"
     >
       <div class="ff-card p-6 sm:p-8 space-y-5">
         <div>
@@ -52,6 +53,17 @@
       <div class="ff-card p-6 sm:p-8">
         <label class="ff-label">Files</label>
         <p class="text-xs text-text-subtle mb-3">PNG, JPG, or PDF · up to {{.MaxFileSizeText}} each.</p>
+
+        <button
+          type="button"
+          class="ff-btn ff-btn-secondary md:hidden w-full mb-3"
+          @click="scanWithApp()"
+          x-show="!scanning"
+        >
+          {{template "ff-icon" (dict "name" "cloud_upload" "class" "ff-icon")}}
+          <span>Scan with companion app</span>
+        </button>
+        <p class="text-xs text-text-subtle mb-3 md:hidden" x-show="scanStatus" x-text="scanStatus" x-cloak></p>
 
         <label
           for="files"
@@ -111,6 +123,9 @@
       return {
         dragging: false,
         files: [],
+        scanning: false,
+        scanStatus: '',
+        scanPollTimer: null,
         addInputFiles(list) {
           this.files = Array.from(list || []);
         },
@@ -133,6 +148,103 @@
           });
           input.files = dt.files;
           this.files = Array.from(input.files);
+        },
+
+        // Resume path: the companion app's "Return to Frozen Fortress" step reopens
+        // this page with ?scan=<token> - possibly in a new tab, so nothing here can
+        // rely on in-page state surviving from before the deep link was opened.
+        init() {
+          var params = new URLSearchParams(window.location.search);
+          var scanParam = params.get('scan');
+          if (scanParam) {
+            this.fetchScanResult(scanParam);
+          }
+        },
+
+        async scanWithApp() {
+          this.scanStatus = 'Starting scan…';
+          try {
+            var res = await fetch('/api/scan-handoff/start', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ key: this.generateScanKey() })
+            });
+            var body = await res.json();
+            if (!res.ok || !body.token) {
+              this.scanStatus = 'Could not start scan.';
+              return;
+            }
+            this.scanning = true;
+            this.scanStatus = 'Opening companion app…';
+            var deepLink = 'ffscan://scan?host=' + encodeURIComponent(window.location.origin)
+              + '&token=' + encodeURIComponent(body.token)
+              + '&key=' + encodeURIComponent(this._scanKey);
+            window.location.href = deepLink;
+            this.pollScanStatus(body.token);
+          } catch (err) {
+            this.scanStatus = 'Network error: ' + err.message;
+          }
+        },
+
+        // Generates the one-time AES-256-GCM key for this handoff, hex-encoded to
+        // match core/encryption.EncryptionService's key format. Kept only in memory
+        // for the lifetime of this request - the server stores it, not this page.
+        generateScanKey() {
+          var bytes = new Uint8Array(32);
+          crypto.getRandomValues(bytes);
+          this._scanKey = Array.from(bytes).map(function (b) {
+            return b.toString(16).padStart(2, '0');
+          }).join('');
+          return this._scanKey;
+        },
+
+        pollScanStatus(token) {
+          var self = this;
+          this.scanPollTimer = setInterval(async function () {
+            try {
+              var res = await fetch('/api/scan-handoff/' + token + '/status');
+              if (res.status === 404) {
+                self.stopPolling();
+                self.scanStatus = 'Scan session expired.';
+                return;
+              }
+              var body = await res.json();
+              if (body.state === 'ready') {
+                self.stopPolling();
+                await self.fetchScanResult(token);
+              }
+            } catch (_) {
+              // Transient network hiccups are fine to ignore mid-poll; the next tick retries.
+            }
+          }, 2000);
+          setTimeout(function () { self.stopPolling(); }, 5 * 60 * 1000); // matches server TTL
+        },
+
+        stopPolling() {
+          if (this.scanPollTimer) {
+            clearInterval(this.scanPollTimer);
+            this.scanPollTimer = null;
+          }
+          this.scanning = false;
+        },
+
+        async fetchScanResult(token) {
+          this.scanStatus = 'Retrieving scanned document…';
+          try {
+            var res = await fetch('/api/scan-handoff/' + token + '/file');
+            if (!res.ok) {
+              this.scanStatus = 'Scan could not be retrieved.';
+              return;
+            }
+            var blob = await res.blob();
+            var filename = res.headers.get('X-Scan-Filename') || 'scan.jpg';
+            var file = new File([blob], filename, { type: blob.type });
+            this.addDroppedFiles([file]);
+            this.scanStatus = 'Scan added — review and submit.';
+            if (window.ffToast) window.ffToast('Scanned document added', 'success');
+          } catch (err) {
+            this.scanStatus = 'Network error: ' + err.message;
+          }
         }
       };
     }
