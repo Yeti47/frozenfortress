@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">FrozenFortress Scan</string>
+
+    <string name="status_starting">Starting…</string>
+    <string name="status_missing_params">This link is missing information needed to scan (host, token, or key). Please start the scan again from FrozenFortress.</string>
+    <string name="status_connecting">Connecting to FrozenFortress…</string>
+    <string name="status_opening_scanner">Opening scanner…</string>
+    <string name="status_processing">Encrypting and uploading…</string>
+    <string name="status_upload_success">Scan uploaded. Tap below to return to FrozenFortress.</string>
+    <string name="status_connect_failed">Could not establish a trusted connection: %1$s</string>
+    <string name="status_scanner_failed">Could not start the document scanner: %1$s</string>
+    <string name="status_scan_empty">The scan did not produce a document.</string>
+    <string name="status_upload_failed_server">The server rejected the upload. The scan link may have expired.</string>
+    <string name="status_upload_failed_error">Upload failed: %1$s</string>
+
+    <string name="action_return_to_frozenfortress">Return to FrozenFortress</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_cancel">Cancel</string>
+
+    <string name="tofu_dialog_title">Verify FrozenFortress server</string>
+    <string name="tofu_dialog_message">First connection to %1$s.\n\nCertificate fingerprint:\n%2$s\n\nOnly accept if you recognize this server.</string>
+    <string name="tofu_dialog_trust">Trust</string>
+    <string name="tofu_dialog_reject">Cancel</string>
 </resources>
