@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Self-hosted FrozenFortress instances aren't necessarily served over TLS (e.g. a
+  home-lab deployment on a trusted LAN with no reverse proxy). Android blocks
+  cleartext HTTP by default for apps targeting API 28+, which would silently break
+  the scan handoff for those instances. TofuTrustManager only ever engages for
+  https:// connections anyway - this doesn't weaken TLS trust for https hosts.
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config
+        cleartextTrafficPermitted="true"
+        tools:ignore="InsecureBaseConfiguration" />
+</network-security-config>
