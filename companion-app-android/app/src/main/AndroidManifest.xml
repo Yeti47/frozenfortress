@@ -1,0 +1,53 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      No CAMERA permission: the ML Kit Document Scanner (GmsDocumentScanner) runs
+      entirely inside Google Play Services' own process/UI, which handles camera
+      access on this app's behalf. This app never touches the camera directly.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      android:dataExtractionRules only governs *what* gets backed up when
+      backups are enabled - moot with allowBackup="false", which disables all
+      forms of backup outright. tools:ignore silences the resulting lint nag.
+    -->
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.Companion"
+        tools:ignore="DataExtractionRules">
+
+        <!--
+          Play Services requires this app to declare the ML Kit document scanner
+          optional module so it gets installed alongside the app on first run.
+        -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="doc_scanner" />
+
+        <activity
+            android:name=".ScanActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Companion">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!--
+                  Custom scheme, deliberately not an Android App Link: App Link
+                  auto-verification needs a real HTTPS domain serving
+                  /.well-known/assetlinks.json, which self-signed/loopback
+                  self-hosted FrozenFortress deployments can't provide.
+                -->
+                <data
+                    android:scheme="ffscan"
+                    android:host="scan" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
