@@ -80,6 +80,7 @@ FF_OCR_OLLAMA_URL=http://gpu-host:11434 docker compose up -d
 | [Docker Setup Guide](doc/setup-docker.md) | Full reference for the recommended Docker deployment — TLS certificates, configuration variables, CLI administration, backup and restore |
 | [Binary Setup Guide](doc/setup-binary.md) | Legacy guide for running Frozen Fortress directly on a host system without Docker |
 | [Binary to Docker Migration Guide](doc/migration-binary-to-docker.md) | Step-by-step instructions for migrating an existing binary installation to the Docker stack |
+| [Companion App Setup Guide](doc/setup-companion-app.md) | Installing and using the Android companion app to scan documents from your phone |
 
 ---
 
@@ -88,7 +89,7 @@ FF_OCR_OLLAMA_URL=http://gpu-host:11434 docker compose up -d
 The WebUI provides a modern interface for daily use:
 
 - **Secrets**: Create, edit, and organize passwords, API keys, and other sensitive information
-- **Documents**: Upload and manage documents with asynchronous OCR text extraction
+- **Documents**: Upload and manage documents with asynchronous OCR text extraction. A companion Android app can scan physical documents with your phone's camera and hand the result straight into the "Create Document" form — see the [Companion App Setup Guide](doc/setup-companion-app.md)
 - **Tags**: Organize content with a flexible tag system
 - **Account Settings**: Password changes, recovery codes, and account management
 
