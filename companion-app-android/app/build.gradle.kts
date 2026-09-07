@@ -16,9 +16,43 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Stable release signing identity (YETI-62), sourced from environment variables so
+    // the keystore itself is never committed - CI decodes it from a GitHub Actions
+    // secret into a temp file and points RELEASE_KEYSTORE_PATH at it (see
+    // android-release.yml). A local `assembleRelease` without those variables set
+    // falls back to the debug keystore below, so the module still builds for anyone
+    // who doesn't have (and doesn't need) the release signing material.
+    val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+    val releaseKeystorePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+    val releaseKeyAlias = System.getenv("RELEASE_KEY_ALIAS")
+    val hasReleaseSigningEnv = !releaseKeystorePath.isNullOrBlank() &&
+        !releaseKeystorePassword.isNullOrBlank() &&
+        !releaseKeyAlias.isNullOrBlank()
+
+    signingConfigs {
+        if (hasReleaseSigningEnv) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                // PKCS12 keystores (keytool's default since JDK 9) use one password
+                // for both the store and every key in it - see YETI-62 PR notes.
+                keyPassword = releaseKeystorePassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = if (hasReleaseSigningEnv) {
+                signingConfigs.getByName("release")
+            } else {
+                // No release signing material available locally - fall back to the
+                // debug keystore so the APK is still installable, just not with a
+                // signature that matches CI-published releases.
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
