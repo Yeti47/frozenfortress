@@ -1,0 +1,25 @@
+# Build outputs
+build/
+app/build/
+.cxx/
+
+# Gradle
+.gradle/
+gradle-app.setting
+
+# Local machine config - contains a developer's absolute SDK path
+local.properties
+
+# Kotlin compiler daemon state
+.kotlin/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Signing keys - never commit companion app release keys
+*.jks
+*.keystore
+
+# Instrumented test artifacts
+captures/
