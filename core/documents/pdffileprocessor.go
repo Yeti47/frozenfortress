@@ -18,13 +18,17 @@ var disablePDFCPUConfigDirOnce sync.Once
 
 // PDFFileProcessor handles PDF file processing
 type PDFFileProcessor struct {
-	ocrService OCRService
+	ocrService     OCRService
+	imageProcessor *ImageFileProcessor
 }
 
 // NewPDFFileProcessor creates a new PDFFileProcessor
-func NewPDFFileProcessor(ocrService OCRService) *PDFFileProcessor {
+func NewPDFFileProcessor(ocrService OCRService, imageProcessor *ImageFileProcessor) *PDFFileProcessor {
 	disablePDFCPUConfigDirOnce.Do(pdfcpuapi.DisableConfigDir)
-	return &PDFFileProcessor{ocrService: ocrService}
+	return &PDFFileProcessor{
+		ocrService:     ocrService,
+		imageProcessor: imageProcessor,
+	}
 }
 
 // SupportsContentType checks if this processor can handle PDF content types
@@ -149,14 +153,65 @@ func combinePDFTextAndOCR(text string, imageTexts []string) string {
 	return strings.Join(sections, "\n\n")
 }
 
-// GeneratePreview creates a preview for PDF files
-// For PDFs, we don't generate actual preview images, just return the content type
-// The frontend will show a generic PDF icon based on the PreviewType
+// GeneratePreview uses the first embedded PDF image as the preview when available.
+// PDFs without an extractable image retain the generic PDF icon.
 func (p *PDFFileProcessor) GeneratePreview(ctx context.Context, fileData []byte) (*PreviewGenerationResult, error) {
+	imagePage := 0
+	var images []pdfImagePreviewCandidate
+	err := pdfcpuapi.ExtractImages(bytes.NewReader(fileData), nil, func(img pdfcpumodel.Image, _ bool, _ int) error {
+		if imagePage != 0 && img.PageNr > imagePage {
+			return nil
+		}
+		if imagePage == 0 || img.PageNr < imagePage {
+			imagePage = img.PageNr
+			images = nil
+		}
+
+		imageData, err := io.ReadAll(img)
+		if err != nil {
+			return fmt.Errorf("failed to read image on PDF page %d: %w", img.PageNr, err)
+		}
+		images = append(images, pdfImagePreviewCandidate{
+			pageNumber:   img.PageNr,
+			objectNumber: img.ObjNr,
+			name:         img.Name,
+			data:         imageData,
+		})
+		return nil
+	}, pdfcpumodel.NewDefaultConfiguration())
+	if err != nil || len(images) == 0 {
+		return genericPDFPreview(), nil
+	}
+
+	sort.SliceStable(images, func(i, j int) bool {
+		if images[i].pageNumber != images[j].pageNumber {
+			return images[i].pageNumber < images[j].pageNumber
+		}
+		if images[i].objectNumber != images[j].objectNumber {
+			return images[i].objectNumber < images[j].objectNumber
+		}
+		return images[i].name < images[j].name
+	})
+
+	if p.imageProcessor == nil {
+		return genericPDFPreview(), nil
+	}
+	preview, err := p.imageProcessor.GeneratePreview(ctx, images[0].data)
+	if err != nil || preview == nil || len(preview.PreviewData) == 0 {
+		return genericPDFPreview(), nil
+	}
+	return preview, nil
+}
+
+type pdfImagePreviewCandidate struct {
+	pageNumber   int
+	objectNumber int
+	name         string
+	data         []byte
+}
+
+func genericPDFPreview() *PreviewGenerationResult {
 	return &PreviewGenerationResult{
-		PreviewData: nil, // No actual preview data
 		PreviewType: "application/pdf",
-		Width:       0, // No dimensions for PDF previews
-		Height:      0,
-	}, nil
+	}
 }

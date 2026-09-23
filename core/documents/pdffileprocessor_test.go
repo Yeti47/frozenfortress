@@ -17,7 +17,7 @@ import (
 )
 
 func TestPDFFileProcessorExtractTextFromSelectableTextPDF(t *testing.T) {
-	processor := NewPDFFileProcessor(&fakePDFOCRService{enabled: true})
+	processor := newTestPDFFileProcessor(&fakePDFOCRService{enabled: true})
 	text, confidence, pageCount, err := processor.ExtractText(context.Background(), textOnlyPDF())
 	if err != nil {
 		t.Fatalf("ExtractText() error = %v", err)
@@ -35,7 +35,7 @@ func TestPDFFileProcessorExtractTextFromSelectableTextPDF(t *testing.T) {
 
 func TestPDFFileProcessorOCRsScannedPagesInPageOrder(t *testing.T) {
 	ocr := &fakePDFOCRService{enabled: true}
-	processor := NewPDFFileProcessor(ocr)
+	processor := newTestPDFFileProcessor(ocr)
 	text, confidence, pageCount, err := processor.ExtractText(context.Background(), imagePDF(t, color.RGBA{R: 255, A: 255}, color.RGBA{B: 255, A: 255}))
 	if err != nil {
 		t.Fatalf("ExtractText() error = %v", err)
@@ -59,7 +59,7 @@ func TestPDFFileProcessorSeparatesNativeTextAndOCRText(t *testing.T) {
 		t.Fatalf("ImportImages() error = %v", err)
 	}
 
-	processor := NewPDFFileProcessor(&fakePDFOCRService{enabled: true})
+	processor := newTestPDFFileProcessor(&fakePDFOCRService{enabled: true})
 	text, _, _, err := processor.ExtractText(context.Background(), hybridPDF.Bytes())
 	if err != nil {
 		t.Fatalf("ExtractText() error = %v", err)
@@ -68,6 +68,53 @@ func TestPDFFileProcessorSeparatesNativeTextAndOCRText(t *testing.T) {
 	if text != want {
 		t.Fatalf("ExtractText() = %q, want %q", text, want)
 	}
+}
+
+func TestPDFFileProcessorGeneratePreviewUsesFirstImageInPageOrder(t *testing.T) {
+	imageProcessor := NewImageFileProcessorWithOptions(nil, 4, 4, 85)
+	processor := NewPDFFileProcessor(nil, imageProcessor)
+	pdfData := imagePDF(t, color.RGBA{R: 255, A: 255}, color.RGBA{B: 255, A: 255})
+	preview, err := processor.GeneratePreview(context.Background(), pdfData)
+	if err != nil {
+		t.Fatalf("GeneratePreview() error = %v", err)
+	}
+	if preview.PreviewType != "image/png" || preview.Width != 4 || preview.Height != 4 {
+		t.Fatalf("GeneratePreview() metadata = %q %dx%d, want injected image preview settings 4x4", preview.PreviewType, preview.Width, preview.Height)
+	}
+	img, _, err := image.Decode(bytes.NewReader(preview.PreviewData))
+	if err != nil {
+		t.Fatalf("image.Decode() error = %v", err)
+	}
+	r, _, b, _ := img.At(img.Bounds().Min.X, img.Bounds().Min.Y).RGBA()
+	if r <= b {
+		t.Fatalf("preview first pixel is not from the first (red) PDF image")
+	}
+}
+
+func TestPDFFileProcessorGeneratePreviewFallsBackWhenPDFHasNoImages(t *testing.T) {
+	processor := newTestPDFFileProcessor(nil)
+	preview, err := processor.GeneratePreview(context.Background(), textOnlyPDF())
+	if err != nil {
+		t.Fatalf("GeneratePreview() error = %v", err)
+	}
+	if preview.PreviewData != nil || preview.PreviewType != "application/pdf" || preview.Width != 0 || preview.Height != 0 {
+		t.Fatalf("GeneratePreview() = %#v, want generic PDF preview fallback", preview)
+	}
+}
+
+func TestPDFFileProcessorGeneratePreviewFallsBackWhenImageExtractionFails(t *testing.T) {
+	processor := newTestPDFFileProcessor(nil)
+	preview, err := processor.GeneratePreview(context.Background(), []byte("not a PDF"))
+	if err != nil {
+		t.Fatalf("GeneratePreview() error = %v, want fallback without error", err)
+	}
+	if preview.PreviewData != nil || preview.PreviewType != "application/pdf" {
+		t.Fatalf("GeneratePreview() = %#v, want generic PDF preview fallback", preview)
+	}
+}
+
+func newTestPDFFileProcessor(ocrService OCRService) *PDFFileProcessor {
+	return NewPDFFileProcessor(ocrService, NewImageFileProcessor(ocrService))
 }
 
 type fakePDFOCRService struct {
