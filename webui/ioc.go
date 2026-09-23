@@ -117,8 +117,8 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 
 	// Create document file processor factory
 	ocrService := createOCRService(config, logger)
-	pdfProcessor := documents.NewPDFFileProcessor(ocrService)
 	imageProcessor := documents.NewImageFileProcessor(ocrService)
+	pdfProcessor := documents.NewPDFFileProcessor(ocrService, imageProcessor)
 	processorFactory := documents.NewDefaultDocumentFileProcessorFactory(pdfProcessor, imageProcessor)
 
 	// Create document file creator and OCR dispatcher factory

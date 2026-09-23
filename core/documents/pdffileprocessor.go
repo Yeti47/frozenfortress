@@ -18,13 +18,17 @@ var disablePDFCPUConfigDirOnce sync.Once
 
 // PDFFileProcessor handles PDF file processing
 type PDFFileProcessor struct {
-	ocrService OCRService
+	ocrService     OCRService
+	imageProcessor *ImageFileProcessor
 }
 
 // NewPDFFileProcessor creates a new PDFFileProcessor
-func NewPDFFileProcessor(ocrService OCRService) *PDFFileProcessor {
+func NewPDFFileProcessor(ocrService OCRService, imageProcessor *ImageFileProcessor) *PDFFileProcessor {
 	disablePDFCPUConfigDirOnce.Do(pdfcpuapi.DisableConfigDir)
-	return &PDFFileProcessor{ocrService: ocrService}
+	return &PDFFileProcessor{
+		ocrService:     ocrService,
+		imageProcessor: imageProcessor,
+	}
 }
 
 // SupportsContentType checks if this processor can handle PDF content types
@@ -189,7 +193,10 @@ func (p *PDFFileProcessor) GeneratePreview(ctx context.Context, fileData []byte)
 		return images[i].name < images[j].name
 	})
 
-	preview, err := NewImageFileProcessor(nil).GeneratePreview(ctx, images[0].data)
+	if p.imageProcessor == nil {
+		return genericPDFPreview(), nil
+	}
+	preview, err := p.imageProcessor.GeneratePreview(ctx, images[0].data)
 	if err != nil || preview == nil || len(preview.PreviewData) == 0 {
 		return genericPDFPreview(), nil
 	}
