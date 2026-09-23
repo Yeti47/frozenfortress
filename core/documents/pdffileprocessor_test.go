@@ -70,6 +70,48 @@ func TestPDFFileProcessorSeparatesNativeTextAndOCRText(t *testing.T) {
 	}
 }
 
+func TestPDFFileProcessorGeneratePreviewUsesFirstImageInPageOrder(t *testing.T) {
+	processor := NewPDFFileProcessor(nil)
+	pdfData := imagePDF(t, color.RGBA{R: 255, A: 255}, color.RGBA{B: 255, A: 255})
+	preview, err := processor.GeneratePreview(context.Background(), pdfData)
+	if err != nil {
+		t.Fatalf("GeneratePreview() error = %v", err)
+	}
+	if preview.PreviewType != "image/png" || preview.Width != 8 || preview.Height != 8 {
+		t.Fatalf("GeneratePreview() metadata = %q %dx%d, want image/png 8x8", preview.PreviewType, preview.Width, preview.Height)
+	}
+	img, _, err := image.Decode(bytes.NewReader(preview.PreviewData))
+	if err != nil {
+		t.Fatalf("image.Decode() error = %v", err)
+	}
+	r, _, b, _ := img.At(img.Bounds().Min.X, img.Bounds().Min.Y).RGBA()
+	if r <= b {
+		t.Fatalf("preview first pixel is not from the first (red) PDF image")
+	}
+}
+
+func TestPDFFileProcessorGeneratePreviewFallsBackWhenPDFHasNoImages(t *testing.T) {
+	processor := NewPDFFileProcessor(nil)
+	preview, err := processor.GeneratePreview(context.Background(), textOnlyPDF())
+	if err != nil {
+		t.Fatalf("GeneratePreview() error = %v", err)
+	}
+	if preview.PreviewData != nil || preview.PreviewType != "application/pdf" || preview.Width != 0 || preview.Height != 0 {
+		t.Fatalf("GeneratePreview() = %#v, want generic PDF preview fallback", preview)
+	}
+}
+
+func TestPDFFileProcessorGeneratePreviewFallsBackWhenImageExtractionFails(t *testing.T) {
+	processor := NewPDFFileProcessor(nil)
+	preview, err := processor.GeneratePreview(context.Background(), []byte("not a PDF"))
+	if err != nil {
+		t.Fatalf("GeneratePreview() error = %v, want fallback without error", err)
+	}
+	if preview.PreviewData != nil || preview.PreviewType != "application/pdf" {
+		t.Fatalf("GeneratePreview() = %#v, want generic PDF preview fallback", preview)
+	}
+}
+
 type fakePDFOCRService struct {
 	enabled bool
 	calls   int
