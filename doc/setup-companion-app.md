@@ -1,6 +1,6 @@
 # Frozen Fortress — Companion App (Android) Setup Guide
 
-The companion app lets you scan a physical document with your phone's camera (via Google's ML Kit Document Scanner) and send it straight into Frozen Fortress's "Create Document" form, without building a full native client or ever giving the app your Frozen Fortress login.
+The companion app lets you scan a physical document with your phone's camera (via Google's ML Kit Document Scanner) and send it straight into Frozen Fortress — either into the **Create Document** form, or into an existing document's **Files** tab — without building a full native client or ever giving the app your Frozen Fortress login.
 
 It's a small, side-loaded Android app — not distributed via the Play Store — published as an APK on this repository's [GitHub Releases](https://github.com/Yeti47/frozenfortress/releases) page, under tags starting with `android-v`.
 
@@ -26,13 +26,32 @@ You do **not** need to sign in to anything inside the companion app itself — i
 
 ## Scanning a Document
 
-1. On your phone (or any device where you're signed in to Frozen Fortress), open the **Create Document** page and tap **"Scan with companion app"**.
+Start from either of two places, depending on where you want the scan to end up:
+
+- **Create Document** — to scan into a brand-new document. Tap **"Scan with companion app"** in the Files card.
+- **Edit Document → Files tab** — to add a scan to an existing document. Tap **"Scan with companion app"** above the drop zone.
+
+Both buttons are mobile-only (`md:hidden`), since the scanner only exists on the phone.
+
+1. Tap **"Scan with companion app"** on the page you started from (see above).
 2. Your browser opens the companion app via a deep link. The first time you scan against a given Frozen Fortress instance, you'll see a certificate confirmation screen — see [Certificate Verification (TOFU)](#certificate-verification-tofu) below.
 3. The Google ML Kit document scanner opens: capture the page(s), then confirm. The app produces a single PDF.
 4. The app encrypts the PDF and uploads it, then shows a **"Return to FrozenFortress"** button. Tap it to jump back to your browser.
-5. Back in Frozen Fortress, the scanned PDF is automatically added to the document you were creating — review it and submit as normal.
+5. Back in Frozen Fortress, the scanned PDF is added to the page you started from — appended to the Create Document file list for you to review and submit, or uploaded straight to the document's Files tab.
 
 The whole handoff (from tapping "Scan with companion app" to the file appearing in your browser) expires after a few minutes if left incomplete, so if something goes wrong, just start again from step 1.
+
+The handoff token is **single-use**: once the file has been retrieved, the link is spent. Starting again is always safe — it just creates a fresh handoff.
+
+---
+
+## How the Return Link Works
+
+When the scan finishes, the app reopens Frozen Fortress at the page you started from. The page passes its own location to the app as a `return` parameter on the deep link, e.g. `/edit-document?id=abc&tab=files`.
+
+The app treats that value as **untrusted input** and validates it against a small allowlist before using it (see `ReturnPathValidator.kt`): it must be a *site-relative* path — never an absolute URL — on a known path (`/create-document` or `/edit-document`), with only the parameters that path understands (`id`, `tab`). Anything else falls back to opening **Create Document**. This matters because `ffscan://` is a custom URL scheme rather than a verified Android App Link, so any app on the device can trigger a scan handoff; the allowlist stops a crafted link from steering your browser somewhere unexpected.
+
+The `tab` parameter is likewise validated on the Frozen Fortress side against the real tab names, so a link can only open a tab that exists.
 
 ---
 
