@@ -44,6 +44,8 @@ jobs:
         echo "Tag: $TAG_NAME"
 
     - name: Build images
+      env:
+        APP_VERSION: ${{ steps.extract_version.outputs.version }}
       run: docker compose build
 
     - name: Log in to GHCR
