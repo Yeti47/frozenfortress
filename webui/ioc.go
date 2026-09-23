@@ -116,8 +116,8 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 	tagManager := documents.NewDefaultTagManager(uowFactory, idGenerator, logger)
 
 	// Create document file processor factory
-	pdfProcessor := documents.NewPDFFileProcessor()
 	ocrService := createOCRService(config, logger)
+	pdfProcessor := documents.NewPDFFileProcessor(ocrService)
 	imageProcessor := documents.NewImageFileProcessor(ocrService)
 	processorFactory := documents.NewDefaultDocumentFileProcessorFactory(pdfProcessor, imageProcessor)
 
