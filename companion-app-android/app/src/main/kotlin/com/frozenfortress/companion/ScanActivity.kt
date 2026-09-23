@@ -11,7 +11,6 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
@@ -24,12 +23,15 @@ import java.util.concurrent.CountDownLatch
 
 /**
  * Entry point for the `ffscan://scan` deep link opened from FrozenFortress's
- * "Create Document" page.
+ * "Create Document" and "Edit Document" pages.
  *
- * Expected query parameters (see `webui/views/documents/create-document.html`):
+ * Expected query parameters (see `webui/views/documents/create-document.html` and
+ * `edit-document.html`):
  *  - `host`: the FrozenFortress origin to upload the scan back to
  *  - `token`: the one-time scan-handoff token
  *  - `key`: hex-encoded AES-256-GCM key to encrypt the scan with before upload
+ *  - `return`: optional site-relative path to reopen once the scan is uploaded,
+ *    validated against [ReturnPathValidator]'s allowlist. Absent -> Create Document.
  *
  * Flow: parse the link -> TOFU TLS handshake against `host` (fails fast, before
  * wasting the user's time scanning) -> launch the ML Kit Document Scanner ->
@@ -52,6 +54,9 @@ class ScanActivity : AppCompatActivity() {
     private var host: String? = null
     private var token: String? = null
     private var key: String? = null
+
+    /** Validated relative path to reopen after upload; defaults to Create Document. */
+    private var returnPath: String = ReturnPathValidator.DEFAULT_PATH
 
     private var uploadClient: UploadClient? = null
 
@@ -93,6 +98,10 @@ class ScanActivity : AppCompatActivity() {
         host = h
         token = t
         key = k
+        // Optional: an unrecognised or absent value falls back to Create Document
+        // rather than failing the scan - the destination is a convenience, not a
+        // security boundary, so a malformed one must not block the user's scan.
+        returnPath = ReturnPathValidator.validate(uri.getQueryParameter("return"))
         return true
     }
 
@@ -237,7 +246,7 @@ class ScanActivity : AppCompatActivity() {
 
         // RFC 8252-style external-user-agent handoff back to the browser -
         // deliberately without the key, which the browser already has its own copy of.
-        val uri = "${h.trimEnd('/')}/create-document?scan=${Uri.encode(t)}".toUri()
+        val uri = ReturnPathValidator.buildReturnUrl(h, returnPath, t)
         startActivity(Intent(Intent.ACTION_VIEW, uri))
         finish()
     }
