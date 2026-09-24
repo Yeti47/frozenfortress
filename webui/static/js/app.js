@@ -247,6 +247,189 @@
   };
 
   // ---------------------------------------------------------------------------
+  // Query-string helper
+  // ---------------------------------------------------------------------------
+
+  window.ffQueryParam = function (name) {
+    try {
+      return new URLSearchParams(window.location.search).get(name);
+    } catch (_) {
+      return null;
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Companion-app scan handoff
+  // ---------------------------------------------------------------------------
+  // The companion app (Android) receives a one-time AES key and a handoff token
+  // via the ffscan:// deep link, encrypts the scan on-device, and uploads it to a
+  // session-less staging endpoint. This side starts the handoff, polls for the
+  // upload, then fetches the (server-decrypted) file and hands it to the page via
+  // attachScan(). Server contract: core/scanhandoff + webui/views/scanhandoff.
+  //
+  // Create Document and Edit Document both mix this in via Object.assign; the only
+  // differences are where the retrieved file goes (attachScan) and the destination
+  // the companion app reopens once the scan is done (returnPath, site-relative).
+  window.ffScanHandoff = function (options) {
+    options = options || {};
+    var attachScan = options.attachScan;
+    var returnPath = options.returnPath;
+    var attachedMessage = options.attachedMessage || "Scanned document added";
+    var attachedStatus = options.attachedStatus || "";
+
+    return {
+      scanning: false,
+      scanStatus: "",
+      _scanKey: null,
+      _scanPollTimer: null,
+      _scanPollExpiry: null,
+
+      // Resume path: the companion app's "Return to Frozen Fortress" step reopens
+      // this page with ?scan=<token> - possibly in a new tab, so nothing here can
+      // rely on in-page state surviving from before the deep link was opened.
+      // Named distinctly from init() so pages can define their own init() that
+      // also does page-specific setup, and call this from there.
+      initScanHandoff: function () {
+        var token = window.ffQueryParam("scan");
+        if (token) this.fetchScanResult(token);
+      },
+
+      scanWithApp: async function () {
+        this.scanStatus = "Starting scan…";
+        try {
+          var res = await fetch("/api/scan-handoff/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: this._generateScanKey() }),
+          });
+          var body = await res.json();
+          if (!res.ok || !body.token) {
+            this.scanStatus = "Could not start scan.";
+            return;
+          }
+          this.scanning = true;
+          this.scanStatus = "Opening companion app…";
+          var deepLink = "ffscan://scan?host=" + encodeURIComponent(window.location.origin)
+            + "&token=" + encodeURIComponent(body.token)
+            + "&key=" + encodeURIComponent(this._scanKey);
+          if (returnPath) {
+            deepLink += "&return=" + encodeURIComponent(returnPath);
+          }
+          window.location.href = deepLink;
+          this._pollScanStatus(body.token);
+        } catch (err) {
+          this.scanStatus = "Network error: " + err.message;
+        }
+      },
+
+      // Generates the one-time AES-256-GCM key for this handoff, hex-encoded to
+      // match core/encryption.EncryptionService's key format. Kept only in memory
+      // for the lifetime of this request - the server stores it, not this page.
+      _generateScanKey: function () {
+        var bytes = new Uint8Array(32);
+        crypto.getRandomValues(bytes);
+        this._scanKey = Array.from(bytes).map(function (b) {
+          return b.toString(16).padStart(2, "0");
+        }).join("");
+        return this._scanKey;
+      },
+
+      _pollScanStatus: function (token) {
+        var self = this;
+        this._scanPollTimer = setInterval(async function () {
+          try {
+            var res = await fetch("/api/scan-handoff/" + encodeURIComponent(token) + "/status");
+            if (res.status === 404) {
+              self._stopPolling();
+              self.scanStatus = "Scan session expired.";
+              return;
+            }
+            var body = await res.json();
+            if (body.state === "ready") {
+              self._stopPolling();
+              await self.fetchScanResult(token);
+            }
+          } catch (_) {
+            // Transient network hiccups are fine to ignore mid-poll; the next tick retries.
+          }
+        }, 2000);
+        this._scanPollExpiry = setTimeout(function () { self._stopPolling(); }, 5 * 60 * 1000); // matches server TTL
+      },
+
+      _stopPolling: function () {
+        if (this._scanPollTimer) {
+          clearInterval(this._scanPollTimer);
+          this._scanPollTimer = null;
+        }
+        if (this._scanPollExpiry) {
+          clearTimeout(this._scanPollExpiry);
+          this._scanPollExpiry = null;
+        }
+        this.scanning = false;
+      },
+
+      fetchScanResult: async function (token) {
+        this.scanStatus = "Retrieving scanned document…";
+
+        var res;
+        try {
+          res = await fetch("/api/scan-handoff/" + encodeURIComponent(token) + "/file");
+        } catch (err) {
+          this.scanStatus = "Network error: " + err.message;
+          return;
+        }
+        if (!res.ok) {
+          // The handoff token is single-use - FetchAndConsume deletes the staged
+          // record and its key - so a re-fetch after a reload lands here.
+          this._clearScanParam();
+          this.scanStatus = "Scan could not be retrieved. Please scan again.";
+          return;
+        }
+
+        var file;
+        try {
+          var blob = await res.blob();
+          var filename = res.headers.get("X-Scan-Filename") || "scan.jpg";
+          file = new File([blob], filename, { type: blob.type });
+        } catch (err) {
+          this._clearScanParam();
+          this.scanStatus = "Scan could not be retrieved. Please scan again.";
+          return;
+        }
+
+        // The token is consumed by now, so drop it from the URL before the attach
+        // step - if that fails, a reload must not re-fetch a token that is gone.
+        this._clearScanParam();
+        this._stopPolling();
+        this.scanning = false;
+
+        if (attachScan) {
+          try {
+            await attachScan.call(this, file);
+          } catch (err) {
+            this.scanStatus = err.message || "The scan could not be added.";
+            return;
+          }
+        }
+
+        this.scanStatus = attachedStatus;
+        if (window.ffToast) window.ffToast(attachedMessage, "success");
+      },
+
+      // Drop the consumed token from the URL so a reload can't re-trigger a fetch
+      // that is guaranteed to 404.
+      _clearScanParam: function () {
+        try {
+          var url = new URL(window.location.href);
+          if (!url.searchParams.has("scan")) return;
+          url.searchParams.delete("scan");
+          history.replaceState(null, "", url.pathname + url.search + url.hash);
+        } catch (_) {}
+      },
+    };
+  };
+
+  // ---------------------------------------------------------------------------
   // Convert server-rendered flash messages to toasts on page load
   // ---------------------------------------------------------------------------
 
