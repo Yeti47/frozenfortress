@@ -135,6 +135,7 @@ To apply changes, run `docker compose up -d` again.
 | `FF_DATABASE_PATH` | Path to SQLite database | `/data/frozenfortress.db` | no |
 | `FF_MAX_SIGN_IN_ATTEMPTS` | Maximum sign-in attempts before account lockout | `3` | no |
 | `FF_SIGN_IN_ATTEMPT_WINDOW` | Time window in minutes for counting sign-in attempts | `30` | no |
+| `FF_SESSION_MAX_AGE_DAYS` | How long a sign-in lasts, in days | `30` | yes |
 | `FF_REDIS_ADDRESS` | Redis server address | `redis:6379` | no |
 | `FF_REDIS_USER` | Redis username (leave empty if not required) | `""` | no |
 | `FF_REDIS_PASSWORD` | Redis password (leave empty if not required) | `""` | no |
@@ -222,7 +223,9 @@ Keep the password in single quotes: otherwise the shell silently rewrites charac
 
 ### CLI Encryption Boundaries
 
-The CLI manages accounts but cannot read any user's encrypted content: decrypting it needs the user's password. This protects data at rest (the database and backups). It does not protect against full administrative access to the host while a user is signed in, because the server keeps that user's key in its session store.
+The CLI manages accounts but cannot read any user's encrypted content: decrypting it needs the user's password. This protects data at rest (the database and backups).
+
+While a user is signed in, Redis holds their key only in encrypted form. The key that decrypts it lives in a cookie in the user's browser, so reading Redis alone (for example with a Redis GUI or a dump) reveals nothing. As with any app that decrypts on the server, the host running Frozen Fortress should be one you trust.
 
 ---
 

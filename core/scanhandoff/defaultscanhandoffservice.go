@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/dataprotection"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 )
 
@@ -37,14 +38,23 @@ func NewDefaultScanHandoffService(store ScanHandoffStore, keyStore ScanKeyStore,
 	}
 }
 
-// StartHandoff creates a new pending handoff owned by userId, stores key for later
-// decryption, and returns the handoff's token.
-func (s *DefaultScanHandoffService) StartHandoff(ctx context.Context, userId, key string) (string, error) {
+// StartHandoff creates a new pending handoff owned by userId, stores key wrapped by
+// keyProtector for later decryption, and returns the handoff's token.
+func (s *DefaultScanHandoffService) StartHandoff(ctx context.Context, userId, key string, keyProtector dataprotection.DataProtector) (string, error) {
 	if userId == "" {
 		return "", ccc.NewInvalidInputError("userId", "must not be empty")
 	}
 	if key == "" {
 		return "", ccc.NewInvalidInputError("key", "must not be empty")
+	}
+	if keyProtector == nil {
+		return "", ccc.NewInvalidInputError("keyProtector", "must not be nil")
+	}
+
+	protectedKey, err := keyProtector.Protect(key)
+	if err != nil {
+		s.logger.Error("Failed to wrap scan key", "user_id", userId, "error", err)
+		return "", ccc.NewInternalError("failed to wrap scan key", err)
 	}
 
 	token, err := GenerateToken()
@@ -65,7 +75,7 @@ func (s *DefaultScanHandoffService) StartHandoff(ctx context.Context, userId, ke
 		return "", ccc.NewInternalError("failed to start scan handoff", err)
 	}
 
-	if err := s.keyStore.Store(ctx, token, key, HandoffTTL); err != nil {
+	if err := s.keyStore.Store(ctx, token, protectedKey, HandoffTTL); err != nil {
 		s.logger.Error("Failed to save scan key for new handoff", "token", token, "error", err)
 		// Roll back the handoff record so we don't leave an orphaned pending record that
 		// could never be decrypted if a scan were later uploaded to it.
@@ -139,7 +149,11 @@ func (s *DefaultScanHandoffService) GetStatus(ctx context.Context, token, userId
 
 // FetchAndConsume decrypts and returns the staged scan, then deletes both the
 // ciphertext record and the key.
-func (s *DefaultScanHandoffService) FetchAndConsume(ctx context.Context, token, userId string) (string, []byte, error) {
+func (s *DefaultScanHandoffService) FetchAndConsume(ctx context.Context, token, userId string, keyProtector dataprotection.DataProtector) (string, []byte, error) {
+	if keyProtector == nil {
+		return "", nil, ccc.NewInvalidInputError("keyProtector", "must not be nil")
+	}
+
 	record, err := s.getOwnedRecord(ctx, token, userId)
 	if err != nil {
 		return "", nil, err
@@ -149,14 +163,20 @@ func (s *DefaultScanHandoffService) FetchAndConsume(ctx context.Context, token, 
 		return "", nil, ccc.NewResourceNotFoundError(token, "scan handoff")
 	}
 
-	key, err := s.keyStore.Retrieve(ctx, token)
+	protectedKey, err := s.keyStore.Retrieve(ctx, token)
 	if err != nil {
 		s.logger.Error("Failed to look up scan key", "token", token, "error", err)
 		return "", nil, ccc.NewInternalError("failed to look up scan key", err)
 	}
-	if key == "" {
+	if protectedKey == "" {
 		s.logger.Warn("Scan key missing or expired for a ready handoff", "token", token)
 		return "", nil, ccc.NewResourceNotFoundError(token, "scan handoff")
+	}
+
+	key, err := keyProtector.Unprotect(protectedKey)
+	if err != nil {
+		s.logger.Error("Failed to unwrap scan key", "token", token, "error", err)
+		return "", nil, ccc.NewOperationFailedError("decrypt scan", "the scan could not be decrypted")
 	}
 
 	plainData, err := s.encryptionService.DecryptBytes(record.CipherBlob, key)

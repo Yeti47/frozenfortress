@@ -78,7 +78,8 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		panic("Failed to create Redis store: " + err.Error())
 	}
 
-	mekStore := auth.NewSessionMekStore(redisStore, logger)
+	wrappingKeyStore := auth.NewCookieWrappingKeyStore(encryptionService, auth.SessionMaxAgeSeconds(config), logger)
+	mekStore := auth.NewSessionMekStore(redisStore, wrappingKeyStore, encryptionService, logger)
 
 	signInManager := auth.NewSessionSignInManager(
 		userRepo,

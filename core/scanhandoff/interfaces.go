@@ -3,6 +3,8 @@ package scanhandoff
 import (
 	"context"
 	"time"
+
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/dataprotection"
 )
 
 // ScanHandoffStore persists StagedScan records with a TTL. It is a plain CRUD store -
@@ -22,10 +24,11 @@ type ScanHandoffStore interface {
 // ScanKeyStore persists the one-time scan handoff encryption key with its own native
 // TTL, entirely separate from ScanHandoffStore's ciphertext record - the two are kept in
 // different Redis keys so that no single record ever holds both the key and what it
-// decrypts. Unlike the MEK, this key is not tied to any particular browser session or
-// cookie: the token is already the bearer credential for the handoff, and ownership is
-// enforced by ScanHandoffService against the caller's authenticated user, not by which
-// session originally stored the key.
+// decrypts. ScanHandoffService only ever passes it the key wrapped with the owner's MEK,
+// so Redis alone is not enough to decrypt a staged scan. The key is tied to the owning
+// user rather than to a particular browser session: the token is already the bearer
+// credential for the handoff, and ownership is enforced by ScanHandoffService against
+// the caller's authenticated user, not by which session originally stored the key.
 type ScanKeyStore interface {
 	// Store saves key for token, expiring after ttl.
 	Store(ctx context.Context, token, key string, ttl time.Duration) error
@@ -47,8 +50,8 @@ type ScanKeyStore interface {
 type ScanHandoffService interface {
 	// StartHandoff creates a new pending handoff owned by userId, stores key (the
 	// browser-generated, server-never-persisted-alongside-its-ciphertext AES-256-GCM
-	// key) for later decryption, and returns the handoff's token.
-	StartHandoff(ctx context.Context, userId, key string) (token string, err error)
+	// key) wrapped by keyProtector for later decryption, and returns the handoff's token.
+	StartHandoff(ctx context.Context, userId, key string, keyProtector dataprotection.DataProtector) (token string, err error)
 
 	// UploadScan attaches the companion app's encrypted scan to a pending handoff.
 	// Fails if the token is unknown, expired, or already has a scan attached (single-use).
@@ -59,7 +62,8 @@ type ScanHandoffService interface {
 	GetStatus(ctx context.Context, token, userId string) (ScanHandoffState, error)
 
 	// FetchAndConsume decrypts and returns the staged scan, then deletes both the
-	// ciphertext record and the key so it can only be fetched once. Returns a not-found
+	// ciphertext record and the key so it can only be fetched once. keyProtector must
+	// be able to unwrap what StartHandoff's keyProtector wrapped. Returns a not-found
 	// error under the same conditions as GetStatus.
-	FetchAndConsume(ctx context.Context, token, userId string) (fileName string, plainData []byte, err error)
+	FetchAndConsume(ctx context.Context, token, userId string, keyProtector dataprotection.DataProtector) (fileName string, plainData []byte, err error)
 }

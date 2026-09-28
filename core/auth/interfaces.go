@@ -84,6 +84,19 @@ type MekStore interface {
 	Delete(w http.ResponseWriter, r *http.Request) error
 }
 
+// WrappingKeyStore holds the per-session key that wraps values kept in the server-side
+// session store (such as the MEK). It must be kept apart from the session store, so
+// that the session store's contents alone are never enough to unwrap those values.
+type WrappingKeyStore interface {
+	// Issue generates a new wrapping key, hands it to the client via w and returns it,
+	// so values can be wrapped with it within the same request.
+	Issue(w http.ResponseWriter, r *http.Request) (key string, err error)
+	// Retrieve returns the wrapping key sent with r, or "" if there is none.
+	Retrieve(r *http.Request) (key string, err error)
+	// Delete tells the client via w to discard its wrapping key.
+	Delete(w http.ResponseWriter, r *http.Request) error
+}
+
 // SessionKeyProvider is responsible for providing session signing and encryption keys.
 type SessionKeyProvider interface {
 	GetSigningKey() ([]byte, error)

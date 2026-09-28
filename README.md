@@ -113,7 +113,7 @@ Your phone must be able to reach your Frozen Fortress instance, which by default
 ## Security
 
 - **Encrypted at rest.** Secrets, and document titles, descriptions, issuers, files, extracted text, and notes, are encrypted with a key derived from the owner's password, so a copy of the database or a backup can't be read without it. Tag names are not encrypted.
-- **Trust your host.** Encryption protects the database file and backups, but not against someone with administrator access to the machine running Frozen Fortress: while you are signed in, the server keeps your key in its session store.
+- **Your key stays out of the session store.** While you are signed in, Redis holds your key only in encrypted form; the key that unlocks it lives in a cookie in your browser, so Redis alone reveals nothing. As with any app that decrypts on the server, the machine running Frozen Fortress should be one you trust.
 - **HTTPS only.** nginx is the only exposed container and listens on `127.0.0.1` by default. The web app, Redis, and Ollama sit on an internal Docker network.
 - **Sign-in protection.** Accounts are locked after repeated failed sign-ins, and new accounts stay inactive until an administrator activates them.
 

@@ -25,6 +25,7 @@ const (
 	EnvSigningKey           = "FF_SIGNING_KEY"
 	EnvEncryptionKey        = "FF_ENCRYPTION_KEY"
 	EnvKeyDir               = "FF_KEY_DIR"
+	EnvSessionMaxAgeDays    = "FF_SESSION_MAX_AGE_DAYS"
 	EnvWebUIPort            = "FF_WEB_UI_PORT"
 	EnvLogLevel             = "FF_LOG_LEVEL"
 	EnvBackupEnabled        = "FF_BACKUP_ENABLED"
@@ -83,6 +84,8 @@ type AppConfig struct {
 	EncryptionKey string // Session encryption key
 	KeyDir        string // Directory to store persistent key files
 
+	SessionMaxAgeDays int // How long a sign-in session lasts, in days
+
 	WebUiPort int    // Port for the Web UI server
 	LogLevel  string // Log level (Debug, Info, Warn, Error)
 
@@ -111,6 +114,7 @@ var DefaultConfig = AppConfig{
 	SigningKey:          "",
 	EncryptionKey:       "",
 	KeyDir:              "",
+	SessionMaxAgeDays:   30,
 	WebUiPort:           8080,   // Default Web UI port
 	LogLevel:            "Info", // Default log level
 	Backup: BackupConfig{
@@ -184,6 +188,13 @@ func LoadConfigFromEnv() AppConfig {
 	}
 	if keyDir := os.Getenv(EnvKeyDir); keyDir != "" {
 		config.KeyDir = keyDir
+	}
+
+	// Session configuration
+	if maxAge := os.Getenv(EnvSessionMaxAgeDays); maxAge != "" {
+		if days, err := strconv.Atoi(maxAge); err == nil && days > 0 {
+			config.SessionMaxAgeDays = days
+		}
 	}
 
 	// Web UI configuration
