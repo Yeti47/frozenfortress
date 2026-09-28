@@ -155,19 +155,21 @@ jobs:
         Docker-native release. Pre-built images are published to GHCR — no build step required.
 
         **Requirements:**
-        - Docker Engine with Compose plugin
+        - Docker Engine with Compose plugin, on an x86-64 (linux/amd64) host
 
         **Quick start:**
         1. Download and extract the release archive
-        2. Copy `.env.example` to `.env` and adjust as needed
-        3. Run `docker compose pull && docker compose up -d`
+        2. In the extracted folder, run `docker compose up -d` (the first start downloads about 6 GB)
+        3. Open https://localhost:8443, click "Request access", then activate your account with `docker compose exec webui /app/ffcli user activate <username>`
+
+        **Upgrading:** run `docker compose down` in your old folder, extract this release, and run `docker compose up -d` in the new folder. Your data is kept.
 
         **Images (digest-pinned):**
         - `${{ steps.push_images.outputs.webui_digest }}`
         - `${{ steps.push_images.outputs.nginx_digest }}`
         - `${{ steps.push_images.outputs.ollama_digest }}`
 
-        See `setup-docker.md` for full setup instructions.
+        See `README.md` and `setup-docker.md` in the archive for full instructions.
 
         **Commit:** ${{ github.sha }}
         EOF
