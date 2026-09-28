@@ -111,7 +111,7 @@ Keep the private key safe and never commit it.
 
 ## Configuration
 
-Frozen Fortress is configured via environment variables. Settings marked **yes** in the `.env` column below can be set in a `.env` file next to `compose.yaml` (Docker Compose picks it up automatically). The others are not passed through by the shipped `compose.yaml`: to change one, add it under `webui` → `environment` in `compose.yaml`, for example `FF_MAX_SIGN_IN_ATTEMPTS: 5`.
+Frozen Fortress is configured via environment variables. Any setting below can be changed in a `.env` file next to `compose.yaml` (Docker Compose picks it up automatically). Put in only what you want to change: everything else keeps its default.
 
 ### Example `.env` file
 
@@ -130,40 +130,40 @@ To apply changes, run `docker compose up -d` again.
 
 ### All Environment Variables
 
-| Variable | Description | Default | `.env` |
-|----------|-------------|---------|--------|
-| `FF_DATABASE_PATH` | Path to SQLite database | `/data/frozenfortress.db` | no |
-| `FF_MAX_SIGN_IN_ATTEMPTS` | Maximum sign-in attempts before account lockout | `3` | no |
-| `FF_SIGN_IN_ATTEMPT_WINDOW` | Time window in minutes for counting sign-in attempts | `30` | no |
-| `FF_SESSION_MAX_AGE_DAYS` | How long a sign-in lasts, in days | `30` | yes |
-| `FF_REDIS_ADDRESS` | Redis server address | `redis:6379` | no |
-| `FF_REDIS_USER` | Redis username (leave empty if not required) | `""` | no |
-| `FF_REDIS_PASSWORD` | Redis password (leave empty if not required) | `""` | no |
-| `FF_REDIS_SIZE` | Redis connection pool size | `10` | no |
-| `FF_REDIS_NETWORK` | Redis network type (`tcp`/`unix`) | `tcp` | no |
-| `FF_SIGNING_KEY` | Session signing key (leave empty to auto-generate) | `""` | no |
-| `FF_ENCRYPTION_KEY` | Session encryption key (leave empty to auto-generate) | `""` | no |
-| `FF_KEY_DIR` | Directory to store persistent key files | `/data/keys` | no |
-| `FF_WEB_UI_PORT` | Internal web UI port | `8080` | no |
-| `FF_LOG_LEVEL` | Log level (`Debug`, `Info`, `Warn`, `Error`) | `Info` | yes |
-| `FF_BACKUP_ENABLED` | Enable automatic backups (also required for `ffcli backup create`) | `false` | yes |
-| `FF_BACKUP_INTERVAL_DAYS` | Backup interval in days (`0` = disabled) | `7` | yes |
-| `FF_BACKUP_DIRECTORY` | Directory where backup files are stored | `/data/backups` | no |
-| `FF_BACKUP_MAX_GENERATIONS` | Maximum number of backup files to keep | `10` | yes |
-| `FF_OCR_ENABLED` | Enable OCR functionality | `true` | yes |
-| `FF_OCR_PROVIDER` | OCR provider: `ollama-tesseract`, `ollama`, `tesseract`, `nop`. The Docker images are built without Tesseract, so `ollama-tesseract` behaves like `ollama` and `tesseract` is not available. | `ollama-tesseract` | yes |
-| `FF_OCR_LANGUAGES` | Tesseract languages (comma-separated, e.g. `eng,deu`). No effect in the Docker images. | `eng` | no |
-| `FF_OCR_OLLAMA_URL` | Ollama API base URL | `http://ollama:11434` | yes |
-| `FF_OCR_OLLAMA_MODEL` | Ollama OCR model | `glm-ocr:q8_0` | yes |
-| `FF_OCR_OLLAMA_KEEP_ALIVE` | Ollama model keep-alive value | `5m` | yes |
-| `FF_OCR_OLLAMA_TIMEOUT_SECONDS` | Ollama OCR request timeout in seconds | `300` | yes |
-| `FF_OCR_IMAGE_MAX_DIMENSION` | Maximum image width/height sent to Ollama | `640` | yes |
-| `FF_OCR_MAX_ATTEMPTS` | Maximum best-effort OCR attempts per upload | `3` | yes |
-| `FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS` | Initial async OCR retry backoff | `2` | yes |
-| `FF_OCR_RETRY_MAX_BACKOFF_SECONDS` | Maximum async OCR retry backoff | `30` | yes |
-| `FF_HTTPS_PORT` | Host port nginx binds for HTTPS | `8443` | yes |
-| `FF_TLS_COMMON_NAME` | Common name of the generated TLS certificate | `frozenfortress.local` | yes |
-| `FF_TLS_HOSTS` | Names and IPs the generated TLS certificate is valid for (comma-separated) | `localhost,frozenfortress.local` | yes |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FF_DATABASE_PATH` | Path to SQLite database | `/data/frozenfortress.db` |
+| `FF_MAX_SIGN_IN_ATTEMPTS` | Maximum sign-in attempts before account lockout | `3` |
+| `FF_SIGN_IN_ATTEMPT_WINDOW` | Time window in minutes for counting sign-in attempts | `30` |
+| `FF_SESSION_MAX_AGE_DAYS` | How long a sign-in lasts, in days | `30` |
+| `FF_REDIS_ADDRESS` | Redis server address | `redis:6379` |
+| `FF_REDIS_USER` | Redis username (leave empty if not required) | `""` |
+| `FF_REDIS_PASSWORD` | Redis password (leave empty if not required) | `""` |
+| `FF_REDIS_SIZE` | Redis connection pool size | `10` |
+| `FF_REDIS_NETWORK` | Redis network type (`tcp`/`unix`) | `tcp` |
+| `FF_SIGNING_KEY` | Session signing key (leave empty to auto-generate) | `""` |
+| `FF_ENCRYPTION_KEY` | Session encryption key (leave empty to auto-generate) | `""` |
+| `FF_KEY_DIR` | Directory to store persistent key files | `/data/keys` |
+| `FF_WEB_UI_PORT` | Internal web UI port. Fixed in Docker, because nginx forwards to port `8080`; `.env` cannot change it. | `8080` |
+| `FF_LOG_LEVEL` | Log level (`Debug`, `Info`, `Warn`, `Error`) | `Info` |
+| `FF_BACKUP_ENABLED` | Enable automatic backups (also required for `ffcli backup create`) | `false` |
+| `FF_BACKUP_INTERVAL_DAYS` | Backup interval in days (`0` = disabled) | `7` |
+| `FF_BACKUP_DIRECTORY` | Directory where backup files are stored | `/data/backups` |
+| `FF_BACKUP_MAX_GENERATIONS` | Maximum number of backup files to keep | `10` |
+| `FF_OCR_ENABLED` | Enable OCR functionality | `true` |
+| `FF_OCR_PROVIDER` | OCR provider: `ollama-tesseract`, `ollama`, `tesseract`, `nop`. The Docker images are built without Tesseract, so `ollama-tesseract` behaves like `ollama` and `tesseract` is not available. | `ollama-tesseract` |
+| `FF_OCR_LANGUAGES` | Tesseract languages (comma-separated, e.g. `eng,deu`). No effect in the Docker images. | `eng` |
+| `FF_OCR_OLLAMA_URL` | Ollama API base URL | `http://ollama:11434` |
+| `FF_OCR_OLLAMA_MODEL` | Ollama OCR model | `glm-ocr:q8_0` |
+| `FF_OCR_OLLAMA_KEEP_ALIVE` | Ollama model keep-alive value | `5m` |
+| `FF_OCR_OLLAMA_TIMEOUT_SECONDS` | Ollama OCR request timeout in seconds | `300` |
+| `FF_OCR_IMAGE_MAX_DIMENSION` | Maximum image width/height sent to Ollama | `640` |
+| `FF_OCR_MAX_ATTEMPTS` | Maximum best-effort OCR attempts per upload | `3` |
+| `FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS` | Initial async OCR retry backoff | `2` |
+| `FF_OCR_RETRY_MAX_BACKOFF_SECONDS` | Maximum async OCR retry backoff | `30` |
+| `FF_HTTPS_PORT` | Host port nginx binds for HTTPS | `8443` |
+| `FF_TLS_COMMON_NAME` | Common name of the generated TLS certificate | `frozenfortress.local` |
+| `FF_TLS_HOSTS` | Names and IPs the generated TLS certificate is valid for (comma-separated) | `localhost,frozenfortress.local` |
 
 ---
 

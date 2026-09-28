@@ -126,7 +126,6 @@ jobs:
         RELEASE_DIR="frozenfortress-docker-v${{ steps.extract_version.outputs.version }}"
         mkdir -p "$RELEASE_DIR"
         cp compose.release.yaml "$RELEASE_DIR/compose.yaml"
-        cp .env.example "$RELEASE_DIR/"
         cp doc/setup-docker.md "$RELEASE_DIR/"
         cp README.md "$RELEASE_DIR/"
         zip -r "${RELEASE_DIR}.zip" "$RELEASE_DIR/"
