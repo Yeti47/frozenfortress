@@ -89,7 +89,7 @@ FF_OCR_OLLAMA_URL=http://gpu-host:11434 docker compose up -d
 The WebUI provides a modern interface for daily use:
 
 - **Secrets**: Create, edit, and organize passwords, API keys, and other sensitive information
-- **Documents**: Upload and manage documents with asynchronous OCR text extraction. A companion Android app can scan physical documents with your phone's camera and hand the result straight into the "Create Document" form — see the [Companion App Setup Guide](doc/setup-companion-app.md)
+- **Documents**: Upload and manage documents with asynchronous OCR text extraction. A companion Android app can scan physical documents with your phone's camera and hand the result straight into the "Create Document" form or an existing document's Files tab — see the [Companion App Setup Guide](doc/setup-companion-app.md)
 - **Tags**: Organize content with a flexible tag system
 - **Account Settings**: Password changes, recovery codes, and account management
 

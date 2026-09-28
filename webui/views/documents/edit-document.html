@@ -28,7 +28,7 @@
 
     {{template "ff-flash" .}}
 
-    <div x-data="{ tab: 'metadata' }">
+    <div x-data="{ tab: ffInitialTab() }">
       {{/* Tabs */}}
       <div class="border-b border-border mb-6">
         <nav class="-mb-px flex gap-1" role="tablist">
@@ -94,10 +94,22 @@
       </section>
 
       {{/* Files tab */}}
-      <section x-show="tab === 'files'" x-cloak role="tabpanel" x-data="ffDocFiles('{{.Document.Id}}', {{.MaxFileSize}})" x-init="loadFiles()">
+      <section x-show="tab === 'files'" x-cloak role="tabpanel" x-data="ffDocFiles('{{.Document.Id}}', {{.MaxFileSize}})" x-init="loadFiles(); initScanHandoff()">
         <div class="ff-card p-6">
           <h2 class="font-semibold text-text mb-3">Upload a file</h2>
           <p class="text-xs text-text-subtle mb-3">PNG, JPG, or PDF · up to {{.MaxFileSizeText}}.</p>
+
+          <button
+            type="button"
+            class="ff-btn ff-btn-secondary w-full mb-3 md:hidden"
+            @click="scanWithApp()"
+            x-show="!scanning"
+          >
+            {{template "ff-icon" (dict "name" "cloud_upload" "class" "ff-icon")}}
+            <span>Scan with companion app</span>
+          </button>
+          <p class="text-xs text-text-subtle mb-3 md:hidden" x-show="scanStatus" x-text="scanStatus" x-cloak></p>
+
           <label
             for="file-upload"
             class="block border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-surface-sunken transition-colors"
@@ -323,8 +335,27 @@
       };
     }
 
+    // Initial tab from ?tab=<name>, validated against the known set so an
+    // arbitrary query value can't select a non-existent panel. Used by the
+    // companion app's return link (?tab=files) and makes the tab directly linkable.
+    function ffInitialTab() {
+      var tab = window.ffQueryParam('tab');
+      return ['metadata', 'files', 'notes'].indexOf(tab) !== -1 ? tab : 'metadata';
+    }
+
     function ffDocFiles(id, maxSize) {
-      return {
+      // Scan handoff is shared with Create Document - see window.ffScanHandoff in
+      // static/js/app.js. This page uploads immediately (no staged file list), so
+      // the retrieved scan goes straight through the existing uploadFile() path.
+      return Object.assign(window.ffScanHandoff({
+        returnPath: '/edit-document?id=' + encodeURIComponent(id) + '&tab=files',
+        attachScan: function (file) {
+          var self = this;
+          return this.uploadFile(file).then(function (ok) {
+            if (!ok) throw new Error(self.uploadStatus || 'The scan could not be uploaded.');
+          });
+        },
+      }), {
         docId: id, maxSize: maxSize,
         files: [], loading: true, dragging: false,
         uploadStatus: '', uploadOk: false,
@@ -341,12 +372,14 @@
           } catch (_) {}
           this.loading = false;
         },
+        // Returns true on success so callers (the scan handoff path) can report a
+        // failure instead of silently looking like it worked.
         async uploadFile(file) {
-          if (!file) return;
+          if (!file) return false;
           if (file.size > this.maxSize) {
             this.uploadStatus = 'File too large.';
             this.uploadOk = false;
-            return;
+            return false;
           }
           var fd = new FormData();
           fd.append('file', file);
@@ -360,13 +393,15 @@
               this.uploadOk = true;
               await this.loadFiles();
               setTimeout(() => this.uploadStatus = '', 3000);
-            } else {
-              this.uploadStatus = j.error || 'Upload failed.';
-              this.uploadOk = false;
+              return true;
             }
+            this.uploadStatus = j.error || 'Upload failed.';
+            this.uploadOk = false;
+            return false;
           } catch (err) {
             this.uploadStatus = 'Network error: ' + err.message;
             this.uploadOk = false;
+            return false;
           }
         },
         uploadDropped(list) {

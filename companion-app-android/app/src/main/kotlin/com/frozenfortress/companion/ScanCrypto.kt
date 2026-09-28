@@ -23,8 +23,8 @@ object ScanCrypto {
 
     /**
      * Encrypts [plainData] with [keyHex] (a 64-character hex string decoding to a
-     * 32-byte AES-256 key - matches `generateScanKey()` in create-document.html).
-     * Returns `nonce || ciphertext || tag`.
+     * 32-byte AES-256 key - matches `_generateScanKey()` in
+     * `webui/static/js/app.js`). Returns `nonce || ciphertext || tag`.
      */
     fun encrypt(plainData: ByteArray, keyHex: String): ByteArray {
         val keyBytes = decodeHex(keyHex)
