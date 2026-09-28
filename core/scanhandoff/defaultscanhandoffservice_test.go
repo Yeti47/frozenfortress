@@ -2,6 +2,7 @@ package scanhandoff
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -90,6 +91,40 @@ func (s *inMemoryScanKeyStore) Delete(ctx context.Context, token string) error {
 	return nil
 }
 
+// keyedDataProtector is a DataProtector backed by a fixed key, standing in for the
+// per-request MekDataProtector the web UI passes to the service.
+type keyedDataProtector struct {
+	enc encryption.EncryptionService
+	key string
+}
+
+func newKeyedDataProtector() *keyedDataProtector {
+	enc := encryption.NewDefaultEncryptionService()
+	key, err := enc.GenerateKey()
+	if err != nil {
+		panic("failed to generate test key: " + err.Error())
+	}
+	return &keyedDataProtector{enc: enc, key: key}
+}
+
+func (p *keyedDataProtector) Protect(data string) (string, error) {
+	return p.enc.Encrypt(data, p.key)
+}
+
+func (p *keyedDataProtector) Unprotect(protectedData string) (string, error) {
+	return p.enc.Decrypt(protectedData, p.key)
+}
+
+func (p *keyedDataProtector) ProtectBytes(data []byte) ([]byte, error) {
+	return p.enc.EncryptBytes(data, p.key)
+}
+
+func (p *keyedDataProtector) UnprotectBytes(protectedData []byte) ([]byte, error) {
+	return p.enc.DecryptBytes(protectedData, p.key)
+}
+
+var testKeyProtector = newKeyedDataProtector()
+
 func newTestService(store ScanHandoffStore, keyStore ScanKeyStore) *DefaultScanHandoffService {
 	return NewDefaultScanHandoffService(store, keyStore, encryption.NewDefaultEncryptionService(), ccc.NopLogger)
 }
@@ -99,7 +134,7 @@ func TestStartHandoff_CreatesRetrievablePendingRecord(t *testing.T) {
 	enc := encryption.NewDefaultEncryptionService()
 	key, _ := enc.GenerateKey()
 
-	token, err := svc.StartHandoff(context.Background(), "user-1", key)
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -121,7 +156,7 @@ func TestUploadScan_TransitionsToReady(t *testing.T) {
 	enc := encryption.NewDefaultEncryptionService()
 
 	key, _ := enc.GenerateKey()
-	token, err := svc.StartHandoff(context.Background(), "user-1", key)
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -161,7 +196,7 @@ func TestUploadScan_RejectsAlreadyReadyToken(t *testing.T) {
 	enc := encryption.NewDefaultEncryptionService()
 
 	key, _ := enc.GenerateKey()
-	token, err := svc.StartHandoff(context.Background(), "user-1", key)
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -183,7 +218,7 @@ func TestGetStatus_ReturnsNotFoundForMismatchedOwner(t *testing.T) {
 	enc := encryption.NewDefaultEncryptionService()
 	key, _ := enc.GenerateKey()
 
-	token, err := svc.StartHandoff(context.Background(), "user-1", key)
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -202,7 +237,7 @@ func TestFetchAndConsume_DecryptsAndDeletesRecord(t *testing.T) {
 	enc := encryption.NewDefaultEncryptionService()
 
 	key, _ := enc.GenerateKey()
-	token, err := svc.StartHandoff(context.Background(), "user-1", key)
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -217,7 +252,7 @@ func TestFetchAndConsume_DecryptsAndDeletesRecord(t *testing.T) {
 		t.Fatalf("UploadScan returned error: %v", err)
 	}
 
-	fileName, gotData, err := svc.FetchAndConsume(context.Background(), token, "user-1")
+	fileName, gotData, err := svc.FetchAndConsume(context.Background(), token, "user-1", testKeyProtector)
 	if err != nil {
 		t.Fatalf("FetchAndConsume returned error: %v", err)
 	}
@@ -229,7 +264,7 @@ func TestFetchAndConsume_DecryptsAndDeletesRecord(t *testing.T) {
 	}
 
 	// Fetch-and-burn: a second fetch of the same token must fail.
-	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1"); err == nil {
+	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1", testKeyProtector); err == nil {
 		t.Fatal("expected an error fetching an already-consumed token")
 	}
 }
@@ -241,7 +276,7 @@ func TestFetchAndConsume_FailsWhenKeyMissing(t *testing.T) {
 	enc := encryption.NewDefaultEncryptionService()
 
 	key, _ := enc.GenerateKey()
-	token, err := svc.StartHandoff(context.Background(), "user-1", key)
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -261,7 +296,7 @@ func TestFetchAndConsume_FailsWhenKeyMissing(t *testing.T) {
 		t.Fatalf("failed to simulate key expiry: %v", err)
 	}
 
-	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1"); err == nil {
+	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1", testKeyProtector); err == nil {
 		t.Fatal("expected an error fetching a handoff whose key is missing")
 	} else if !ccc.IsNotFound(err) {
 		t.Fatalf("expected a not-found error, got %v", err)
@@ -275,7 +310,7 @@ func TestFetchAndConsume_FailsWhenStoredKeyDoesNotMatchCiphertext(t *testing.T) 
 	enc := encryption.NewDefaultEncryptionService()
 
 	key, _ := enc.GenerateKey()
-	token, err := svc.StartHandoff(context.Background(), "user-1", key)
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
 	if err != nil {
 		t.Fatalf("StartHandoff returned error: %v", err)
 	}
@@ -291,11 +326,76 @@ func TestFetchAndConsume_FailsWhenStoredKeyDoesNotMatchCiphertext(t *testing.T) 
 
 	// Overwrite the stored key so it no longer matches what encrypted the ciphertext.
 	wrongKey, _ := enc.GenerateKey()
-	if err := keyStore.Store(context.Background(), token, wrongKey, time.Minute); err != nil {
+	protectedWrongKey, err := testKeyProtector.Protect(wrongKey)
+	if err != nil {
+		t.Fatalf("failed to wrap wrong key: %v", err)
+	}
+	if err := keyStore.Store(context.Background(), token, protectedWrongKey, time.Minute); err != nil {
 		t.Fatalf("failed to overwrite stored key: %v", err)
 	}
 
-	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1"); err == nil {
+	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1", testKeyProtector); err == nil {
 		t.Fatal("expected an error decrypting with a mismatched key")
+	}
+}
+
+func TestStartHandoff_DoesNotStorePlaintextKey(t *testing.T) {
+	keyStore := newInMemoryScanKeyStore()
+	svc := newTestService(newInMemoryScanHandoffStore(), keyStore)
+	enc := encryption.NewDefaultEncryptionService()
+
+	key, _ := enc.GenerateKey()
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
+	if err != nil {
+		t.Fatalf("StartHandoff returned error: %v", err)
+	}
+
+	stored, err := keyStore.Retrieve(context.Background(), token)
+	if err != nil {
+		t.Fatalf("failed to read stored key: %v", err)
+	}
+	if stored == "" {
+		t.Fatal("expected a stored key")
+	}
+	if strings.Contains(stored, key) {
+		t.Fatal("expected the key store to hold only the wrapped key, found the plaintext key")
+	}
+}
+
+func TestStartHandoff_RejectsNilKeyProtector(t *testing.T) {
+	svc := newTestService(newInMemoryScanHandoffStore(), newInMemoryScanKeyStore())
+	enc := encryption.NewDefaultEncryptionService()
+
+	key, _ := enc.GenerateKey()
+	if _, err := svc.StartHandoff(context.Background(), "user-1", key, nil); err == nil {
+		t.Fatal("expected an error starting a handoff without a key protector")
+	}
+}
+
+func TestFetchAndConsume_FailsWithDifferentKeyProtector(t *testing.T) {
+	svc := newTestService(newInMemoryScanHandoffStore(), newInMemoryScanKeyStore())
+	enc := encryption.NewDefaultEncryptionService()
+
+	key, _ := enc.GenerateKey()
+	token, err := svc.StartHandoff(context.Background(), "user-1", key, testKeyProtector)
+	if err != nil {
+		t.Fatalf("StartHandoff returned error: %v", err)
+	}
+
+	cipherBlob, err := enc.EncryptBytes([]byte("scan bytes"), key)
+	if err != nil {
+		t.Fatalf("failed to encrypt test payload: %v", err)
+	}
+	if err := svc.UploadScan(context.Background(), token, "scan.jpg", cipherBlob); err != nil {
+		t.Fatalf("UploadScan returned error: %v", err)
+	}
+
+	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1", newKeyedDataProtector()); err == nil {
+		t.Fatal("expected an error fetching with a key protector that can't unwrap the key")
+	}
+
+	// A failed unwrap must not consume the handoff
+	if _, _, err := svc.FetchAndConsume(context.Background(), token, "user-1", testKeyProtector); err != nil {
+		t.Fatalf("expected the handoff to still be fetchable with the right key protector, got %v", err)
 	}
 }

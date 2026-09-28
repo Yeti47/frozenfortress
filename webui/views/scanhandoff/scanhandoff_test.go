@@ -45,6 +45,24 @@ func newUnauthenticatedSignInManager() auth.SignInManager {
 	return &fakeSignInManager{err: ccc.NewUnauthorizedError("not signed in")}
 }
 
+// fakeMekStore is a minimal auth.MekStore stub that always returns the same MEK, so the
+// handlers can wrap and unwrap scan keys without a real session.
+type fakeMekStore struct {
+	mek string
+}
+
+func newFakeMekStore() *fakeMekStore {
+	mek, err := encryption.NewDefaultEncryptionService().GenerateKey()
+	if err != nil {
+		panic("failed to generate test MEK: " + err.Error())
+	}
+	return &fakeMekStore{mek: mek}
+}
+
+func (f *fakeMekStore) Store(w http.ResponseWriter, r *http.Request, mek string) error { return nil }
+func (f *fakeMekStore) Retrieve(r *http.Request) (string, error)                       { return f.mek, nil }
+func (f *fakeMekStore) Delete(w http.ResponseWriter, r *http.Request) error            { return nil }
+
 // in-memory ScanHandoffStore/ScanKeyStore fakes, so these handler tests don't depend on
 // a running Redis instance - the Redis-backed implementations have their own tests in
 // core/scanhandoff.
@@ -130,7 +148,7 @@ func newTestHandoffService() scanhandoff.ScanHandoffService {
 func newTestRouter(signInManager auth.SignInManager, handoffService scanhandoff.ScanHandoffService) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	RegisterRoutes(router, signInManager, handoffService, ccc.NopLogger)
+	RegisterRoutes(router, signInManager, handoffService, newFakeMekStore(), encryption.NewDefaultEncryptionService(), ccc.NopLogger)
 	return router
 }
 

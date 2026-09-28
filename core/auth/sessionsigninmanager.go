@@ -5,12 +5,19 @@ import (
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/boj/redistore"
 	"github.com/gorilla/sessions"
 )
 
 const sessionName = "frozenfortress_session"
-const mekSessionKey = "ffmek"
+
+// mekSessionKey holds the MEK wrapped with the session wrapping key (see WrappingKeyStore).
+const mekSessionKey = "ffmekw"
+
+// legacyMekSessionKey held the plaintext MEK in older versions. It is never read, so
+// sessions from before the update count as signed out.
+const legacyMekSessionKey = "ffmek"
 
 // SessionSignInManager implements SignInManager using gorilla sessions
 // and delegates core sign-in logic to a SignInHandler.
@@ -169,6 +176,19 @@ func (m *SessionSignInManager) GetCurrentUser(r *http.Request) (UserDto, error) 
 	}
 
 	userIdStr := userId.(string)
+
+	// A session without a usable MEK can't decrypt anything, e.g. because the wrapping
+	// key cookie is gone or the session predates MEK wrapping. Treat it as signed out.
+	mek, err := m.mekStore.Retrieve(r)
+	if err != nil {
+		m.logger.Error("Failed to retrieve MEK for current user lookup", "user_id", userIdStr, "error", err)
+		return UserDto{}, ccc.NewInternalError("failed to retrieve MEK", err)
+	}
+	if mek == "" {
+		m.logger.Debug("Session has no usable MEK, treating as signed out", "user_id", userIdStr)
+		return UserDto{}, nil
+	}
+
 	m.logger.Debug("Found user ID in session, looking up user", "user_id", userIdStr)
 
 	user, err := m.userRepository.FindById(userIdStr)
@@ -293,6 +313,7 @@ func (m *SessionSignInManager) RecoverySignIn(w http.ResponseWriter, r *http.Req
 // - RedisPassword: Password for the Redis server (empty if none)
 // - RedisSize: Maximum number of idle connections in the pool (e.g., 10)
 // - RedisNetwork: Network type, "tcp" or "unix" (e.g., "tcp")
+// - SessionMaxAgeDays: How long a session lasts (e.g., 30)
 //
 // The SessionKeyProvider is responsible for the logic of obtaining,
 // generating, and persisting the session keys.
@@ -323,31 +344,45 @@ func CreateRedisStore(config ccc.AppConfig, keyProvider SessionKeyProvider, logg
 		return nil, err
 	}
 
-	store.SetMaxAge(30 * 24 * 60 * 60) // 30 days
-	store.SetMaxLength(4096)           // 4KB
+	store.SetMaxAge(SessionMaxAgeSeconds(config))
+	store.SetMaxLength(4096) // 4KB
 
-	logger.Info("Redis session store created successfully", "max_age_days", 30, "max_length_bytes", 4096)
+	logger.Info("Redis session store created successfully", "max_age_days", config.SessionMaxAgeDays, "max_length_bytes", 4096)
 
 	return store, nil
 }
 
-type SessionMekStore struct {
-	sessionStore sessions.Store
-	logger       ccc.Logger
+// SessionMaxAgeSeconds returns the configured session lifetime in seconds. Session and
+// wrapping key cookies share it.
+func SessionMaxAgeSeconds(config ccc.AppConfig) int {
+	return config.SessionMaxAgeDays * 24 * 60 * 60
 }
 
-func NewSessionMekStore(sessionStore sessions.Store, logger ccc.Logger) *SessionMekStore {
+type SessionMekStore struct {
+	sessionStore      sessions.Store
+	wrappingKeyStore  WrappingKeyStore
+	encryptionService encryption.EncryptionService
+	logger            ccc.Logger
+}
+
+// NewSessionMekStore creates a SessionMekStore that keeps the MEK in the session store
+// only in wrapped (encrypted) form. The key that unwraps it lives in wrappingKeyStore.
+func NewSessionMekStore(sessionStore sessions.Store, wrappingKeyStore WrappingKeyStore, encryptionService encryption.EncryptionService, logger ccc.Logger) *SessionMekStore {
 	if logger == nil {
 		logger = ccc.NopLogger
 	}
 
 	return &SessionMekStore{
-		sessionStore: sessionStore,
-		logger:       logger,
+		sessionStore:      sessionStore,
+		wrappingKeyStore:  wrappingKeyStore,
+		encryptionService: encryptionService,
+		logger:            logger,
 	}
 }
 
-// Retrieve reads the MEK (Master Encryption Key) from the session store
+// Retrieve reads the wrapped MEK (Master Encryption Key) from the session store and
+// unwraps it with the request's wrapping key. It returns "" if either part is missing
+// or the MEK can't be unwrapped, which callers treat as "not signed in".
 func (s *SessionMekStore) Retrieve(r *http.Request) (string, error) {
 	s.logger.Debug("Retrieving MEK from session store")
 
@@ -357,17 +392,34 @@ func (s *SessionMekStore) Retrieve(r *http.Request) (string, error) {
 		return "", err
 	}
 
-	mek, ok := session.Values[mekSessionKey]
-	if !ok || mek == nil {
-		s.logger.Debug("No MEK found in session")
-		return "", nil // No MEK found in session
+	wrappedMek, ok := session.Values[mekSessionKey].(string)
+	if !ok || wrappedMek == "" {
+		s.logger.Debug("No wrapped MEK found in session")
+		return "", nil
+	}
+
+	wrappingKey, err := s.wrappingKeyStore.Retrieve(r)
+	if err != nil {
+		s.logger.Error("Failed to get session wrapping key for MEK retrieval", "error", err)
+		return "", err
+	}
+	if wrappingKey == "" {
+		s.logger.Debug("No session wrapping key found for MEK")
+		return "", nil
+	}
+
+	mek, err := s.encryptionService.Decrypt(wrappedMek, wrappingKey)
+	if err != nil {
+		s.logger.Warn("Failed to unwrap MEK with session wrapping key", "error", err)
+		return "", nil
 	}
 
 	s.logger.Debug("MEK retrieved from session successfully")
-	return mek.(string), nil
+	return mek, nil
 }
 
-// Store saves the MEK (Master Encryption Key) in the session store
+// Store wraps the MEK (Master Encryption Key) with a newly issued wrapping key and
+// saves only the wrapped MEK in the session store
 func (s *SessionMekStore) Store(w http.ResponseWriter, r *http.Request, mek string) error {
 	s.logger.Debug("Storing MEK in session store")
 
@@ -377,7 +429,21 @@ func (s *SessionMekStore) Store(w http.ResponseWriter, r *http.Request, mek stri
 		return err
 	}
 
-	session.Values[mekSessionKey] = mek
+	wrappingKey, err := s.wrappingKeyStore.Issue(w, r)
+	if err != nil {
+		s.logger.Error("Failed to issue session wrapping key for MEK storage", "error", err)
+		return err
+	}
+
+	wrappedMek, err := s.encryptionService.Encrypt(mek, wrappingKey)
+	if err != nil {
+		s.logger.Error("Failed to wrap MEK with session wrapping key", "error", err)
+		return err
+	}
+
+	// Drop a plaintext MEK left behind by an older version
+	delete(session.Values, legacyMekSessionKey)
+	session.Values[mekSessionKey] = wrappedMek
 	err = s.sessionStore.Save(r, w, session)
 	if err != nil {
 		s.logger.Error("Failed to save session with MEK", "error", err)
@@ -388,9 +454,15 @@ func (s *SessionMekStore) Store(w http.ResponseWriter, r *http.Request, mek stri
 	return nil
 }
 
-// Delete removes the MEK (Master Encryption Key) from the session store
+// Delete removes the MEK (Master Encryption Key) from the session store and discards
+// the wrapping key
 func (s *SessionMekStore) Delete(w http.ResponseWriter, r *http.Request) error {
 	s.logger.Debug("Deleting MEK from session store")
+
+	if err := s.wrappingKeyStore.Delete(w, r); err != nil {
+		s.logger.Error("Failed to delete session wrapping key", "error", err)
+		return err
+	}
 
 	session, err := s.sessionStore.Get(r, sessionName)
 	if err != nil {
@@ -399,6 +471,7 @@ func (s *SessionMekStore) Delete(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	delete(session.Values, mekSessionKey)
+	delete(session.Values, legacyMekSessionKey)
 	err = s.sessionStore.Save(r, w, session)
 	if err != nil {
 		s.logger.Error("Failed to save session after MEK deletion", "error", err)

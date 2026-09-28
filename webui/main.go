@@ -139,7 +139,7 @@ func registerRoutes(router *gin.Engine, svc services) {
 		NoteManager:         svc.NoteManager,
 	}
 	documentsview.RegisterRoutes(router, svc.SignInManager, docServices, svc.MekStore, svc.EncryptionService, svc.Logger)
-	scanhandoffview.RegisterRoutes(router, svc.SignInManager, svc.ScanHandoffService, svc.Logger)
+	scanhandoffview.RegisterRoutes(router, svc.SignInManager, svc.ScanHandoffService, svc.MekStore, svc.EncryptionService, svc.Logger)
 
 	login.RegisterRoutes(router, svc.SignInManager)
 	register.RegisterRoutes(router, svc.UserManager)

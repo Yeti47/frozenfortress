@@ -6,6 +6,8 @@ import (
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/dataprotection"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/scanhandoff"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/middleware"
 	documentsview "github.com/Yeti47/frozenfortress/frozenfortress/webui/views/documents"
@@ -22,9 +24,9 @@ type startHandoffRequest struct {
 // The upload route is deliberately NOT behind AuthMiddleware: it's called by the
 // companion app, which has no browser session/cookie. Its handoff token is the
 // credential instead - see core/scanhandoff for the full security reasoning.
-func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, handoffService scanhandoff.ScanHandoffService, logger ccc.Logger) {
+func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, handoffService scanhandoff.ScanHandoffService, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
 	router.POST("/api/scan-handoff/start", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleStartHandoff(c, signInManager, handoffService, logger)
+		handleStartHandoff(c, signInManager, handoffService, mekStore, encryptionService, logger)
 	})
 	router.POST("/api/scan-handoff/:token/upload", func(c *gin.Context) {
 		handleUploadScan(c, handoffService, logger)
@@ -33,12 +35,12 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, handof
 		handleHandoffStatus(c, signInManager, handoffService, logger)
 	})
 	router.GET("/api/scan-handoff/:token/file", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleFetchScan(c, signInManager, handoffService, logger)
+		handleFetchScan(c, signInManager, handoffService, mekStore, encryptionService, logger)
 	})
 }
 
 // handleStartHandoff handles POST requests to start a new scan handoff.
-func handleStartHandoff(c *gin.Context, signInManager auth.SignInManager, handoffService scanhandoff.ScanHandoffService, logger ccc.Logger) {
+func handleStartHandoff(c *gin.Context, signInManager auth.SignInManager, handoffService scanhandoff.ScanHandoffService, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
 	user, err := signInManager.GetCurrentUser(c.Request)
 	if err != nil {
 		c.JSON(401, gin.H{"success": false, "error": "Authentication required"})
@@ -51,7 +53,10 @@ func handleStartHandoff(c *gin.Context, signInManager auth.SignInManager, handof
 		return
 	}
 
-	token, err := handoffService.StartHandoff(c.Request.Context(), user.Id, req.Key)
+	// Wrap the scan key with the user's MEK so it isn't readable from Redis alone
+	keyProtector := dataprotection.CreateMekDataProtectorForRequest(mekStore, encryptionService, c.Request)
+
+	token, err := handoffService.StartHandoff(c.Request.Context(), user.Id, req.Key, keyProtector)
 	if err != nil {
 		logger.Error("Failed to start scan handoff", "user_id", user.Id, "error", err)
 		if middleware.HandleErrorWithJson(c, err, "Failed to start scan handoff") {
@@ -143,7 +148,7 @@ func handleHandoffStatus(c *gin.Context, signInManager auth.SignInManager, hando
 }
 
 // handleFetchScan handles GET requests to fetch and consume the decrypted scan.
-func handleFetchScan(c *gin.Context, signInManager auth.SignInManager, handoffService scanhandoff.ScanHandoffService, logger ccc.Logger) {
+func handleFetchScan(c *gin.Context, signInManager auth.SignInManager, handoffService scanhandoff.ScanHandoffService, mekStore auth.MekStore, encryptionService encryption.EncryptionService, logger ccc.Logger) {
 	user, err := signInManager.GetCurrentUser(c.Request)
 	if err != nil {
 		c.JSON(401, gin.H{"success": false, "error": "Authentication required"})
@@ -156,7 +161,9 @@ func handleFetchScan(c *gin.Context, signInManager auth.SignInManager, handoffSe
 		return
 	}
 
-	fileName, plainData, err := handoffService.FetchAndConsume(c.Request.Context(), token, user.Id)
+	keyProtector := dataprotection.CreateMekDataProtectorForRequest(mekStore, encryptionService, c.Request)
+
+	fileName, plainData, err := handoffService.FetchAndConsume(c.Request.Context(), token, user.Id, keyProtector)
 	if err != nil {
 		logger.Error("Failed to fetch scan", "token", token, "user_id", user.Id, "error", err)
 		if middleware.HandleErrorWithJson(c, err, "Failed to fetch scan") {

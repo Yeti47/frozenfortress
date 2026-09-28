@@ -119,6 +119,7 @@ All configuration is provided via environment variables. Set them before startin
 | `FF_DATABASE_PATH` | Path to SQLite database | `~/.config/frozenfortress/frozenfortress.db` |
 | `FF_MAX_SIGN_IN_ATTEMPTS` | Maximum sign-in attempts before account lockout | `3` |
 | `FF_SIGN_IN_ATTEMPT_WINDOW` | Time window in minutes for counting sign-in attempts | `30` |
+| `FF_SESSION_MAX_AGE_DAYS` | How long a sign-in lasts, in days | `30` |
 | `FF_REDIS_ADDRESS` | Redis server address | `localhost:6379` |
 | `FF_REDIS_USER` | Redis username (leave empty if not required) | `""` |
 | `FF_REDIS_PASSWORD` | Redis password (leave empty if not required) | `""` |
