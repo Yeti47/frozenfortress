@@ -77,7 +77,9 @@ docker compose up -d nginx
 
 ### Using Your Own Certificate
 
-Put `frozenfortress.crt` (full chain) and `frozenfortress.key` in a folder, for example `./certs`, and install them:
+Put `frozenfortress.crt` (full chain) and `frozenfortress.key` in a folder, for example `./certs`. There are two ways to give them to nginx.
+
+**Copy them into the volume** (works everywhere, including Docker Desktop):
 
 ```bash
 docker compose stop nginx
@@ -85,7 +87,25 @@ docker compose run --rm --no-deps --user root -v "$PWD/certs:/certs:ro" --entryp
 docker compose up -d nginx
 ```
 
-Don't use `docker compose cp` for this: it creates the files owned by root, and nginx then fails to start with `Permission denied` on the key. Keep the private key safe and never commit it.
+Don't use `docker compose cp` for this: the files keep your host user's ownership, nginx runs as a different user (uid 101) and can't read the `600` key, so it fails to start with `Permission denied`.
+
+**Or mount the folder directly**, which makes renewing easier: replace the files and run `docker compose restart nginx`. In `compose.yaml`, change nginx's `frozenfortress-certs:/data/certs` volume to:
+
+```yaml
+    volumes:
+      - ./certs:/data/certs:ro
+```
+
+The folder is read-only for nginx, so it cannot generate a certificate there: both files must already exist. The key must also be readable by uid 101, so hand it over and keep it private:
+
+```bash
+sudo chown 101:101 certs/frozenfortress.crt certs/frozenfortress.key
+sudo chmod 600 certs/frozenfortress.key
+```
+
+Making the key `644` also works, but then every user on the host can read it. Then run `docker compose up -d nginx`.
+
+Keep the private key safe and never commit it.
 
 ---
 
