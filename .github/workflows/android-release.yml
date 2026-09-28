@@ -110,8 +110,9 @@ jobs:
         ## FrozenFortress Companion (Android) v${{ steps.extract_version.outputs.version }}
 
         Scans physical documents from your phone (Google ML Kit Document Scanner)
-        and hands the result to FrozenFortress's "Create Document" page over a
-        one-time encrypted handoff. Side-loaded only - not distributed via the
+        and hands the result to FrozenFortress over a one-time encrypted handoff,
+        either into a new document ("Create Document") or an existing one (the
+        Files tab of "Edit Document"). Side-loaded only - not distributed via the
         Play Store.
 
         **Install:**
@@ -119,8 +120,12 @@ jobs:
            API 26; requires Google Play Services for the document scanner).
         2. Enable "Install unknown apps" for the app you downloaded it with.
         3. Open the APK to install.
-        4. On the FrozenFortress "Create Document" page, tap "Scan with
-           companion app".
+        4. On the FrozenFortress "Create Document" page, or in the Files tab of
+           "Edit Document", tap "Scan with companion app".
+
+        Update the app together with FrozenFortress: older app versions always
+        return to "Create Document", even when the scan was started from
+        "Edit Document".
 
         **Signing:** this release is signed with FrozenFortress Companion's stable
         release key, so installing a newer release over an older one upgrades in
