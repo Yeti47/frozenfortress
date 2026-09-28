@@ -1,135 +1,131 @@
-<div align="center" style="padding: 4px; margin-bottom: 8px;">
-  <img src="resources/ff_igloo_logo.png" alt="Frozen Fortress Logo" width="400" height="400" style="margin-bottom: -100px">
-  <h1 style="margin-top: 2px; margin-bottom: 0; font-size: 2.5em;">Frozen Fortress</h1>
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Yeti47/frozenfortress/master/resources/ff_igloo_logo.png" alt="Frozen Fortress logo" width="300">
+  <h1>Frozen Fortress</h1>
 </div>
 
-Frozen Fortress is a **lightweight secret and document manager** designed for local self-hosting. Built with **Go**, it provides a secure, simple, and pragmatic solution for storing and managing sensitive information like passwords, secrets, and documents in a local environment.
+Frozen Fortress is a lightweight, self-hosted manager for your secrets and documents. It runs on your own hardware, keeps your data encrypted at rest, and needs no cloud services.
 
-## 🎯 What is Frozen Fortress?
+- **Secrets**: passwords, API keys, and other sensitive values
+- **Documents**: files with tags and notes, with text extracted from images and PDFs by OCR in the background
+- **Multiple users**: each user's data is encrypted with a key derived from their own password
+- **Android companion app**: scan paper documents with your phone straight into Frozen Fortress
+- **Web UI and CLI**: everyday use in the browser, administration from the command line
 
-Frozen Fortress is designed to help individuals and small teams manage their sensitive data locally without relying on cloud services. It provides:
+## Quick Start
 
-- **Secret Management**: Store and organize passwords, API keys, and other sensitive information
-- **Document Management**: Store and organize documents with OCR support for text extraction
-- **User Management**: Multi-user support with authentication and authorization
-- **Web Interface**: Modern web UI for easy interaction
-- **CLI Tools**: Command-line interface for administrative tasks
-- **Backup System**: Automated backup functionality to protect your data
-- **OCR Support**: Best-effort asynchronous text extraction from images and PDFs using Ollama, with optional Tesseract fallback
+Docker is the recommended way to run Frozen Fortress. Nothing else needs to be installed: no Go, no Redis.
 
-## 🏗️ Architecture & Tech Stack
+**You will need**
 
-Frozen Fortress is built with **simplicity and pragmatism** as core driving principles.
+- Docker 24 or newer with the Compose v2 plugin (Docker Desktop includes it). Check with `docker compose version`.
+- Linux, or Windows with WSL 2, on an x86-64 CPU. The published images are `linux/amd64` only.
+- About 6 GB of downloads on the first start, most of it for OCR.
 
-- **Backend**: Go 1.24.3
-- **Database**: SQLite 3
-- **Session Storage**: Redis
-- **Web Framework**: Gin
-- **CLI Framework**: Cobra
-- **OCR**: Ollama `glm-ocr:q8_0` for image OCR, PDF text extraction in-process, optional Tesseract fallback
-- **Deployment**: Docker Compose (recommended) — nginx + WebUI + Redis + Ollama on a dedicated Docker network
+### 1. Download
 
-## 🚀 Quick Start
+On the [Releases page](https://github.com/Yeti47/frozenfortress/releases), open the newest release named **Frozen Fortress vX.Y.Z** and download `frozenfortress-docker-vX.Y.Z.zip`. Extract it. The folder contains the `compose.yaml` that defines the whole stack.
 
-Docker and Docker Compose are the recommended and supported deployment method. No Go installation, Redis setup, or manual dependency management required.
+### 2. Start
 
-### Prerequisites
-
-- **Docker** 24+ and **Docker Compose** v2
-
-### 1. Start the stack
+Open a terminal in the extracted folder and run:
 
 ```bash
 docker compose up -d
 ```
 
-The Compose stack starts four services on a private `frozenfortress` Docker network:
+This starts four containers: nginx (the HTTPS entry point), the web app, Redis (sessions), and Ollama (OCR). The first start takes a few minutes. OCR results appear once the OCR model has finished downloading; `docker compose logs -f ollama` shows its progress.
 
-| Service  | Purpose                                          | Default host exposure   |
-|----------|--------------------------------------------------|-------------------------|
-| `nginx`  | HTTPS entrypoint, SSL termination, reverse proxy | `127.0.0.1:8443`        |
-| `webui`  | Frozen Fortress web application                  | Internal network only   |
-| `redis`  | Session store                                    | Internal network only   |
-| `ollama` | GLM OCR inference                                | Internal network only   |
+### 3. Create your account
 
-### 2. Create your first user
+1. Open <https://localhost:8443>. Your browser will warn that the connection isn't trusted, because Frozen Fortress creates its own certificate on first start. Continue anyway, or [use your own certificate](https://github.com/Yeti47/frozenfortress/blob/master/doc/setup-docker.md#tls-certificates).
+2. Click **Request access** and pick a username (3-20 letters, numbers, or underscores) and a password. Passwords need at least 16 characters, including an uppercase letter, a lowercase letter, a digit, and a special character. Only letters, digits, and these special characters are allowed: `@ $ ! % * ? & # _ - . , ; : + § / [ ] ( ) { } =`
+3. Save the **recovery code** shown afterwards. It lets you reset a forgotten password without losing your data.
+4. New accounts can't sign in until an administrator (you) activates them:
 
-```bash
-docker compose exec webui /app/ffcli user create <username> <password>
-docker compose exec webui /app/ffcli user activate <username>
-```
+   ```bash
+   docker compose exec webui /app/ffcli user activate <username>
+   ```
 
-### 3. Open the web UI
+Now sign in with your new account.
 
-Navigate to `https://127.0.0.1:8443`. On first use, accept the self-signed certificate warning (see the [Docker Setup Guide](doc/setup-docker.md) for how to use your own certificate).
+> **Prefer the terminal?** `docker compose exec webui /app/ffcli user create <username> '<password>'` creates an account too (it still needs activating). Keep the password in single quotes: otherwise the shell silently rewrites characters such as `$`, and the account gets a different password than the one you typed. The CLI does not show a recovery code, so generate one in your account settings after signing in.
 
-### Using an external Ollama instance
+## Day-to-day use
 
-If you already have Ollama running elsewhere, skip the bundled container:
+Run these in the folder containing `compose.yaml`:
 
 ```bash
-FF_OCR_OLLAMA_URL=http://gpu-host:11434 docker compose up -d
+docker compose down            # stop (your data is kept)
+docker compose up -d           # start again
+docker compose ps              # is everything running?
+docker compose logs -f webui   # application logs
 ```
 
----
+> **Never add `-v` to `docker compose down`.** It deletes the volumes that hold your data.
 
-## 📖 Setup Guides
+**Locked out?** After 3 failed sign-ins within 30 minutes an account is locked. Unlock it with `docker compose exec webui /app/ffcli user unlock <username>`. `user list` shows every account and its status.
 
-| Guide | Description |
-|-------|-------------|
-| [Docker Setup Guide](doc/setup-docker.md) | Full reference for the recommended Docker deployment — TLS certificates, configuration variables, CLI administration, backup and restore |
-| [Binary Setup Guide](doc/setup-binary.md) | Legacy guide for running Frozen Fortress directly on a host system without Docker |
-| [Binary to Docker Migration Guide](doc/migration-binary-to-docker.md) | Step-by-step instructions for migrating an existing binary installation to the Docker stack |
-| [Companion App Setup Guide](doc/setup-companion-app.md) | Installing and using the Android companion app to scan documents from your phone |
+### Settings
 
----
+To change a setting, create a file named `.env` next to `compose.yaml` containing only what you want to change, then run `docker compose up -d` again:
 
-## 👩🏻‍💻 Web User Interface
+```env
+FF_HTTPS_PORT=9443
+FF_BACKUP_ENABLED=true
+```
 
-The WebUI provides a modern interface for daily use:
+All options are listed in the [Docker guide](https://github.com/Yeti47/frozenfortress/blob/master/doc/setup-docker.md#configuration).
 
-- **Secrets**: Create, edit, and organize passwords, API keys, and other sensitive information
-- **Documents**: Upload and manage documents with asynchronous OCR text extraction. A companion Android app can scan physical documents with your phone's camera and hand the result straight into the "Create Document" form or an existing document's Files tab — see the [Companion App Setup Guide](doc/setup-companion-app.md)
-- **Tags**: Organize content with a flexible tag system
-- **Account Settings**: Password changes, recovery codes, and account management
+### Backups
 
-### User Registration Workflow
+Backups are **off by default**. Turn them on with `FF_BACKUP_ENABLED=true` in `.env` (see above): a backup is then made every 7 days, the last 10 are kept, and you can make one on demand. They are stored inside the Docker volume, so copy them somewhere else:
 
-1. New users register via the web UI registration form
-2. An administrator activates the account via the CLI: `ffcli user activate <username>`
-3. The user can then sign in
+```bash
+docker compose exec webui /app/ffcli backup create
+docker compose cp webui:/data/backups ./backups
+```
 
-Alternatively, administrators can create users directly via the CLI.
+To restore, follow the [restore steps in the Docker guide](https://github.com/Yeti47/frozenfortress/blob/master/doc/setup-docker.md#restoring-from-backup). Copying the file in by hand leaves the database read-only for the app.
 
----
+### Updating
 
-## 🔐 Security
+1. In the old folder, run `docker compose down`.
+2. Download and extract the newer release, and copy your `.env` file into the new folder if you have one.
+3. In the new folder, run `docker compose up -d`.
 
-- **Data Encryption**: All sensitive data is encrypted at rest using user-specific Master Encryption Keys (MEK) derived from user passwords
-- **Zero-Knowledge Architecture**: Even administrators cannot access encrypted user data without the user's password
-- **Secure Sessions**: Session-based authentication with secure cookies backed by Redis
-- **Account Lockout**: Protection against brute force attacks
-- **Recovery Codes**: Secure account recovery mechanism
-- **HTTPS by Default**: The Docker stack enforces HTTPS via nginx; the Go application runs HTTP only on the internal Docker network
+Your data lives in Docker volumes and carries over. Don't rely on `docker compose pull` to update: the images in a release are pinned to exact versions, so it can only fetch the same ones again.
 
----
+## Android companion app
 
-## 🤝 Contributing
+The companion app scans a paper document with your phone's camera and sends it to Frozen Fortress, either as a new document or into an existing document's Files tab. It needs Android 8.0 or newer with Google Play Services, is installed from an APK rather than Google Play, and is currently a pre-release. Download the APK from the [Releases page](https://github.com/Yeti47/frozenfortress/releases) (releases tagged `android-v...`).
 
-Contributions are welcome. Please submit issues, feature requests, or pull requests.
+Your phone must be able to reach your Frozen Fortress instance, which by default only accepts connections from the machine it runs on. See the [companion app guide](https://github.com/Yeti47/frozenfortress/blob/master/doc/setup-companion-app.md) for setup.
 
-### Development Workflow
+## Documentation
 
-1. Install development dependencies: `./install-dev-deps-debian.sh` or `./install-dev-deps-fedora.sh`
-2. Make your changes
-3. Build and test: `./build-all.sh`
-4. Submit a pull request
+| Guide | Contents |
+|-------|----------|
+| [Docker guide](https://github.com/Yeti47/frozenfortress/blob/master/doc/setup-docker.md) | TLS certificates, all configuration options, CLI reference, backup and restore |
+| [Companion app guide](https://github.com/Yeti47/frozenfortress/blob/master/doc/setup-companion-app.md) | Installing the Android app and scanning documents |
+| [Binary setup guide](https://github.com/Yeti47/frozenfortress/blob/master/doc/setup-binary.md) | Legacy: running without Docker |
+| [Binary to Docker migration](https://github.com/Yeti47/frozenfortress/blob/master/doc/migration-binary-to-docker.md) | Moving an existing binary installation to Docker |
 
----
+## Security
 
-## 📄 License
+- **Encrypted at rest.** Secrets, and document titles, descriptions, issuers, files, extracted text, and notes, are encrypted with a key derived from the owner's password, so a copy of the database or a backup can't be read without it. Tag names are not encrypted.
+- **Trust your host.** Encryption protects the database file and backups, but not against someone with administrator access to the machine running Frozen Fortress: while you are signed in, the server keeps your key in its session store.
+- **HTTPS only.** nginx is the only exposed container and listens on `127.0.0.1` by default. The web app, Redis, and Ollama sit on an internal Docker network.
+- **Sign-in protection.** Accounts are locked after repeated failed sign-ins, and new accounts stay inactive until an administrator activates them.
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE.md) file for details.
+## Contributing
+
+Issues and pull requests are welcome. Frozen Fortress is built with Go, SQLite, Redis, Gin, and Ollama (GLM-OCR).
+
+To build from source, install the development dependencies (`./install-dev-deps-debian.sh` or `./install-dev-deps-fedora.sh`) and run `./build-all.sh`. To build the Docker images from a clone instead of downloading a release, run `docker compose up -d --build`.
+
+## License
+
+MIT. See [LICENSE](LICENSE.md).
 
 ------
 
