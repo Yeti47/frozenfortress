@@ -161,7 +161,7 @@ jobs:
         2. In the extracted folder, run `docker compose up -d` (the first start downloads about 6 GB)
         3. Open https://localhost:8443, click "Request access", then activate your account with `docker compose exec webui /app/ffcli user activate <username>`
 
-        **Upgrading:** run `docker compose down` in your old folder, extract this release, and run `docker compose up -d` in the new folder. Your data is kept.
+        **Upgrading:** run `docker compose down` in your old folder, extract this release, copy your `.env` file into the new folder if you have one, and run `docker compose up -d` there. Your data is kept.
 
         **Images (digest-pinned):**
         - `${{ steps.push_images.outputs.webui_digest }}`
