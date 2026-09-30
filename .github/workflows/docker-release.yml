@@ -46,7 +46,12 @@ jobs:
     - name: Build images
       env:
         APP_VERSION: ${{ steps.extract_version.outputs.version }}
-      run: docker compose build
+      run: |
+        # Both ollama variants build to the same local name, so tag the GPU
+        # one separately before the default build overwrites it.
+        docker compose -f compose.yaml -f compose.gpu.yaml build ollama
+        docker tag frozenfortress-ollama frozenfortress-ollama-gpu
+        docker compose build
 
     - name: Log in to GHCR
       uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
@@ -64,7 +69,7 @@ jobs:
         push_image() {
           local local_name="$1"
           local remote_name="$2"
-          local tag="${REGISTRY}/${remote_name}:${VERSION}"
+          local tag="${REGISTRY}/${remote_name}:${VERSION}${3:-}"
 
           docker tag "$local_name" "$tag" >&2
           docker push "$tag" >&2
@@ -77,12 +82,14 @@ jobs:
         WEBUI_DIGEST=$(push_image  frozenfortress-webui  frozenfortress/webui)
         NGINX_DIGEST=$(push_image  frozenfortress-nginx  frozenfortress/nginx)
         OLLAMA_DIGEST=$(push_image frozenfortress-ollama frozenfortress/ollama)
+        OLLAMA_GPU_DIGEST=$(push_image frozenfortress-ollama-gpu frozenfortress/ollama -gpu)
 
         echo "webui_digest=$WEBUI_DIGEST"   >> $GITHUB_OUTPUT
         echo "nginx_digest=$NGINX_DIGEST"   >> $GITHUB_OUTPUT
         echo "ollama_digest=$OLLAMA_DIGEST" >> $GITHUB_OUTPUT
+        echo "ollama_gpu_digest=$OLLAMA_GPU_DIGEST" >> $GITHUB_OUTPUT
 
-    - name: Generate compose.release.yaml
+    - name: Generate release compose files
       run: |
         python3 - << 'PYEOF'
         import re
@@ -93,17 +100,17 @@ jobs:
         webui_digest  = "${{ steps.push_images.outputs.webui_digest }}"
         nginx_digest  = "${{ steps.push_images.outputs.nginx_digest }}"
         ollama_digest = "${{ steps.push_images.outputs.ollama_digest }}"
+        ollama_gpu_digest = "${{ steps.push_images.outputs.ollama_gpu_digest }}"
 
-        # Replace each service's build block with an image reference.
-        # The build blocks differ in indentation and content but all follow the pattern:
-        #   build:\n      context: <path>
+        # Replace each service's build block (the build: line and every
+        # line indented below it, e.g. context and target) with an image reference.
         def replace_build(service, digest, text):
             pattern = (
                 r'(?m)'                         # multiline
                 r'(^  ' + service + r':.*?\n)'  # service header line
                 r'((?:    .+\n)*?)'             # any lines before build (captured)
                 r'    build:\n'                  # build: line
-                r'      context: .+\n'           # context: line
+                r'(?:      .+\n)+'               # context:, target:, ... lines
             )
             replacement = (
                 r'\1\2'
@@ -118,14 +125,30 @@ jobs:
         with open('compose.release.yaml', 'w') as f:
             f.write(src)
 
-        print("compose.release.yaml generated successfully.")
+        with open('compose.gpu.yaml') as f:
+            gpu_src = f.read()
+
+        gpu_out = replace_build('ollama', ollama_gpu_digest, gpu_src)
+        if gpu_out == gpu_src:
+            raise SystemExit("compose.gpu.yaml: ollama build block not found")
+
+        with open('compose.gpu.release.yaml', 'w') as f:
+            f.write(gpu_out)
+
+        print("compose.release.yaml and compose.gpu.release.yaml generated successfully.")
         PYEOF
+
+    - name: Validate release compose files
+      run: |
+        docker compose -f compose.release.yaml config --quiet
+        docker compose -f compose.release.yaml -f compose.gpu.release.yaml config --quiet
 
     - name: Assemble release archive
       run: |
         RELEASE_DIR="frozenfortress-docker-v${{ steps.extract_version.outputs.version }}"
         mkdir -p "$RELEASE_DIR"
         cp compose.release.yaml "$RELEASE_DIR/compose.yaml"
+        cp compose.gpu.release.yaml "$RELEASE_DIR/compose.gpu.yaml"
         cp doc/setup-docker.md "$RELEASE_DIR/"
         cp README.md "$RELEASE_DIR/"
         zip -r "${RELEASE_DIR}.zip" "$RELEASE_DIR/"
@@ -158,8 +181,10 @@ jobs:
 
         **Quick start:**
         1. Download and extract the release archive
-        2. In the extracted folder, run `docker compose up -d` (the first start downloads about 6 GB)
+        2. In the extracted folder, run `docker compose up -d` (the first start downloads about 2 GB, most of it the OCR model)
         3. Open https://localhost:8443, click "Request access", then activate your account with `docker compose exec webui /app/ffcli user activate <username>`
+
+        **GPU OCR:** OCR runs on the CPU by default. To run it on a GPU, add `COMPOSE_FILE=compose.yaml:compose.gpu.yaml` to a `.env` file next to `compose.yaml` and give the container GPU access as described in `compose.gpu.yaml` and `setup-docker.md`. The GPU image is about 6 GB larger.
 
         **Upgrading:** run `docker compose down` in your old folder, extract this release, copy your `.env` file into the new folder if you have one, and run `docker compose up -d` there. Your data is kept.
 
@@ -167,6 +192,7 @@ jobs:
         - `${{ steps.push_images.outputs.webui_digest }}`
         - `${{ steps.push_images.outputs.nginx_digest }}`
         - `${{ steps.push_images.outputs.ollama_digest }}`
+        - `${{ steps.push_images.outputs.ollama_gpu_digest }}` (GPU, see `compose.gpu.yaml`)
 
         See `README.md` and `setup-docker.md` in the archive for full instructions.
 

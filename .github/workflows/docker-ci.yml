@@ -19,3 +19,6 @@ jobs:
 
     - name: Validate Docker Compose build
       run: docker compose build
+
+    - name: Validate GPU OCR image build
+      run: docker compose -f compose.yaml -f compose.gpu.yaml build ollama

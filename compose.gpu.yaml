@@ -1,0 +1,23 @@
+# GPU OCR: swaps the ollama service for the image with the GPU runtimes
+# (CUDA, MLX, Vulkan). It is about 6 GB larger than the default CPU image and
+# only helps if the container can reach a GPU (see the deploy block below).
+#
+# Enable it by adding this line to .env next to compose.yaml:
+#   COMPOSE_FILE=compose.yaml:compose.gpu.yaml
+# or pass both files to every command:
+#   docker compose -f compose.yaml -f compose.gpu.yaml up -d
+
+services:
+  ollama:
+    build:
+      context: ./docker/ollama
+      target: gpu
+    # For an NVIDIA GPU, install the NVIDIA Container Toolkit on the host and
+    # uncomment these lines:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]

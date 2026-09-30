@@ -19,7 +19,7 @@ Docker is the recommended way to run Frozen Fortress. Nothing else needs to be i
 
 - Docker 24 or newer with the Compose v2 plugin (Docker Desktop includes it). Check with `docker compose version`.
 - Linux, or Windows with WSL 2, on an x86-64 CPU. The published images are `linux/amd64` only.
-- About 6 GB of downloads on the first start, most of it for OCR.
+- About 2 GB of downloads on the first start, most of it the OCR model. OCR runs on the CPU; a [GPU setup](https://github.com/Yeti47/frozenfortress/blob/master/doc/setup-docker.md#gpu-ocr) is optional.
 
 ### 1. Download
 

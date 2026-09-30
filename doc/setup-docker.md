@@ -34,7 +34,7 @@ Only nginx is exposed to the host. All other services communicate on the interna
    ```bash
    docker compose up -d
    ```
-   The first start downloads about 6 GB, most of it the OCR image and model.
+   The first start downloads about 2 GB, most of it the OCR model. OCR runs on the CPU; see [GPU OCR](#gpu-ocr) to use a GPU instead.
 
 3. **Open the web UI** at `https://localhost:8443`. Accept the self-signed certificate warning on first use (see [TLS Certificates](#tls-certificates) for how to use your own certificate).
 
@@ -164,6 +164,26 @@ To apply changes, run `docker compose up -d` again.
 | `FF_HTTPS_PORT` | Host port nginx binds for HTTPS | `8443` |
 | `FF_TLS_COMMON_NAME` | Common name of the generated TLS certificate | `frozenfortress.local` |
 | `FF_TLS_HOSTS` | Names and IPs the generated TLS certificate is valid for (comma-separated) | `localhost,frozenfortress.local` |
+
+---
+
+## GPU OCR
+
+OCR runs on the CPU by default. The default `ollama` image contains only Ollama's CPU backends, about 130 MB. The GPU runtimes (CUDA, MLX, Vulkan) would add about 6 GB, so they come in a separate image.
+
+To run OCR on a GPU:
+
+1. Give the container access to the GPU. The release folder contains `compose.gpu.yaml`, which switches to the GPU image. For an NVIDIA GPU, install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) on the host and uncomment the `deploy:` block in `compose.gpu.yaml`. Other GPUs need their own setup; see Docker's [GPU support](https://docs.docker.com/compose/how-tos/gpu-support/) guide.
+2. Add this line to `.env` next to `compose.yaml` (create the file if it does not exist):
+   ```env
+   COMPOSE_FILE=compose.yaml:compose.gpu.yaml
+   ```
+   Every `docker compose` command in this folder now uses both files, so you do not need to pass them yourself. Alternatively, leave `.env` alone and pass both files to every command: `docker compose -f compose.yaml -f compose.gpu.yaml up -d`.
+3. Run `docker compose up -d`. `docker compose logs ollama` should now report a CUDA (or other GPU) device under `inference compute` instead of `cpu`.
+
+Without GPU access, the GPU image still runs OCR on the CPU, only with a much larger download.
+
+To switch back, remove the line and run `docker compose up -d` again. The downloaded model is kept in the `frozenfortress-ollama` volume in both cases. `docker image prune` then removes the unused GPU image. This also applies after upgrading from v1.3.0 or earlier, which always used the large image.
 
 ---
 
