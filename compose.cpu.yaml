@@ -1,0 +1,14 @@
+# CPU-only OCR: swaps the ollama service for an image without the GPU runtimes
+# (CUDA, MLX, Vulkan), which saves about 6 GB of download and disk space.
+# Use it on hosts that run OCR on the CPU anyway.
+#
+# Enable it by adding this line to .env next to compose.yaml:
+#   COMPOSE_FILE=compose.yaml:compose.cpu.yaml
+# or pass both files to every command:
+#   docker compose -f compose.yaml -f compose.cpu.yaml up -d
+
+services:
+  ollama:
+    build:
+      context: ./docker/ollama
+      target: cpu

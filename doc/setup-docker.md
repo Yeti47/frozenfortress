@@ -34,7 +34,7 @@ Only nginx is exposed to the host. All other services communicate on the interna
    ```bash
    docker compose up -d
    ```
-   The first start downloads about 6 GB, most of it the OCR image and model.
+   The first start downloads about 6 GB, most of it the OCR image and model. On a host without a GPU, you can [use the CPU-only OCR image](#cpu-only-ocr) instead and save most of that.
 
 3. **Open the web UI** at `https://localhost:8443`. Accept the self-signed certificate warning on first use (see [TLS Certificates](#tls-certificates) for how to use your own certificate).
 
@@ -164,6 +164,24 @@ To apply changes, run `docker compose up -d` again.
 | `FF_HTTPS_PORT` | Host port nginx binds for HTTPS | `8443` |
 | `FF_TLS_COMMON_NAME` | Common name of the generated TLS certificate | `frozenfortress.local` |
 | `FF_TLS_HOSTS` | Names and IPs the generated TLS certificate is valid for (comma-separated) | `localhost,frozenfortress.local` |
+
+---
+
+## CPU-only OCR
+
+The default `ollama` image is based on the official Ollama image, which includes the GPU runtimes (CUDA, MLX, Vulkan). They make up about 6 GB of its size. If OCR runs on the CPU on your host, you can switch to a CPU-only image of about 130 MB instead. OCR results are the same.
+
+The release folder contains `compose.cpu.yaml` for this. To use it, add this line to `.env` next to `compose.yaml` (create the file if it does not exist):
+
+```env
+COMPOSE_FILE=compose.yaml:compose.cpu.yaml
+```
+
+Then run `docker compose up -d`. Every `docker compose` command in this folder now uses both files, so you do not need to pass them yourself. Alternatively, leave `.env` alone and pass both files to every command: `docker compose -f compose.yaml -f compose.cpu.yaml up -d`.
+
+To switch back, remove the line and run `docker compose up -d` again. The downloaded model is kept in the `frozenfortress-ollama` volume in both cases. If you switched from the default image, `docker image prune` removes the now unused GPU image.
+
+The bundled `compose.yaml` does not give the `ollama` container access to a GPU, so OCR runs on the CPU with either image unless you add GPU access yourself (for NVIDIA, see Docker's [GPU support](https://docs.docker.com/compose/how-tos/gpu-support/) guide).
 
 ---
 
