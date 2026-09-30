@@ -84,7 +84,7 @@ services:
     container_name: frozenfortress-ollama
     build:
       context: ./docker/ollama
-      target: gpu
+      target: cpu
     environment:
       HOME: /home/ollama
       OLLAMA_HOST: 0.0.0.0:11434
