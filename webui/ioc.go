@@ -10,6 +10,7 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/scanhandoff"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/secrets"
+	"github.com/Yeti47/frozenfortress/frozenfortress/core/updates"
 	"github.com/Yeti47/frozenfortress/frozenfortress/webui/workers"
 )
 
@@ -32,6 +33,8 @@ type services struct {
 	DocumentListService     documents.DocumentListService
 	NoteManager             documents.NoteManager
 	ScanHandoffService      scanhandoff.ScanHandoffService
+	UpdateChecker           updates.UpdateChecker
+	UpdateCheckWorker       workers.UpdateCheckWorker
 }
 
 // configureServices configures the services used by the web UI.
@@ -154,6 +157,10 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 	scanKeyStore := scanhandoff.NewRedisScanKeyStore(config, logger)
 	scanHandoffService := scanhandoff.NewDefaultScanHandoffService(scanHandoffStore, scanKeyStore, encryptionService, logger)
 
+	// Create update checker and its worker (GitHub release notifications)
+	updateChecker := updates.NewGitHubUpdateChecker(updates.DefaultGitHubReleasesURL, ccc.AppVersion, logger)
+	updateCheckWorker := workers.NewDefaultUpdateCheckWorker(updateChecker, config, logger)
+
 	return services{
 		SignInManager:           signInManager,
 		EncryptionService:       encryptionService,
@@ -173,5 +180,7 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 		DocumentListService:     documentListService,
 		NoteManager:             noteManager,
 		ScanHandoffService:      scanHandoffService,
+		UpdateChecker:           updateChecker,
+		UpdateCheckWorker:       updateCheckWorker,
 	}
 }

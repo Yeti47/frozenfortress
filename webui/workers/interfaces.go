@@ -8,3 +8,12 @@ type BackupWorker interface {
 	// Stop gracefully stops the backup worker
 	Stop()
 }
+
+// UpdateCheckWorker defines the interface for background update checks
+type UpdateCheckWorker interface {
+	// Start begins the background worker loop
+	Start()
+
+	// Stop gracefully stops the update check worker
+	Stop()
+}

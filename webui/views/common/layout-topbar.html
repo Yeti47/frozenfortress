@@ -8,6 +8,9 @@
                                         Pages set this via `(merge . (dict "Active" "secrets"))`.
        .SearchTerm         (string)   — pre-fills the search box.
        .HideNav            (bool)     — true on auth pages.
+
+     Signed-in pages also show a "vX.Y.Z available" link when the update
+     check worker has found a newer release (see the updateAvailable func).
 */}}
 {{define "ff-topbar"}}
 <header
@@ -34,6 +37,20 @@
       {{end}}
 
       <div class="flex-1"></div>
+
+      {{if and .Username (not .HideNav)}}
+      {{with updateAvailable}}
+      <a
+        href="{{.URL}}"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="hidden sm:inline-flex ff-badge ff-badge-brand dark:!text-brand-300 hover:!bg-brand-500/25 transition-colors"
+        title="A new version of Frozen Fortress is available. View the release on GitHub."
+      >
+        {{template "ff-icon" (dict "name" "download" "class" "ff-icon size-3.5")}}<span>v{{.Version}} available</span>
+      </a>
+      {{end}}
+      {{end}}
 
       {{template "ff-theme-toggle" .}}
 
@@ -97,6 +114,11 @@
         <a href="/tags" class="ff-btn ff-btn-ghost ff-btn-block justify-start {{if eq .Active "tags"}}!bg-brand-500/15 !text-brand-700 dark:!text-brand-300{{end}}">
           {{template "ff-icon" (dict "name" "label" "class" "ff-icon")}}<span>Tags</span>
         </a>
+        {{with updateAvailable}}
+        <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" class="sm:hidden ff-btn ff-btn-ghost ff-btn-block justify-start !text-brand-700 dark:!text-brand-300">
+          {{template "ff-icon" (dict "name" "download" "class" "ff-icon")}}<span>v{{.Version}} available</span>
+        </a>
+        {{end}}
       </nav>
     </div>
     {{end}}

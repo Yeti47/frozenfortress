@@ -145,6 +145,7 @@ All configuration is provided via environment variables. Set them before startin
 | `FF_OCR_MAX_ATTEMPTS` | Maximum best-effort OCR attempts per upload | `3` |
 | `FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS` | Initial async OCR retry backoff | `2` |
 | `FF_OCR_RETRY_MAX_BACKOFF_SECONDS` | Maximum async OCR retry backoff | `30` |
+| `FF_UPDATE_CHECK_ENABLED` | Check GitHub once a day for a newer release and show a "new version available" link to signed-in users. Makes one anonymous request to `api.github.com` per day; set to `false` to turn it off. | `true` |
 
 **Key directory defaults** (when `FF_KEY_DIR` is empty):
 - **Linux**: `$XDG_CONFIG_HOME/frozenfortress` or `~/.config/frozenfortress`

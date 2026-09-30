@@ -43,6 +43,7 @@ const (
 	EnvOCRRetryInitial      = "FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS"
 	EnvOCRRetryMax          = "FF_OCR_RETRY_MAX_BACKOFF_SECONDS"
 	EnvOCRImageMaxDimension = "FF_OCR_IMAGE_MAX_DIMENSION"
+	EnvUpdateCheckEnabled   = "FF_UPDATE_CHECK_ENABLED"
 )
 
 // BackupConfig contains all backup-related configuration settings
@@ -91,6 +92,8 @@ type AppConfig struct {
 
 	Backup BackupConfig // Backup configuration
 	OCR    OCRConfig    // OCR configuration
+
+	UpdateCheckEnabled bool // Periodically check GitHub for a newer release
 }
 
 // String returns a JSON representation of the AppConfig.
@@ -136,6 +139,7 @@ var DefaultConfig = AppConfig{
 		RetryMaxBackoffSeconds:     30,
 		ImageMaxDimension:          640,
 	},
+	UpdateCheckEnabled: true, // Check for new releases by default
 }
 
 // LoadConfigFromEnv loads the application configuration from environment variables.
@@ -283,6 +287,11 @@ func LoadConfigFromEnv() AppConfig {
 		if pixels, err := strconv.Atoi(imageMaxDimension); err == nil && pixels > 0 {
 			config.OCR.ImageMaxDimension = pixels
 		}
+	}
+
+	// Update check configuration
+	if updateCheckEnabled := os.Getenv(EnvUpdateCheckEnabled); updateCheckEnabled != "" {
+		config.UpdateCheckEnabled = updateCheckEnabled == "true"
 	}
 
 	return config
