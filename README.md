@@ -121,7 +121,7 @@ Your phone must be able to reach your Frozen Fortress instance, which by default
 
 Issues and pull requests are welcome. Frozen Fortress is built with Go, SQLite, Redis, Gin, and Ollama (GLM-OCR).
 
-To build from source, install the development dependencies (`./install-dev-deps-debian.sh` or `./install-dev-deps-fedora.sh`) and run `./build-all.sh`. To build the Docker images from a clone instead of downloading a release, run `docker compose up -d --build`.
+To build from source, install the development dependencies (`./install-dev-deps-debian.sh` or `./install-dev-deps-fedora.sh`) and run `./build-all.sh`. For a complete local stack (web UI, Redis and OCR) with one command, run `./dev.sh`; see the [dev stack guide](https://github.com/Yeti47/frozenfortress/blob/master/doc/dev-stack.md). To build the Docker images from a clone instead of downloading a release, run `docker compose up -d --build`.
 
 ## License
 
