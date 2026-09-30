@@ -46,7 +46,7 @@
           </div>
         </div>
 
-        {{template "ff-tag-picker" (dict "fieldId" "createTags" "fieldName" "tagIds" "allTags" .AllTags "label" "Tags")}}
+        {{template "ff-tag-picker" (dict "fieldId" "createTags" "fieldName" "tagIds" "allTags" .AllTags "selectedIds" .SelectedTagIds "label" "Tags")}}
       </div>
 
       {{/* Drop zone */}}

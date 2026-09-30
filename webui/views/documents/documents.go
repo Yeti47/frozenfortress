@@ -46,7 +46,7 @@ func RegisterRoutes(router *gin.Engine, signInManager auth.SignInManager, docume
 
 	// Create document routes - protected by authentication
 	router.GET("/create-document", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
-		handleCreateDocumentPage(c, signInManager, logger)
+		handleCreateDocumentPage(c, signInManager, documentServices.TagManager, logger)
 	})
 	router.POST("/create-document", middleware.AuthMiddleware(signInManager), func(c *gin.Context) {
 		handleCreateDocumentSubmit(c, signInManager, documentServices.DocumentManager, documentServices.TagManager, mekStore, encryptionService, logger)
@@ -244,29 +244,29 @@ func handleDocumentsPage(c *gin.Context, signInManager auth.SignInManager, docum
 
 	// Prepare template data
 	templateData := gin.H{
-		"Title":           "Frozen Fortress - Documents",
-		"Username":        user.UserName,
-		"Version":         ccc.AppVersion,
-		"Documents":       documentListResponse.Items,
-		"TotalCount":      documentListResponse.TotalCount,
-		"Page":            page,
-		"TotalPages":      totalPages,
-		"PageSize":        documentListResponse.PageSize,
-		"SortBy":          sortBy,
-		"SortAsc":         sortAsc,
-		"TagIds":          tagIds,
-		"AllTags":         allTags,
-		"HasPrevious":     page > 1,
-		"HasNext":         page < totalPages,
-		"SuccessMessage":  successMessage,
-		"SearchTerm":      searchTerm,
-		"DeepSearch":      deepSearch,
-		"IsSearchResult":  searchTerm != "",
-		"DateFrom":        dateFromStr,
-		"DateTo":          dateToStr,
-		"IssueDateFrom":   issueDateFromStr,
-		"IssueDateTo":     issueDateToStr,
-		"IssuerFilter":    issuerFilter,
+		"Title":          "Frozen Fortress - Documents",
+		"Username":       user.UserName,
+		"Version":        ccc.AppVersion,
+		"Documents":      documentListResponse.Items,
+		"TotalCount":     documentListResponse.TotalCount,
+		"Page":           page,
+		"TotalPages":     totalPages,
+		"PageSize":       documentListResponse.PageSize,
+		"SortBy":         sortBy,
+		"SortAsc":        sortAsc,
+		"TagIds":         tagIds,
+		"AllTags":        allTags,
+		"HasPrevious":    page > 1,
+		"HasNext":        page < totalPages,
+		"SuccessMessage": successMessage,
+		"SearchTerm":     searchTerm,
+		"DeepSearch":     deepSearch,
+		"IsSearchResult": searchTerm != "",
+		"DateFrom":       dateFromStr,
+		"DateTo":         dateToStr,
+		"IssueDateFrom":  issueDateFromStr,
+		"IssueDateTo":    issueDateToStr,
+		"IssuerFilter":   issuerFilter,
 	}
 
 	// Render the documents template
@@ -378,7 +378,7 @@ func handleViewDocumentPage(c *gin.Context, signInManager auth.SignInManager, do
 }
 
 // handleCreateDocumentPage handles GET requests to the create-document page
-func handleCreateDocumentPage(c *gin.Context, signInManager auth.SignInManager, logger ccc.Logger) {
+func handleCreateDocumentPage(c *gin.Context, signInManager auth.SignInManager, tagManager documents.TagManager, logger ccc.Logger) {
 	// Get current user for display
 	user, err := signInManager.GetCurrentUser(c.Request)
 	if err != nil {
@@ -386,16 +386,28 @@ func handleCreateDocumentPage(c *gin.Context, signInManager auth.SignInManager, 
 		return
 	}
 
-	templateData := gin.H{
+	// Render the create document template
+	c.HTML(200, "create-document.html", createDocumentTemplateData(c, user.Id, user.UserName, tagManager, logger))
+}
+
+// createDocumentTemplateData builds the base template data for the create
+// document page, including the user's tags for the tag picker.
+func createDocumentTemplateData(c *gin.Context, userId string, userName string, tagManager documents.TagManager, logger ccc.Logger) gin.H {
+	allTags, err := tagManager.GetUserTags(c.Request.Context(), userId)
+	if err != nil {
+		logger.Error("Failed to get tags for user", "user_id", userId, "error", err)
+		// Don't fail the page load if tags can't be loaded
+		allTags = []*documents.TagDto{}
+	}
+
+	return gin.H{
 		"Title":           "Frozen Fortress - Create Document",
-		"Username":        user.UserName,
+		"Username":        userName,
 		"Version":         ccc.AppVersion,
 		"MaxFileSize":     MaxFileSize,
 		"MaxFileSizeText": getMaxFileSizeMB(),
+		"AllTags":         allTags,
 	}
-
-	// Render the create document template
-	c.HTML(200, "create-document.html", templateData)
 }
 
 // handleCreateDocumentSubmit handles POST requests to create a new document
@@ -422,22 +434,6 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 		}
 	}
 
-	// Validate title (required)
-	if title == "" {
-		templateData := gin.H{
-			"Title":           "Frozen Fortress - Create Document",
-			"Username":        user.UserName,
-			"Version":         ccc.AppVersion,
-			"DocumentTitle":   title,
-			"Description":     description,
-			"ErrorMessage":    "Document title is required.",
-			"MaxFileSize":     MaxFileSize,
-			"MaxFileSizeText": getMaxFileSizeMB(),
-		}
-		c.HTML(400, "create-document.html", templateData)
-		return
-	}
-
 	// Parse tag IDs
 	var tagIds []string
 	if tagIdsStr != "" {
@@ -452,20 +448,33 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 		tagIds = validTagIds
 	}
 
+	// formData rebuilds the page data with the submitted values so an error
+	// re-render keeps what the user already entered.
+	formData := func(errorMessage string) gin.H {
+		data := createDocumentTemplateData(c, user.Id, user.UserName, tagManager, logger)
+		data["DocumentTitle"] = title
+		data["Description"] = description
+		data["Issuer"] = issuer
+		data["IssueDate"] = issueDateStr
+		data["SelectedTagIds"] = tagIds
+		if errorMessage != "" {
+			data["ErrorMessage"] = errorMessage
+		}
+		return data
+	}
+
+	// Validate title (required)
+	if title == "" {
+		templateData := formData("Document title is required.")
+		c.HTML(400, "create-document.html", templateData)
+		return
+	}
+
 	// Handle file uploads
 	form, err := c.MultipartForm()
 	if err != nil {
 		logger.Error("Failed to parse multipart form", "error", err)
-		templateData := gin.H{
-			"Title":           "Frozen Fortress - Create Document",
-			"Username":        user.UserName,
-			"Version":         ccc.AppVersion,
-			"DocumentTitle":   title,
-			"Description":     description,
-			"ErrorMessage":    "Failed to process uploaded files.",
-			"MaxFileSize":     MaxFileSize,
-			"MaxFileSizeText": getMaxFileSizeMB(),
-		}
+		templateData := formData("Failed to process uploaded files.")
 		c.HTML(400, "create-document.html", templateData)
 		return
 	}
@@ -491,16 +500,7 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 				"filename", fileHeader.Filename,
 				"content_type", contentType,
 				"user_id", user.Id)
-			templateData := gin.H{
-				"Title":           "Frozen Fortress - Create Document",
-				"Username":        user.UserName,
-				"Version":         ccc.AppVersion,
-				"ErrorMessage":    "File '" + fileHeader.Filename + "' has an unsupported format. Only PNG, JPG, JPEG, and PDF files are allowed.",
-				"DocumentTitle":   title,
-				"Description":     description,
-				"MaxFileSize":     MaxFileSize,
-				"MaxFileSizeText": getMaxFileSizeMB(),
-			}
+			templateData := formData("File '" + fileHeader.Filename + "' has an unsupported format. Only PNG, JPG, JPEG, and PDF files are allowed.")
 			c.HTML(400, "create-document.html", templateData)
 			return
 		}
@@ -512,16 +512,7 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 				"size", fileHeader.Size,
 				"max_size", MaxFileSize,
 				"user_id", user.Id)
-			templateData := gin.H{
-				"Title":           "Frozen Fortress - Create Document",
-				"Username":        user.UserName,
-				"Version":         ccc.AppVersion,
-				"ErrorMessage":    "File '" + fileHeader.Filename + "' is too large. Maximum file size is " + getMaxFileSizeMB() + ".",
-				"DocumentTitle":   title,
-				"Description":     description,
-				"MaxFileSize":     MaxFileSize,
-				"MaxFileSizeText": getMaxFileSizeMB(),
-			}
+			templateData := formData("File '" + fileHeader.Filename + "' is too large. Maximum file size is " + getMaxFileSizeMB() + ".")
 			c.HTML(400, "create-document.html", templateData)
 			return
 		}
@@ -569,15 +560,7 @@ func handleCreateDocumentSubmit(c *gin.Context, signInManager auth.SignInManager
 	if err != nil {
 		logger.Error("Failed to create document", "user_id", user.Id, "title", title, "error", err)
 
-		templateData := gin.H{
-			"Title":           "Frozen Fortress - Create Document",
-			"Username":        user.UserName,
-			"Version":         ccc.AppVersion,
-			"DocumentTitle":   title,
-			"Description":     description,
-			"MaxFileSize":     MaxFileSize,
-			"MaxFileSizeText": getMaxFileSizeMB(),
-		}
+		templateData := formData("")
 
 		if middleware.HandleErrorOnPage(c, err, "create-document.html", templateData, "ErrorMessage") {
 			return

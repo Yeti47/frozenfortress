@@ -1,17 +1,21 @@
-{{/* ff-tag-picker — Alpine-powered multi-select tag picker.
+{{/* ff-tag-picker — Alpine-powered multi-select tag combobox.
 
      Args (map):
-       fieldId   (string, required)  HTML id prefix; must be unique on the page
-       fieldName (string, required)  POST field name (single hidden input,
-                                     value is comma-separated tag IDs)
-       allTags   (slice of *TagDto, required)
-       selected  (slice of *TagDto, optional)  pre-selected tags
-       max       (int, optional)     hard cap on count; 0 = unlimited
-       label     (string, optional)  visible label text; omit to skip <label>
-       helper    (string, optional)  helper text shown beneath the picker
+       fieldId     (string, required)  HTML id prefix; must be unique on the page
+       fieldName   (string, required)  POST field name (single hidden input,
+                                       value is comma-separated tag IDs)
+       allTags     (slice of *TagDto, required)
+       selected    (slice of *TagDto, optional)  pre-selected tags
+       selectedIds (slice of string, optional)   pre-selected tag IDs
+                                                 (used when selected is empty)
+       max         (int, optional)     hard cap on count; 0 = unlimited
+       label       (string, optional)  visible label text; omit to skip <label>
+       helper      (string, optional)  helper text shown beneath the picker
 
      Renders:
-       <label> (optional) → search/filter input → selected pills → available list
+       <label> (optional) → input-styled field holding the selected tags as
+       chips plus an inline search input → dropdown with the matching
+       unselected tags and a "Create …" option
        + hidden <input name="{fieldName}"> holding the CSV value
 */}}
 {{define "ff-tag-picker"}}
@@ -41,70 +45,85 @@
       {{- end -}}
     {{- end -}}
   ])'
-  class="ff-tag-picker"
+  class="ff-tag-picker relative"
+  @click.outside="open = false"
+  @focusout="if (!$el.contains($event.relatedTarget)) open = false"
 >
   {{if $label}}<label for="{{$fid}}-search" class="ff-label">{{$label}}{{if $max}} <span class="text-text-subtle font-normal">(max {{$max}})</span>{{end}}</label>{{end}}
 
-  {{/* Selected pills */}}
-  <div class="flex flex-wrap gap-1.5 mb-2 min-h-[1.75rem]" x-show="selected.length > 0" x-cloak>
+  <div class="ff-tag-field" @click="$refs.input.focus()">
     <template x-for="t in selectedTags()" :key="t.id">
-      <span class="ff-badge gap-1" :style="`background-color: ${t.color}20; color: ${t.color}; border-color: ${t.color}66`">
+      <span class="ff-badge gap-1 pr-1" :style="`background-color: ${t.color}20; color: ${t.color}; border-color: ${t.color}66`">
         <span x-text="t.name"></span>
-        <button type="button" class="hover:opacity-70" @click="toggle(t.id)" :aria-label="`Remove tag ${t.name}`">
+        <button type="button" class="rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10" @click.stop="remove(t.id)" :aria-label="`Remove tag ${t.name}`">
           <svg class="ff-icon size-3" aria-hidden="true"><use href="/static/icons/lucide.svg#i-close"/></svg>
         </button>
       </span>
     </template>
-  </div>
-
-  {{/* Search input */}}
-  <div class="relative">
-    <span class="absolute inset-y-0 left-3 flex items-center text-text-subtle pointer-events-none">
-      <svg class="ff-icon size-4" aria-hidden="true"><use href="/static/icons/lucide.svg#i-search"/></svg>
-    </span>
     <input
       type="text"
-      :id="`{{$fid}}-search`"
+      id="{{$fid}}-search"
+      x-ref="input"
       x-model="query"
-      class="ff-input pl-9"
-      placeholder="Search tags…"
+      class="ff-tag-field-input"
+      :placeholder="selected.length ? 'Add tag…' : 'Search or create tags…'"
       autocomplete="off"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-controls="{{$fid}}-listbox"
+      :aria-expanded="open"
+      :aria-activedescendant="open && options().length ? `{{$fid}}-opt-${active}` : null"
+      @focus="open = true"
+      @input="open = true; active = 0"
+      @keydown.arrow-down.prevent="open = true; move(1)"
+      @keydown.arrow-up.prevent="move(-1)"
+      @keydown.enter="onEnter($event)"
+      @keydown.escape="if (open) { open = false; $event.stopPropagation() }"
+      @keydown.backspace="if (!query && selected.length) selected.pop()"
     >
   </div>
 
-  {{/* Available tag list + create-on-the-fly pill (same row) */}}
-  <div class="flex flex-wrap gap-1.5 mt-2" x-show="filtered().length > 0 || (query.trim() && !exactMatch())">
-    <template x-for="t in filtered()" :key="t.id">
+  <div
+    class="ff-tag-menu"
+    id="{{$fid}}-listbox"
+    role="listbox"
+    aria-multiselectable="true"
+    x-ref="menu"
+    x-show="open && (options().length > 0 || emptyMessage())"
+    x-cloak
+  >
+    <template x-for="(o, i) in options()" :key="o.key">
       <button
         type="button"
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
-        :style="isSelected(t.id)
-          ? `background-color: ${t.color}; color: white; border-color: ${t.color}`
-          : `background-color: ${t.color}20; color: ${t.color}; border-color: ${t.color}66`"
-        :aria-pressed="isSelected(t.id)"
-        @click="toggle(t.id)"
+        tabindex="-1"
+        role="option"
+        :id="`{{$fid}}-opt-${i}`"
+        :data-idx="i"
+        :data-active="i === active"
+        :aria-selected="i === active"
+        class="ff-tag-option"
+        @mousedown.prevent
+        @mouseenter="active = i"
+        @click="pick(o)"
       >
-        <svg class="ff-icon size-3" aria-hidden="true">
-          <use :href="isSelected(t.id) ? '/static/icons/lucide.svg#i-check' : '/static/icons/lucide.svg#i-add'"/>
-        </svg>
-        <span x-text="t.name"></span>
+        <template x-if="o.tag">
+          <span class="contents">
+            <span class="ff-tag-dot" :style="`background-color: ${o.tag.color}`"></span>
+            <span class="truncate" x-text="o.tag.name"></span>
+          </span>
+        </template>
+        <template x-if="!o.tag">
+          <span class="contents text-brand-600 dark:text-brand-300">
+            <svg class="ff-icon size-3.5 flex-none" aria-hidden="true"><use href="/static/icons/lucide.svg#i-add"/></svg>
+            <span class="truncate">Create "<span x-text="query.trim()"></span>"</span>
+          </span>
+        </template>
       </button>
     </template>
-    <button
-      x-show="query.trim() && !exactMatch()"
-      type="button"
-      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-brand-400 text-brand-600 dark:text-brand-300 hover:bg-brand-500/10 transition-colors"
-      @click="createTag()"
-      :disabled="creating"
-    >
-      <svg class="ff-icon size-3" aria-hidden="true"><use href="/static/icons/lucide.svg#i-add"/></svg>
-      Create "<span x-text="query.trim()"></span>"
-    </button>
+    <p class="px-2 py-1.5 text-sm text-text-subtle" x-show="options().length === 0" x-text="emptyMessage()"></p>
   </div>
 
-  <p class="text-xs text-text-subtle mt-2" x-show="all.length === 0 && !query.trim()">
-    No tags yet — <a href="/edit-tag" class="text-brand-600 hover:underline">create one first</a>.
-  </p>
+  <p class="text-xs text-danger-500 mt-1" x-show="error" x-text="error" x-cloak></p>
   {{if $helper}}<p class="text-xs text-text-subtle mt-1">{{$helper}}</p>{{end}}
 
   <input type="hidden" name="{{$fname}}" :value="selected.join(',')">
@@ -118,48 +137,104 @@
         id: id, max: max, all: all,
         selected: Array.isArray(initialSelected) ? initialSelected.slice() : [],
         query: '',
+        open: false,
+        active: 0,
         creating: false,
-        isSelected(tid) { return this.selected.indexOf(tid) !== -1; },
-        toggle(tid) {
-          var i = this.selected.indexOf(tid);
-          if (i === -1) {
-            if (this.max > 0 && this.selected.length >= this.max) return;
-            this.selected.push(tid);
-          } else {
-            this.selected.splice(i, 1);
-          }
-        },
+        error: '',
+        atMax() { return this.max > 0 && this.selected.length >= this.max; },
         selectedTags() {
           var self = this;
           return this.selected.map(function (sid) {
             return self.all.find(function (t) { return t.id === sid; });
           }).filter(Boolean);
         },
-        filtered() {
+        // Unselected tags matching the query; prefix matches sort first.
+        matches() {
+          var self = this;
           var q = (this.query || '').toLowerCase().trim();
-          if (!q) return this.all;
-          return this.all.filter(function (t) { return t.name.toLowerCase().indexOf(q) !== -1; });
+          var list = this.all.filter(function (t) {
+            return self.selected.indexOf(t.id) === -1 && t.name.toLowerCase().indexOf(q) !== -1;
+          });
+          if (!q) return list;
+          return list.sort(function (a, b) {
+            return (b.name.toLowerCase().indexOf(q) === 0) - (a.name.toLowerCase().indexOf(q) === 0);
+          });
         },
         exactMatch() {
           var q = (this.query || '').toLowerCase().trim();
-          if (!q) return true;
           return this.all.some(function (t) { return t.name.toLowerCase() === q; });
+        },
+        options() {
+          if (this.atMax()) return [];
+          var opts = this.matches().map(function (t) { return { key: t.id, tag: t }; });
+          if (this.query.trim() && !this.exactMatch()) opts.push({ key: '__create', tag: null });
+          return opts;
+        },
+        emptyMessage() {
+          if (this.atMax()) return 'Maximum of ' + this.max + ' tags reached.';
+          if (this.query.trim()) return 'Already added.';
+          return this.all.length === 0 ? 'No tags yet. Type a name to create one.' : 'All tags added.';
+        },
+        move(delta) {
+          var n = this.options().length;
+          if (!n) return;
+          this.active = (this.active + delta + n) % n;
+          var menu = this.$refs.menu;
+          var idx = this.active;
+          this.$nextTick(function () {
+            var el = menu.querySelector('[data-idx="' + idx + '"]');
+            if (el) el.scrollIntoView({ block: 'nearest' });
+          });
+        },
+        onEnter(e) {
+          var opts = this.options();
+          if (this.open && opts.length) {
+            e.preventDefault();
+            this.pick(opts[Math.min(this.active, opts.length - 1)]);
+          } else if (this.query.trim()) {
+            // Don't submit the surrounding form with a half-typed tag.
+            e.preventDefault();
+          }
+        },
+        pick(o) {
+          if (!o) return;
+          if (!o.tag) { this.createTag(); return; }
+          this.add(o.tag.id);
+        },
+        add(tid) {
+          if (this.atMax() || this.selected.indexOf(tid) !== -1) return;
+          this.selected.push(tid);
+          this.query = '';
+          this.active = 0;
+          this.error = '';
+          this.$refs.input.focus();
+        },
+        remove(tid) {
+          var i = this.selected.indexOf(tid);
+          if (i !== -1) this.selected.splice(i, 1);
+          this.$refs.input.focus();
         },
         async createTag() {
           var name = (this.query || '').trim();
           if (!name || this.creating) return;
           this.creating = true;
+          this.error = '';
           try {
             var resp = await fetch('/api/tags', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name: name, color: '#3498db' })
             });
-            if (!resp.ok) return;
+            if (!resp.ok) {
+              var body = await resp.json().catch(function () { return {}; });
+              this.error = body.error || 'Could not create tag.';
+              return;
+            }
             var tag = await resp.json();
             this.all.push(tag);
-            this.toggle(tag.id);
-            this.query = '';
+            this.add(tag.id);
+          } catch (err) {
+            this.error = 'Could not create tag.';
           } finally {
             this.creating = false;
           }

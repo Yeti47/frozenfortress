@@ -349,6 +349,72 @@
     color: var(--color-text-muted);
     white-space: nowrap;
   }
+  /* Tag picker (combobox): chips + inline input in an input-styled box */
+  .ff-tag-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.625rem;
+    padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: text;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .ff-tag-field:focus-within {
+    border-color: var(--color-ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-ring) 25%, transparent);
+  }
+  .ff-tag-field-input {
+    flex: 1 1 6rem;
+    min-width: 6rem;
+    padding: 0.125rem 0;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--color-text);
+    font-size: 0.875rem;
+  }
+  .ff-tag-field-input::placeholder {
+    color: var(--color-text-subtle);
+  }
+  .ff-tag-menu {
+    position: absolute;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    margin-top: 0.25rem;
+    max-height: 15rem;
+    overflow-y: auto;
+    padding: 0.25rem;
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+  }
+  .ff-tag-option {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    text-align: left;
+    color: var(--color-text);
+  }
+  .ff-tag-option[data-active="true"] {
+    background: color-mix(in oklch, var(--color-brand-500) 18%, transparent);
+  }
+  .ff-tag-dot {
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 999px;
+  }
+
   .ff-badge-success { background: color-mix(in oklch, var(--color-success-500) 15%, transparent); color: var(--color-success-600); border-color: color-mix(in oklch, var(--color-success-500) 30%, transparent); }
   .ff-badge-warning { background: color-mix(in oklch, var(--color-warning-500) 15%, transparent); color: var(--color-warning-600); border-color: color-mix(in oklch, var(--color-warning-500) 30%, transparent); }
   .ff-badge-danger  { background: color-mix(in oklch, var(--color-danger-500) 15%, transparent);  color: var(--color-danger-600);  border-color: color-mix(in oklch, var(--color-danger-500) 30%, transparent); }
