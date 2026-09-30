@@ -33,8 +33,9 @@ func main() {
 
 	svc := configureServices(config, db)
 
-	// Start the backup worker
+	// Start the background workers
 	svc.BackupWorker.Start()
+	svc.UpdateCheckWorker.Start()
 
 	// Set up graceful shutdown
 	c := make(chan os.Signal, 1)
@@ -42,8 +43,9 @@ func main() {
 
 	go func() {
 		<-c
-		svc.Logger.Info("Shutting down backup worker...")
+		svc.Logger.Info("Shutting down background workers...")
 		svc.BackupWorker.Stop()
+		svc.UpdateCheckWorker.Stop()
 		os.Exit(0)
 	}()
 
@@ -116,6 +118,9 @@ func registerRoutes(router *gin.Engine, svc services) {
 		"hasPrefix": strings.HasPrefix,
 		"hasSuffix": strings.HasSuffix,
 		"contains":  strings.Contains,
+		// updateAvailable returns the newer release found by the update
+		// check worker, or nil if the running version is up to date.
+		"updateAvailable": svc.UpdateChecker.Latest,
 	}
 
 	// Load HTML templates with functions
