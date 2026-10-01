@@ -121,6 +121,22 @@ func TestCheckNetworkError(t *testing.T) {
 	}
 }
 
+func TestIsReleaseVersion(t *testing.T) {
+	cases := map[string]bool{
+		"1.4.1":          true,
+		"v1.4.1":         true,
+		"dev":            false,
+		"":               false,
+		"1.4.1-rc1":      false,
+		"android-v0.3.0": false,
+	}
+	for version, want := range cases {
+		if got := IsReleaseVersion(version); got != want {
+			t.Errorf("IsReleaseVersion(%q) = %t, want %t", version, got, want)
+		}
+	}
+}
+
 func TestCompareVersions(t *testing.T) {
 	cases := []struct {
 		a, b string
