@@ -161,7 +161,7 @@ To apply changes, run `docker compose up -d` again.
 | `FF_OCR_MAX_ATTEMPTS` | Maximum best-effort OCR attempts per upload | `3` |
 | `FF_OCR_RETRY_INITIAL_BACKOFF_SECONDS` | Initial async OCR retry backoff | `2` |
 | `FF_OCR_RETRY_MAX_BACKOFF_SECONDS` | Maximum async OCR retry backoff | `30` |
-| `FF_UPDATE_CHECK_ENABLED` | Check GitHub once a day for a newer release and show a "new version available" link to signed-in users. Makes one anonymous request to `api.github.com` per day; set to `false` to turn it off. | `true` |
+| `FF_UPDATE_CHECK_ENABLED` | Check GitHub once a day for a newer release and show a "new version available" link to signed-in users. Makes one anonymous request to `api.github.com` per day; set to `false` to turn it off. Doesn't affect `ffcli version --check`, which only runs when you call it. | `true` |
 | `FF_HTTPS_PORT` | Host port nginx binds for HTTPS | `8443` |
 | `FF_TLS_COMMON_NAME` | Common name of the generated TLS certificate | `frozenfortress.local` |
 | `FF_TLS_HOSTS` | Names and IPs the generated TLS certificate is valid for (comma-separated) | `localhost,frozenfortress.local` |
@@ -238,6 +238,9 @@ docker compose exec webui /app/ffcli backup cleanup
 
 # View current configuration
 docker compose exec webui /app/ffcli setup --read
+
+# Show the version and check GitHub for a newer release
+docker compose exec webui /app/ffcli version --check
 ```
 
 Keep the password in single quotes: otherwise the shell silently rewrites characters such as `$`, and the account gets a different password than the one you typed. Accounts created this way don't get a recovery code shown; generate one in the account settings after signing in.

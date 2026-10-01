@@ -134,6 +134,14 @@ func (c *GitHubUpdateChecker) fetchReleases(ctx context.Context) ([]githubReleas
 	return releases, nil
 }
 
+// IsReleaseVersion reports whether version (with or without a leading "v") is a
+// stable release version that can be checked for updates. Dev builds and
+// prerelease versions return false.
+func IsReleaseVersion(version string) bool {
+	_, ok := parseVersion("v" + strings.TrimPrefix(version, "v"))
+	return ok
+}
+
 // parseVersion parses a "vMAJOR.MINOR.PATCH" tag
 func parseVersion(tag string) ([3]int, bool) {
 	var v [3]int
