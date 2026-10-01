@@ -26,6 +26,8 @@ RUN groupadd --system --gid 65532 nonroot \
 
 WORKDIR /app
 
+# The slim base has no CA bundle; outbound HTTPS (e.g. the GitHub update check) needs it.
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --chown=nonroot:nonroot --from=builder /out/ /app/
 COPY --chown=nonroot:nonroot --from=builder /out-data/ /data/
 
