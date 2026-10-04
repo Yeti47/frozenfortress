@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/api/bootstrap"
 	"github.com/Yeti47/frozenfortress/frozenfortress/api/workers"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/backup"
@@ -14,31 +15,8 @@ import (
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/updates"
 )
 
-type services struct {
-	SignInManager           auth.SignInManager
-	EncryptionService       encryption.EncryptionService
-	SecretRepository        secrets.SecretRepository
-	UserRepository          auth.UserRepository
-	SignInHistoryRepository auth.SignInHistoryItemRepository
-	MekStore                auth.MekStore
-	SecretManager           secrets.SecretManager
-	UserManager             auth.UserManager
-	BackupService           backup.BackupService
-	BackupWorker            workers.BackupWorker
-	Logger                  ccc.Logger
-	TagManager              documents.TagManager
-	DocumentManager         documents.DocumentManager
-	DocumentFileManager     documents.DocumentFileManager
-	DocumentSearchEngine    documents.DocumentSearchEngine
-	DocumentListService     documents.DocumentListService
-	NoteManager             documents.NoteManager
-	ScanHandoffService      scanhandoff.ScanHandoffService
-	UpdateChecker           updates.UpdateChecker
-	UpdateCheckWorker       workers.UpdateCheckWorker
-}
-
 // configureServices configures the services used by the API.
-func configureServices(config ccc.AppConfig, db *sql.DB) services {
+func configureServices(config ccc.AppConfig, db *sql.DB) bootstrap.Services {
 
 	logger := ccc.CreateLogger(config)
 
@@ -161,7 +139,8 @@ func configureServices(config ccc.AppConfig, db *sql.DB) services {
 	updateChecker := updates.NewGitHubUpdateChecker(updates.DefaultGitHubReleasesURL, ccc.AppVersion, logger)
 	updateCheckWorker := workers.NewDefaultUpdateCheckWorker(updateChecker, config, logger)
 
-	return services{
+	return bootstrap.Services{
+		DB:                      db,
 		SignInManager:           signInManager,
 		EncryptionService:       encryptionService,
 		SecretRepository:        secretRepo,

@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Yeti47/frozenfortress/frozenfortress/api/handlers/system"
+	"github.com/Yeti47/frozenfortress/frozenfortress/api/bootstrap"
 	"github.com/Yeti47/frozenfortress/frozenfortress/api/server"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 )
@@ -43,8 +43,7 @@ func run() error {
 		TrustedProxies: config.TrustedProxies,
 		DocsEnabled:    os.Getenv(envDocsEnabled) == "true",
 	},
-		system.NewHandler(svc.Logger, db, svc.UpdateChecker),
-	)
+		bootstrap.Handlers(svc)...)
 	if err != nil {
 		return err
 	}
