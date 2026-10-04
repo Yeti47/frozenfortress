@@ -67,10 +67,11 @@ version_compare() {
 
 # Check and install Go
 install_go() {
-    local required_version="1.24.3"
+    local required_version="1.26.8"
     local go_install_dir="/usr/local"
-    local go_tar_file="go1.24.3.linux-amd64.tar.gz"
-    local go_download_url="https://go.dev/dl/go1.24.3.linux-amd64.tar.gz"
+    local go_tar_file="go1.26.8.linux-amd64.tar.gz"
+    local go_sha256="d0f743b33e8d8945e6b1f432edd15785c70507121d6e2a723b21285eddf8b57b"
+    local go_download_url="https://go.dev/dl/go1.26.8.linux-amd64.tar.gz"
     
     log_info "Checking Go installation..."
     
@@ -122,6 +123,13 @@ install_go() {
     # Verify download
     if [[ ! -f "$go_tar_file" ]]; then
         log_error "Go download failed - file not found"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+    
+    # Verify the checksum published at https://go.dev/dl/
+    if ! echo "$go_sha256  $go_tar_file" | sha256sum -c - > /dev/null; then
+        log_error "Checksum mismatch for $go_tar_file - refusing to install"
         rm -rf "$temp_dir"
         exit 1
     fi

@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-- **Go 1.24.3** or higher
+- **Go 1.26.8** or higher
 - **Redis** server (required for session management)
 - **Tesseract OCR** (optional, for local OCR fallback)
 - A reverse proxy such as **nginx** (recommended for HTTPS)
@@ -31,7 +31,7 @@ Helper scripts are provided to install all dependencies automatically.
 ```
 
 Both scripts install:
-- Go 1.24.3
+- Go 1.26.8
 - Redis server
 - Tesseract OCR with language packs
 - All required development tools
