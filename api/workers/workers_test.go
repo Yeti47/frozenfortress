@@ -5,26 +5,13 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/backup"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/updates"
 )
-
-const waitTimeout = 2 * time.Second
-
-func eventually(t *testing.T, cond func() bool) {
-	t.Helper()
-	deadline := time.Now().Add(waitTimeout)
-	for time.Now().Before(deadline) {
-		if cond() {
-			return
-		}
-		time.Sleep(time.Millisecond)
-	}
-	t.Fatal("condition not met in time")
-}
 
 type fakeBackupService struct {
 	mu         sync.Mutex
@@ -75,6 +62,10 @@ func backupConfig(enabled bool, days int) ccc.AppConfig {
 	return ccc.AppConfig{Backup: ccc.BackupConfig{Enabled: enabled, IntervalDays: days, MaxGenerations: 3}}
 }
 
+// The worker loops run inside a synctest bubble: time is fake, and synctest.Wait returns once
+// every goroutine (the worker loop) is blocked again, so these tests need no polling or sleeps
+// in real time. Workers must be constructed inside the bubble and stopped before it ends.
+
 func TestBackupWorker_NilLoggerDefaults(t *testing.T) {
 	w := NewDefaultBackupWorker(&fakeBackupService{}, backupConfig(false, 7), nil)
 	if w.logger == nil {
@@ -85,44 +76,54 @@ func TestBackupWorker_NilLoggerDefaults(t *testing.T) {
 func TestBackupWorker_DoesNotRunWhenDisabled(t *testing.T) {
 	for name, cfg := range map[string]ccc.AppConfig{
 		"disabled":          backupConfig(false, 7),
-		"non-positive":      backupConfig(true, 0),
+		"zero-interval":     backupConfig(true, 0),
 		"negative-interval": backupConfig(true, -1),
 	} {
 		t.Run(name, func(t *testing.T) {
-			svc := &fakeBackupService{needs: true}
-			w := NewDefaultBackupWorker(svc, cfg, ccc.NopLogger)
-			w.Start()
-			time.Sleep(20 * time.Millisecond)
-			w.Stop()
-			if checks, _, _ := svc.counts(); checks != 0 {
-				t.Fatalf("worker ran %d checks", checks)
-			}
+			synctest.Test(t, func(t *testing.T) {
+				svc := &fakeBackupService{needs: true}
+				w := NewDefaultBackupWorker(svc, cfg, ccc.NopLogger)
+				w.Start()
+				time.Sleep(72 * time.Hour)
+				synctest.Wait()
+				w.Stop()
+				if checks, _, _ := svc.counts(); checks != 0 {
+					t.Fatalf("worker ran %d checks", checks)
+				}
+			})
 		})
 	}
 }
 
 func TestBackupWorker_CreatesBackupAndCleansUp(t *testing.T) {
-	svc := &fakeBackupService{needs: true}
-	w := NewDefaultBackupWorker(svc, backupConfig(true, 7), ccc.NopLogger)
-	w.Start()
-	defer w.Stop()
+	synctest.Test(t, func(t *testing.T) {
+		svc := &fakeBackupService{needs: true}
+		w := NewDefaultBackupWorker(svc, backupConfig(true, 7), ccc.NopLogger)
+		w.Start()
+		defer w.Stop()
+		synctest.Wait()
 
-	eventually(t, func() bool { _, creates, cleanups := svc.counts(); return creates == 1 && cleanups == 1 })
-	if svc.creates[0] != backup.BackupTriggerAuto {
-		t.Fatalf("trigger = %s", svc.creates[0])
-	}
+		if _, creates, cleanups := svc.counts(); creates != 1 || cleanups != 1 {
+			t.Fatalf("creates=%d cleanups=%d, want 1 and 1", creates, cleanups)
+		}
+		if svc.creates[0] != backup.BackupTriggerAuto {
+			t.Fatalf("trigger = %s", svc.creates[0])
+		}
+	})
 }
 
 func TestBackupWorker_NoBackupNeeded(t *testing.T) {
-	svc := &fakeBackupService{}
-	w := NewDefaultBackupWorker(svc, backupConfig(true, 7), ccc.NopLogger)
-	w.Start()
-	defer w.Stop()
+	synctest.Test(t, func(t *testing.T) {
+		svc := &fakeBackupService{}
+		w := NewDefaultBackupWorker(svc, backupConfig(true, 7), ccc.NopLogger)
+		w.Start()
+		defer w.Stop()
+		synctest.Wait()
 
-	eventually(t, func() bool { checks, _, _ := svc.counts(); return checks == 1 })
-	if _, creates, _ := svc.counts(); creates != 0 {
-		t.Fatalf("created %d backups", creates)
-	}
+		if checks, creates, cleanups := svc.counts(); checks != 1 || creates != 0 || cleanups != 0 {
+			t.Fatalf("checks=%d creates=%d cleanups=%d", checks, creates, cleanups)
+		}
+	})
 }
 
 func TestBackupWorker_ErrorPaths(t *testing.T) {
@@ -147,30 +148,42 @@ func TestBackupWorker_ErrorPaths(t *testing.T) {
 	}
 }
 
-func TestBackupWorker_ChecksAgainOnTick(t *testing.T) {
-	svc := &fakeBackupService{}
-	w := NewDefaultBackupWorker(svc, backupConfig(true, 7), ccc.NopLogger)
-	w.checkInterval = 5 * time.Millisecond
-	w.Start()
-	defer w.Stop()
+func TestBackupWorker_ChecksOnStartAndEveryHour(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		svc := &fakeBackupService{}
+		w := NewDefaultBackupWorker(svc, backupConfig(true, 7), ccc.NopLogger)
+		w.Start()
+		defer w.Stop()
 
-	eventually(t, func() bool { checks, _, _ := svc.counts(); return checks >= 3 })
+		synctest.Wait()
+		if checks, _, _ := svc.counts(); checks != 1 {
+			t.Fatalf("after start: checks = %d, want 1", checks)
+		}
+		for want := 2; want <= 4; want++ {
+			time.Sleep(time.Hour)
+			synctest.Wait()
+			if checks, _, _ := svc.counts(); checks != want {
+				t.Fatalf("checks = %d, want %d", checks, want)
+			}
+		}
+	})
 }
 
 func TestBackupWorker_StopEndsTheLoop(t *testing.T) {
-	svc := &fakeBackupService{}
-	w := NewDefaultBackupWorker(svc, backupConfig(true, 7), ccc.NopLogger)
-	w.checkInterval = 5 * time.Millisecond
-	w.Start()
-	eventually(t, func() bool { checks, _, _ := svc.counts(); return checks >= 1 })
+	synctest.Test(t, func(t *testing.T) {
+		svc := &fakeBackupService{}
+		w := NewDefaultBackupWorker(svc, backupConfig(true, 7), ccc.NopLogger)
+		w.Start()
+		synctest.Wait()
 
-	w.Stop()
-	time.Sleep(20 * time.Millisecond) // let an in-flight check finish
-	before, _, _ := svc.counts()
-	time.Sleep(50 * time.Millisecond)
-	if after, _, _ := svc.counts(); after != before {
-		t.Fatalf("worker kept running after Stop: %d -> %d", before, after)
-	}
+		w.Stop()
+		synctest.Wait()
+		time.Sleep(48 * time.Hour)
+		synctest.Wait()
+		if checks, _, _ := svc.counts(); checks != 1 {
+			t.Fatalf("worker kept running after Stop: checks = %d", checks)
+		}
+	})
 }
 
 type fakeChecker struct {
@@ -178,14 +191,12 @@ type fakeChecker struct {
 	release *updates.ReleaseInfo
 	err     error
 	calls   int
-	ctxErr  error
 }
 
 func (f *fakeChecker) Check(ctx context.Context) (*updates.ReleaseInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls++
-	f.ctxErr = ctx.Err()
 	return f.release, f.err
 }
 func (f *fakeChecker) Latest() *updates.ReleaseInfo { return f.release }
@@ -203,24 +214,38 @@ func TestUpdateCheckWorker_NilLoggerDefaults(t *testing.T) {
 }
 
 func TestUpdateCheckWorker_DisabledDoesNotRun(t *testing.T) {
-	checker := &fakeChecker{}
-	w := NewDefaultUpdateCheckWorker(checker, ccc.AppConfig{UpdateCheckEnabled: false}, ccc.NopLogger)
-	w.Start()
-	time.Sleep(20 * time.Millisecond)
-	w.Stop()
-	if checker.callCount() != 0 {
-		t.Fatal("disabled worker checked for updates")
-	}
+	synctest.Test(t, func(t *testing.T) {
+		checker := &fakeChecker{}
+		w := NewDefaultUpdateCheckWorker(checker, ccc.AppConfig{UpdateCheckEnabled: false}, ccc.NopLogger)
+		w.Start()
+		time.Sleep(72 * time.Hour)
+		synctest.Wait()
+		w.Stop()
+		if checker.callCount() != 0 {
+			t.Fatal("disabled worker checked for updates")
+		}
+	})
 }
 
-func TestUpdateCheckWorker_ChecksOnStartAndOnTick(t *testing.T) {
-	checker := &fakeChecker{release: &updates.ReleaseInfo{Version: "9.9.9", URL: "u"}}
-	w := NewDefaultUpdateCheckWorker(checker, ccc.AppConfig{UpdateCheckEnabled: true}, ccc.NopLogger)
-	w.interval = 5 * time.Millisecond
-	w.Start()
-	defer w.Stop()
+func TestUpdateCheckWorker_ChecksOnStartAndEveryDay(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		checker := &fakeChecker{release: &updates.ReleaseInfo{Version: "9.9.9", URL: "u"}}
+		w := NewDefaultUpdateCheckWorker(checker, ccc.AppConfig{UpdateCheckEnabled: true}, ccc.NopLogger)
+		w.Start()
+		defer w.Stop()
 
-	eventually(t, func() bool { return checker.callCount() >= 3 })
+		synctest.Wait()
+		if checker.callCount() != 1 {
+			t.Fatalf("after start: calls = %d, want 1", checker.callCount())
+		}
+		for want := 2; want <= 4; want++ {
+			time.Sleep(24 * time.Hour)
+			synctest.Wait()
+			if checker.callCount() != want {
+				t.Fatalf("calls = %d, want %d", checker.callCount(), want)
+			}
+		}
+	})
 }
 
 func TestUpdateCheckWorker_CheckErrorIsTolerated(t *testing.T) {
@@ -233,20 +258,21 @@ func TestUpdateCheckWorker_CheckErrorIsTolerated(t *testing.T) {
 }
 
 func TestUpdateCheckWorker_StopCancelsContextAndLoop(t *testing.T) {
-	checker := &fakeChecker{}
-	w := NewDefaultUpdateCheckWorker(checker, ccc.AppConfig{UpdateCheckEnabled: true}, ccc.NopLogger)
-	w.interval = 5 * time.Millisecond
-	w.Start()
-	eventually(t, func() bool { return checker.callCount() >= 1 })
+	synctest.Test(t, func(t *testing.T) {
+		checker := &fakeChecker{}
+		w := NewDefaultUpdateCheckWorker(checker, ccc.AppConfig{UpdateCheckEnabled: true}, ccc.NopLogger)
+		w.Start()
+		synctest.Wait()
 
-	w.Stop()
-	time.Sleep(20 * time.Millisecond)
-	before := checker.callCount()
-	time.Sleep(50 * time.Millisecond)
-	if after := checker.callCount(); after != before {
-		t.Fatalf("worker kept running after Stop: %d -> %d", before, after)
-	}
-	if w.ctx.Err() == nil {
-		t.Fatal("Stop must cancel the worker context")
-	}
+		w.Stop()
+		synctest.Wait()
+		time.Sleep(72 * time.Hour)
+		synctest.Wait()
+		if checker.callCount() != 1 {
+			t.Fatalf("worker kept running after Stop: calls = %d", checker.callCount())
+		}
+		if w.ctx.Err() == nil {
+			t.Fatal("Stop must cancel the worker context")
+		}
+	})
 }

@@ -10,12 +10,11 @@ import (
 
 // DefaultUpdateCheckWorker periodically checks for newer releases in the background
 type DefaultUpdateCheckWorker struct {
-	checker  updates.UpdateChecker
-	config   ccc.AppConfig
-	logger   ccc.Logger
-	interval time.Duration
-	ctx      context.Context
-	cancel   context.CancelFunc
+	checker updates.UpdateChecker
+	config  ccc.AppConfig
+	logger  ccc.Logger
+	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
 // NewDefaultUpdateCheckWorker creates a new update check worker instance
@@ -27,12 +26,11 @@ func NewDefaultUpdateCheckWorker(checker updates.UpdateChecker, config ccc.AppCo
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &DefaultUpdateCheckWorker{
-		checker:  checker,
-		config:   config,
-		logger:   logger,
-		interval: 24 * time.Hour,
-		ctx:      ctx,
-		cancel:   cancel,
+		checker: checker,
+		config:  config,
+		logger:  logger,
+		ctx:     ctx,
+		cancel:  cancel,
 	}
 }
 
@@ -56,7 +54,7 @@ func (w *DefaultUpdateCheckWorker) Stop() {
 
 // run is the main worker loop that runs in the background
 func (w *DefaultUpdateCheckWorker) run() {
-	ticker := time.NewTicker(w.interval)
+	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 
 	w.performUpdateCheck()
