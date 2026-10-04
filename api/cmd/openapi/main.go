@@ -2,7 +2,8 @@
 //
 //	go run ./api/cmd/openapi > api/openapi.yaml
 //
-// It builds the router without any database, Redis or environment.
+// It builds the router without any database, Redis or environment: handlers are constructed
+// with nil dependencies, which is fine because no operation is ever invoked.
 package main
 
 import (
@@ -10,6 +11,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/api/handlers/system"
 	"github.com/Yeti47/frozenfortress/frozenfortress/api/server"
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +19,7 @@ import (
 // generateSpec renders the OpenAPI document of the production router as YAML.
 func generateSpec() ([]byte, error) {
 	gin.SetMode(gin.ReleaseMode) // keep gin's route debug output off stdout, which carries the spec
-	_, api, err := server.NewRouter(server.Deps{}, server.Options{})
+	_, api, err := server.NewRouter(nil, server.Options{}, system.NewHandler(nil, nil, nil))
 	if err != nil {
 		return nil, err
 	}

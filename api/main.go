@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/api/handlers/system"
 	"github.com/Yeti47/frozenfortress/frozenfortress/api/server"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 )
@@ -38,17 +39,12 @@ func run() error {
 
 	svc := configureServices(config, db)
 
-	router, _, err := server.NewRouter(server.Deps{
-		Logger:            svc.Logger,
-		DB:                db,
-		UpdateChecker:     svc.UpdateChecker,
-		SignInManager:     svc.SignInManager,
-		MekStore:          svc.MekStore,
-		EncryptionService: svc.EncryptionService,
-	}, server.Options{
+	router, _, err := server.NewRouter(svc.Logger, server.Options{
 		TrustedProxies: config.TrustedProxies,
 		DocsEnabled:    os.Getenv(envDocsEnabled) == "true",
-	})
+	},
+		system.NewHandler(svc.Logger, db, svc.UpdateChecker),
+	)
 	if err != nil {
 		return err
 	}

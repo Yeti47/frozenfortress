@@ -67,10 +67,8 @@ components:
       additionalProperties: false
       properties:
         latestRelease:
-          description: The newest release, only set when it is newer than the running version.
-          oneOf:
-            - $ref: "#/components/schemas/LatestRelease"
-            - type: "null"
+          $ref: "#/components/schemas/LatestRelease"
+          description: The newest release. Absent when the running version is up to date, or when the update check is disabled or has not succeeded yet.
         version:
           description: Version of the running API.
           examples:
@@ -78,7 +76,6 @@ components:
           type: string
       required:
         - version
-        - latestRelease
       type: object
     LatestRelease:
       additionalProperties: false

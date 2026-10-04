@@ -9,47 +9,21 @@ import (
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/api/server"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
-	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
 	"github.com/gin-gonic/gin"
 )
 
-// ServerOptions override the default fakes of NewTestServer. Zero fields keep the default.
-type ServerOptions struct {
-	Deps    server.Deps
-	Options server.Options
-}
-
-// TestServer is the real router, built by server.NewRouter, with injectable services.
+// TestServer is a router with request helpers.
 type TestServer struct {
 	Router *gin.Engine
 }
 
-// NewTestServer builds the production router with fakes for every service the options leave unset.
-func NewTestServer(t testing.TB, opts ServerOptions) *TestServer {
+// NewTestServer builds the production router (server.NewRouter, default options) around the
+// given handlers, which the test constructs with whatever fakes it needs.
+func NewTestServer(t testing.TB, handlers ...server.Registrar) *TestServer {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
-	deps := opts.Deps
-	if deps.Logger == nil {
-		deps.Logger = ccc.NopLogger
-	}
-	if deps.DB == nil {
-		deps.DB = &FakePinger{}
-	}
-	if deps.UpdateChecker == nil {
-		deps.UpdateChecker = &FakeUpdateChecker{}
-	}
-	if deps.SignInManager == nil {
-		deps.SignInManager = NewAuthedSignInManager("user-1")
-	}
-	if deps.MekStore == nil {
-		deps.MekStore = NewFakeMekStore()
-	}
-	if deps.EncryptionService == nil {
-		deps.EncryptionService = encryption.NewDefaultEncryptionService()
-	}
-
-	router, _, err := server.NewRouter(deps, opts.Options)
+	router, _, err := server.NewRouter(ccc.NopLogger, server.Options{}, handlers...)
 	if err != nil {
 		t.Fatalf("failed to build router: %v", err)
 	}

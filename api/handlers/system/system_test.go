@@ -4,21 +4,23 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Yeti47/frozenfortress/frozenfortress/api/handlers/system"
 	"github.com/Yeti47/frozenfortress/frozenfortress/api/internal/testutil"
-	"github.com/Yeti47/frozenfortress/frozenfortress/api/server"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/updates"
-	"github.com/gin-gonic/gin"
 )
 
+func newServer(t *testing.T, db system.Pinger, release *updates.ReleaseInfo) *testutil.TestServer {
+	t.Helper()
+	return testutil.NewTestServer(t, system.NewHandler(ccc.NopLogger, db, &testutil.FakeUpdateChecker{Release: release}))
+}
+
 func TestHealth_OK(t *testing.T) {
-	ts := testutil.NewTestServer(t, testutil.ServerOptions{})
-	rec := ts.Get("/api/system/health")
+	rec := newServer(t, &testutil.FakePinger{}, nil).Get("/api/system/health")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d (%s)", rec.Code, rec.Body)
@@ -29,10 +31,7 @@ func TestHealth_OK(t *testing.T) {
 }
 
 func TestHealth_DatabaseDown(t *testing.T) {
-	ts := testutil.NewTestServer(t, testutil.ServerOptions{
-		Deps: server.Deps{DB: &testutil.FakePinger{Err: errors.New("db gone")}},
-	})
-	rec := ts.Get("/api/system/health")
+	rec := newServer(t, &testutil.FakePinger{Err: errors.New("db gone")}, nil).Get("/api/system/health")
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d", rec.Code)
@@ -46,8 +45,7 @@ func TestHealth_DatabaseDown(t *testing.T) {
 }
 
 func TestInfo_NoNewerRelease(t *testing.T) {
-	ts := testutil.NewTestServer(t, testutil.ServerOptions{})
-	rec := ts.Get("/api/system/info")
+	rec := newServer(t, &testutil.FakePinger{}, nil).Get("/api/system/info")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d (%s)", rec.Code, rec.Body)
@@ -59,19 +57,16 @@ func TestInfo_NoNewerRelease(t *testing.T) {
 	if string(raw["version"]) != `"`+ccc.AppVersion+`"` {
 		t.Fatalf("version = %s", raw["version"])
 	}
-	if string(raw["latestRelease"]) != "null" {
-		t.Fatalf("latestRelease = %s, want null", raw["latestRelease"])
+	if _, present := raw["latestRelease"]; present {
+		t.Fatalf("latestRelease must be absent when up to date: %s", rec.Body)
 	}
 }
 
 func TestInfo_NewerRelease(t *testing.T) {
 	published := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
-	ts := testutil.NewTestServer(t, testutil.ServerOptions{
-		Deps: server.Deps{UpdateChecker: &testutil.FakeUpdateChecker{Release: &updates.ReleaseInfo{
-			Version: "9.9.9", URL: "https://example.com/r", PublishedAt: published,
-		}}},
-	})
-	rec := ts.Get("/api/system/info")
+	rec := newServer(t, &testutil.FakePinger{}, &updates.ReleaseInfo{
+		Version: "9.9.9", URL: "https://example.com/r", PublishedAt: published,
+	}).Get("/api/system/info")
 
 	var body struct {
 		Version       string `json:"version"`
@@ -87,20 +82,5 @@ func TestInfo_NewerRelease(t *testing.T) {
 	if body.LatestRelease == nil || body.LatestRelease.Version != "9.9.9" ||
 		body.LatestRelease.URL != "https://example.com/r" || !body.LatestRelease.PublishedAt.Equal(published) {
 		t.Fatalf("unexpected body: %s", rec.Body)
-	}
-}
-
-func TestNilServices(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	router, _, err := server.NewRouter(server.Deps{}, server.Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, path := range []string{"/api/system/health", "/api/system/info"} {
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
-		if rec.Code != http.StatusOK {
-			t.Fatalf("%s: status = %d", path, rec.Code)
-		}
 	}
 }

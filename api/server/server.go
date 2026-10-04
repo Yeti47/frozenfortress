@@ -7,25 +7,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Yeti47/frozenfortress/frozenfortress/api/handlers/system"
 	"github.com/Yeti47/frozenfortress/frozenfortress/api/internal/problem"
-	"github.com/Yeti47/frozenfortress/frozenfortress/core/auth"
 	"github.com/Yeti47/frozenfortress/frozenfortress/core/ccc"
-	"github.com/Yeti47/frozenfortress/frozenfortress/core/encryption"
-	"github.com/Yeti47/frozenfortress/frozenfortress/core/updates"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humagin"
 	"github.com/gin-gonic/gin"
 )
 
-// Deps are the services the API handlers need. Resource issues add their services here.
-type Deps struct {
-	Logger            ccc.Logger
-	DB                system.Pinger
-	UpdateChecker     updates.UpdateChecker
-	SignInManager     auth.SignInManager
-	MekStore          auth.MekStore
-	EncryptionService encryption.EncryptionService
+// Registrar adds a group of operations to the API. Every handler object implements it; its
+// dependencies are injected into its own constructor, not into the router.
+type Registrar interface {
+	Register(api huma.API)
 }
 
 // Options are the settings that do not come from services.
@@ -40,9 +32,9 @@ type Options struct {
 //
 // NOTE for upload operations: Huma's default MaxBodyBytes is 1 MB. Operations that accept
 // file uploads must raise it explicitly (huma.Operation.MaxBodyBytes).
-func NewRouter(deps Deps, opts Options) (*gin.Engine, huma.API, error) {
-	if deps.Logger == nil {
-		deps.Logger = ccc.NopLogger
+func NewRouter(logger ccc.Logger, opts Options, handlers ...Registrar) (*gin.Engine, huma.API, error) {
+	if logger == nil {
+		logger = ccc.NopLogger
 	}
 
 	router := gin.New()
@@ -53,11 +45,11 @@ func NewRouter(deps Deps, opts Options) (*gin.Engine, huma.API, error) {
 
 	router.Use(
 		gin.CustomRecoveryWithWriter(nil, func(c *gin.Context, recovered any) {
-			deps.Logger.Error("Panic while handling request", "path", c.Request.URL.Path, "panic", fmt.Sprint(recovered))
-			writeProblem(c, problem.Map(deps.Logger, fmt.Errorf("panic: %v", recovered)))
+			logger.Error("Panic while handling request", "path", c.Request.URL.Path, "panic", fmt.Sprint(recovered))
+			writeProblem(c, problem.Map(logger, fmt.Errorf("panic: %v", recovered)))
 		}),
 		securityHeaders(),
-		requestLogger(deps.Logger),
+		requestLogger(logger),
 	)
 	// TODO(YETI-83): register the auth session and CSRF (double-submit XSRF) middleware here,
 	// after the security headers and before the routes.
@@ -71,7 +63,9 @@ func NewRouter(deps Deps, opts Options) (*gin.Engine, huma.API, error) {
 	})
 
 	api := humagin.New(router, apiConfig(opts))
-	system.Register(api, system.Deps{Logger: deps.Logger, DB: deps.DB, UpdateChecker: deps.UpdateChecker})
+	for _, h := range handlers {
+		h.Register(api)
+	}
 
 	return router, api, nil
 }
