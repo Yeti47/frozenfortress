@@ -10,7 +10,7 @@ import (
 // TestSnapshotIsUpToDate fails when api/openapi.yaml differs from the generated spec.
 // Regenerate with: go run ./api/cmd/openapi > api/openapi.yaml
 func TestSnapshotIsUpToDate(t *testing.T) {
-	want, err := Spec()
+	want, err := generateSpec()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,9 +28,9 @@ func TestRunWritesSpec(t *testing.T) {
 	if err := run(&buf); err != nil {
 		t.Fatal(err)
 	}
-	want, _ := Spec()
+	want, _ := generateSpec()
 	if !bytes.Equal(buf.Bytes(), want) {
-		t.Fatal("run output differs from Spec")
+		t.Fatal("run output differs from generateSpec")
 	}
 }
 

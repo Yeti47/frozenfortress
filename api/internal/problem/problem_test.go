@@ -90,7 +90,7 @@ func TestMap_InvalidInputExposesField(t *testing.T) {
 func TestMap_UnknownErrorIsGenericAndLogged(t *testing.T) {
 	logger := &recordingLogger{}
 	m := model(t, Map(logger, errors.New("secret internals")))
-	if m.GetStatus() != 500 || m.Detail != GenericMessage {
+	if m.GetStatus() != 500 || m.Detail != genericMessage {
 		t.Fatalf("got %d %q", m.GetStatus(), m.Detail)
 	}
 	if len(logger.errors) != 1 {

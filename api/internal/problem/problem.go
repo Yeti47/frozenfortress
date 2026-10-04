@@ -11,8 +11,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 )
 
-// GenericMessage is the detail sent for errors that are not ccc.ApiErrors.
-const GenericMessage = "An unexpected error occurred. Please try again later or contact your administrator."
+// genericMessage is the detail sent for errors that are not ccc.ApiErrors.
+const genericMessage = "An unexpected error occurred. Please try again later or contact your administrator."
 
 // Map converts err into a huma.StatusError.
 //
@@ -45,5 +45,5 @@ func Map(logger ccc.Logger, err error) huma.StatusError {
 	}
 
 	logger.Error("Unexpected error", "error", err)
-	return huma.NewError(http.StatusInternalServerError, GenericMessage)
+	return huma.NewError(http.StatusInternalServerError, genericMessage)
 }

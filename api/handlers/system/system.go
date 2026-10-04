@@ -26,32 +26,32 @@ type Deps struct {
 	UpdateChecker updates.UpdateChecker
 }
 
-// HealthBody is the response of GET /api/system/health.
-type HealthBody struct {
+// healthBody is the response of GET /api/system/health.
+type healthBody struct {
 	Status string `json:"status" enum:"ok" doc:"Always \"ok\" when the API is healthy."`
 }
 
-// HealthOutput wraps HealthBody for Huma.
-type HealthOutput struct {
-	Body HealthBody
+// healthOutput wraps healthBody for Huma.
+type healthOutput struct {
+	Body healthBody
 }
 
-// LatestRelease describes a newer published release.
-type LatestRelease struct {
+// latestRelease describes a newer published release.
+type latestRelease struct {
 	Version     string    `json:"version" doc:"Version without a leading \"v\"." example:"1.4.1"`
 	URL         string    `json:"url" doc:"Link to the release page."`
 	PublishedAt time.Time `json:"publishedAt"`
 }
 
-// InfoBody is the response of GET /api/system/info.
-type InfoBody struct {
+// infoBody is the response of GET /api/system/info.
+type infoBody struct {
 	Version       string         `json:"version" doc:"Version of the running API." example:"1.4.0"`
-	LatestRelease *LatestRelease `json:"latestRelease" doc:"The newest release, only set when it is newer than the running version."`
+	LatestRelease *latestRelease `json:"latestRelease" doc:"The newest release, only set when it is newer than the running version."`
 }
 
 // TransformSchema makes latestRelease nullable in the spec: Huma cannot express that for
 // a pointer to a struct through a struct tag.
-func (InfoBody) TransformSchema(r huma.Registry, s *huma.Schema) *huma.Schema {
+func (infoBody) TransformSchema(r huma.Registry, s *huma.Schema) *huma.Schema {
 	if prop, ok := s.Properties["latestRelease"]; ok {
 		s.Properties["latestRelease"] = &huma.Schema{
 			Description: prop.Description,
@@ -61,9 +61,9 @@ func (InfoBody) TransformSchema(r huma.Registry, s *huma.Schema) *huma.Schema {
 	return s
 }
 
-// InfoOutput wraps InfoBody for Huma.
-type InfoOutput struct {
-	Body InfoBody
+// infoOutput wraps infoBody for Huma.
+type infoOutput struct {
+	Body infoBody
 }
 
 // Register adds the system operations to api.
@@ -76,7 +76,7 @@ func Register(api huma.API, deps Deps) {
 		Description: "Used by the container healthcheck. Pings the database only; never touches Redis or Ollama.",
 		Tags:        []string{"System"},
 		Errors:      []int{http.StatusServiceUnavailable},
-	}, func(ctx context.Context, _ *struct{}) (*HealthOutput, error) {
+	}, func(ctx context.Context, _ *struct{}) (*healthOutput, error) {
 		if deps.DB != nil {
 			pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
@@ -90,7 +90,7 @@ func Register(api huma.API, deps Deps) {
 				})
 			}
 		}
-		return &HealthOutput{Body: HealthBody{Status: "ok"}}, nil
+		return &healthOutput{Body: healthBody{Status: "ok"}}, nil
 	})
 
 	huma.Register(api, huma.Operation{
@@ -99,17 +99,17 @@ func Register(api huma.API, deps Deps) {
 		Path:        "/api/system/info",
 		Summary:     "Version and update information",
 		Tags:        []string{"System"},
-	}, func(ctx context.Context, _ *struct{}) (*InfoOutput, error) {
-		body := InfoBody{Version: ccc.AppVersion}
+	}, func(ctx context.Context, _ *struct{}) (*infoOutput, error) {
+		body := infoBody{Version: ccc.AppVersion}
 		if deps.UpdateChecker != nil {
 			if release := deps.UpdateChecker.Latest(); release != nil {
-				body.LatestRelease = &LatestRelease{
+				body.LatestRelease = &latestRelease{
 					Version:     release.Version,
 					URL:         release.URL,
 					PublishedAt: release.PublishedAt,
 				}
 			}
 		}
-		return &InfoOutput{Body: body}, nil
+		return &infoOutput{Body: body}, nil
 	})
 }
