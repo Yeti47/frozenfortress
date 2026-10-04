@@ -69,7 +69,7 @@ This will automatically build the application and create a GitHub release with t
 ## Dependencies Installed
 
 Both workflows automatically install the following system dependencies:
-- Go 1.24.3
+- Go 1.26.8
 - Tesseract OCR with English language pack
 - Tesseract development libraries
 - Leptonica development libraries  

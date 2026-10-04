@@ -27,6 +27,8 @@ const (
 	EnvKeyDir               = "FF_KEY_DIR"
 	EnvSessionMaxAgeDays    = "FF_SESSION_MAX_AGE_DAYS"
 	EnvWebUIPort            = "FF_WEB_UI_PORT"
+	EnvAPIPort              = "FF_API_PORT"
+	EnvTrustedProxies       = "FF_TRUSTED_PROXIES"
 	EnvLogLevel             = "FF_LOG_LEVEL"
 	EnvBackupEnabled        = "FF_BACKUP_ENABLED"
 	EnvBackupIntervalDays   = "FF_BACKUP_INTERVAL_DAYS"
@@ -87,8 +89,11 @@ type AppConfig struct {
 
 	SessionMaxAgeDays int // How long a sign-in session lasts, in days
 
-	WebUiPort int    // Port for the Web UI server
-	LogLevel  string // Log level (Debug, Info, Warn, Error)
+	WebUiPort int // Port for the Web UI server
+	APIPort   int // Port for the JSON API server (falls back to WebUiPort when FF_API_PORT is unset)
+	// TrustedProxies lists the CIDRs/IPs whose forwarding headers are trusted. Empty trusts none.
+	TrustedProxies []string
+	LogLevel       string // Log level (Debug, Info, Warn, Error)
 
 	Backup BackupConfig // Backup configuration
 	OCR    OCRConfig    // OCR configuration
@@ -119,6 +124,7 @@ var DefaultConfig = AppConfig{
 	KeyDir:              "",
 	SessionMaxAgeDays:   30,
 	WebUiPort:           8080,   // Default Web UI port
+	APIPort:             8080,   // Default API port
 	LogLevel:            "Info", // Default log level
 	Backup: BackupConfig{
 		Enabled:        false,                                      // Disabled by default
@@ -206,6 +212,17 @@ func LoadConfigFromEnv() AppConfig {
 		if port, err := strconv.Atoi(webUIPort); err == nil {
 			config.WebUiPort = port
 		}
+	}
+
+	// API configuration: FF_API_PORT wins, FF_WEB_UI_PORT is the compatibility fallback
+	config.APIPort = config.WebUiPort
+	if apiPort := os.Getenv(EnvAPIPort); apiPort != "" {
+		if port, err := strconv.Atoi(apiPort); err == nil {
+			config.APIPort = port
+		}
+	}
+	if proxies := os.Getenv(EnvTrustedProxies); proxies != "" {
+		config.TrustedProxies = ParseCommaSeparated(proxies)
 	}
 
 	// Log level configuration
@@ -362,4 +379,15 @@ func SetupDatabase(config AppConfig) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+// ParseCommaSeparated splits a comma-separated value, trimming blanks and dropping empty entries.
+func ParseCommaSeparated(value string) []string {
+	var result []string
+	for _, part := range strings.Split(value, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			result = append(result, part)
+		}
+	}
+	return result
 }

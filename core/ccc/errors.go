@@ -25,6 +25,7 @@ type ApiError struct {
 	UserMessage      string    // User-friendly message safe to display to end users
 	TechnicalMessage string    // Technical details for logging/debugging
 	Cause            error     // Underlying error (for logging/debugging)
+	Field            string    // Name of the offending input field, for invalid-input errors
 }
 
 func (e *ApiError) Error() string {
@@ -67,6 +68,7 @@ func NewInvalidInputError(field, reason string) *ApiError {
 		Code:             ErrCodeInvalidInput,
 		UserMessage:      "Invalid input provided",
 		TechnicalMessage: fmt.Sprintf("invalid %s: %s", field, reason),
+		Field:            field,
 	}
 }
 
@@ -77,6 +79,7 @@ func NewInvalidInputErrorWithMessage(field, reason, userMessage string) *ApiErro
 		Code:             ErrCodeInvalidInput,
 		UserMessage:      userMessage,
 		TechnicalMessage: fmt.Sprintf("invalid %s: %s", field, reason),
+		Field:            field,
 	}
 }
 
