@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Blocks commits whose staged changes contain secrets (gitleaks).
+# Activate with ./setup-hooks.sh. See doc/secret-scanning.md.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+# shellcheck source=gitleaks.env
+. "$root/.githooks/gitleaks.env"
+
+# Git GUIs often start hooks without the user's PATH additions.
+PATH="$HOME/.local/bin:$PATH"
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  cat >&2 <<MSG
+pre-commit: gitleaks is not installed, so this commit was blocked.
+Install the pinned version (v$GITLEAKS_VERSION) with:
+  ./setup-hooks.sh --install
+MSG
+  exit 1
+fi
+
+installed="$(gitleaks version 2>/dev/null | tr -d 'v' || true)"
+if [ "$installed" != "$GITLEAKS_VERSION" ]; then
+  echo "pre-commit: warning: gitleaks $installed found, repo pins $GITLEAKS_VERSION (./setup-hooks.sh --install)" >&2
+fi
+
+if ! gitleaks git --staged --redact --no-banner --verbose \
+     --config "$root/.gitleaks.toml" "$root"; then
+  cat >&2 <<'MSG'
+
+pre-commit: possible secret in staged changes, commit blocked.
+  - Remove the secret from the change and load it at runtime instead (AGENTS.md section 2).
+  - If it was ever real, rotate it. Removing it from the commit is not enough.
+  - Verified false positive? Add a justified allowlist entry to .gitleaks.toml.
+See doc/secret-scanning.md.
+MSG
+  exit 1
+fi

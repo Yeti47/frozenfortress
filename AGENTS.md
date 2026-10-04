@@ -80,6 +80,7 @@ Generate with `pip-compile --generate-hashes`.
 
 - **Never** hardcode secrets, tokens, passwords, or API keys in source files, Dockerfiles, or CI config.
 - **Never** pass secrets as environment variables when a secrets manager or mounted secret file is available (e.g. Docker secrets, Kubernetes secrets mounted as files).
+- A gitleaks pre-commit hook and a CI scan enforce this. Run `./setup-hooks.sh --install` once per clone, never bypass the hook with `--no-verify` except in an emergency, and rotate any secret that was committed. See [`doc/secret-scanning.md`](doc/secret-scanning.md).
 - **Never** log secrets. Treat any header named `Authorization`, `X-*-Secret`, `X-*-Key`, `X-*-Token`, or `Password` as sensitive — mask or omit from logs.
 - Secrets that change independently of code (e.g. SMTP credentials, API keys) must be stored outside the repository and injected at runtime. Rotating them must **not** require a code change or pipeline trigger.
 - CI/CD secrets (e.g. GitHub Actions secrets) should be **scoped as narrowly as possible** and reviewed when pipeline steps change. Delete any secret that is no longer referenced.

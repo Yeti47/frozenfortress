@@ -123,6 +123,8 @@ Issues and pull requests are welcome. Frozen Fortress is built with Go, SQLite, 
 
 To build from source, install the development dependencies (`./install-dev-deps-debian.sh` or `./install-dev-deps-fedora.sh`) and run `./build-all.sh`. For a complete local stack (web UI, Redis and OCR) with one command, run `./dev.sh`; see the [dev stack guide](https://github.com/Yeti47/frozenfortress/blob/master/doc/dev-stack.md). To build the Docker images from a clone instead of downloading a release, run `docker compose up -d --build`.
 
+Enable the secret-scanning pre-commit hook once after cloning with `./setup-hooks.sh --install`; see [secret scanning](doc/secret-scanning.md).
+
 Work on the upcoming v2 (Go JSON API plus Angular UI) happens on the `feature/v2` branch; see the [v2 architecture and conventions](doc/v2-architecture.md) before contributing there.
 
 ## License

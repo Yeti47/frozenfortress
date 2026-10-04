@@ -1,0 +1,32 @@
+name: Secret scan
+
+on:
+  push:
+    branches: [ master, feature/v2 ]
+  pull_request:
+    branches: [ master, feature/v2 ]
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout code (full history)
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Install pinned gitleaks (checksum verified)
+      run: .githooks/install-gitleaks.sh "$RUNNER_TEMP/bin"
+
+    - name: Scan history and working tree
+      run: |
+        "$RUNNER_TEMP/bin/gitleaks" git --redact --no-banner --verbose --config .gitleaks.toml .
+        "$RUNNER_TEMP/bin/gitleaks" dir --redact --no-banner --verbose --config .gitleaks.toml .
