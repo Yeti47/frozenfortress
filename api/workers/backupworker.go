@@ -13,6 +13,7 @@ type DefaultBackupWorker struct {
 	backupService backup.BackupService
 	config        ccc.AppConfig
 	logger        ccc.Logger
+	checkInterval time.Duration
 	ctx           context.Context
 	cancel        context.CancelFunc
 }
@@ -29,6 +30,7 @@ func NewDefaultBackupWorker(backupService backup.BackupService, config ccc.AppCo
 		backupService: backupService,
 		config:        config,
 		logger:        logger,
+		checkInterval: time.Hour,
 		ctx:           ctx,
 		cancel:        cancel,
 	}
@@ -66,8 +68,8 @@ func (w *DefaultBackupWorker) Stop() {
 
 // run is the main worker loop that runs in the background
 func (w *DefaultBackupWorker) run() {
-	// Check interval - we'll check for backups every hour
-	checkInterval := time.Hour
+	// Check for backups periodically (hourly unless overridden in tests)
+	checkInterval := w.checkInterval
 
 	// Create a ticker for periodic checks
 	ticker := time.NewTicker(checkInterval)

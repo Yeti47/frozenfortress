@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -61,16 +62,36 @@ func run() error {
 		IdleTimeout:       120 * time.Second,
 	}
 
-	svc.BackupWorker.Start()
-	svc.UpdateCheckWorker.Start()
+	ln, err := net.Listen("tcp", srv.Addr)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %s: %w", srv.Addr, err)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// The deferred db.Close runs last, after serve has stopped the workers and drained requests.
+	return serve(ctx, srv, ln, svc.Logger, shutdownTimeout, svc.BackupWorker, svc.UpdateCheckWorker)
+}
+
+// worker is a background job with a start/stop lifecycle.
+type worker interface {
+	Start()
+	Stop()
+}
+
+// serve starts the workers and serves srv on ln until ctx is cancelled or the server fails.
+// It then shuts down in a fixed order: stop the workers, drain in-flight requests (up to
+// timeout), and only then return, so the caller can close the DB.
+func serve(ctx context.Context, srv *http.Server, ln net.Listener, logger ccc.Logger, timeout time.Duration, workers ...worker) error {
+	for _, w := range workers {
+		w.Start()
+	}
+
 	serveErr := make(chan error, 1)
 	go func() {
-		svc.Logger.Info("API listening", "addr", srv.Addr)
-		serveErr <- srv.ListenAndServe()
+		logger.Info("API listening", "addr", ln.Addr().String())
+		serveErr <- srv.Serve(ln)
 	}()
 
 	var result error
@@ -80,18 +101,19 @@ func run() error {
 			result = err
 		}
 	case <-ctx.Done():
-		svc.Logger.Info("Shutdown signal received")
+		logger.Info("Shutdown signal received")
 	}
 
-	// 1. stop the workers, 2. drain in-flight requests, 3. close the DB (deferred).
-	svc.Logger.Info("Shutting down background workers...")
-	svc.BackupWorker.Stop()
-	svc.UpdateCheckWorker.Stop()
+	logger.Info("Shutting down background workers...")
+	for _, w := range workers {
+		w.Stop()
+	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		svc.Logger.Error("Graceful shutdown failed", "error", err)
+		logger.Error("Graceful shutdown failed", "error", err)
+		srv.Close() // give up on requests still in flight
 		if result == nil {
 			result = err
 		}

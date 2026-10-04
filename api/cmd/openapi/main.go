@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/Yeti47/frozenfortress/frozenfortress/api/server"
@@ -23,11 +24,18 @@ func Spec() ([]byte, error) {
 	return api.OpenAPI().YAML()
 }
 
-func main() {
+func run(w io.Writer) error {
 	spec, err := Spec()
 	if err != nil {
+		return err
+	}
+	_, err = w.Write(spec)
+	return err
+}
+
+func main() {
+	if err := run(os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	os.Stdout.Write(spec)
 }
