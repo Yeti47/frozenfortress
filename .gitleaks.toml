@@ -1,0 +1,14 @@
+# gitleaks configuration. Extends the default ruleset, which covers typical
+# cloud keys, tokens, private keys and password assignments.
+title = "Frozen Fortress gitleaks config"
+
+[extend]
+useDefault = true
+
+# Allowlist entries are only for verified false positives. Every entry needs a
+# comment saying what it matches and why it is not a secret. None are needed yet:
+# the full history and working tree were clean when this was introduced.
+#
+# [[allowlists]]
+# description = "<what and why>"
+# paths = ['''path/to/file''']
