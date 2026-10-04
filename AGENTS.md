@@ -48,6 +48,8 @@ If the tag is annotated, dereference: `gh api /repos/<owner>/<repo>/git/tags/<sh
 ```
 Always commit `package-lock.json` / `pnpm-lock.yaml` / `yarn.lock`. Never run installs without `--frozen-lockfile` / `npm ci` in CI.
 
+These rules apply to the Angular workspace in `ui/`: exact versions only, a `.npmrc` with `save-exact=true`, a committed `package-lock.json`, and `npm ci` in CI and Dockerfiles.
+
 ### NuGet
 ```xml
 <!-- WRONG -->
@@ -113,3 +115,9 @@ When a dependency must be updated:
 4. Commit pin + lockfile together in the same change.
 
 Do **not** bump a pin without verifying the new version/digest against the official release (check release notes, compare digests from the official registry or package index).
+
+---
+
+## 6. v2 Layout
+
+v2 splits the web app into a Go JSON API (`api/`) and an Angular SPA (`ui/`); `webui/` remains until UI parity is reached. Architecture, decisions, conventions and the definition of done are in [`doc/v2-architecture.md`](doc/v2-architecture.md). Read it before changing anything on `feature/v2`.
