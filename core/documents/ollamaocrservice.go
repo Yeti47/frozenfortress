@@ -25,10 +25,35 @@ import (
 // (PP-DocLayout-V3 layout detection), so this is a conservative approximation.
 const ollamaOCRConfidence float32 = 0.95
 
+// ollamaOCRTruncatedConfidence is reported when the model hit the output limit. The text is kept,
+// because partial text still helps search, but it is probably incomplete or, if the model kept
+// repeating itself, partly garbage.
+const ollamaOCRTruncatedConfidence float32 = 0.5
+
+const (
+	// ollamaMaxOutputTokens limits how much text one request may generate. A full A4 page of text
+	// needs roughly 600 tokens, so this leaves plenty of room for dense pages and tables.
+	// Without a limit, a model that does not stop (for example on an unreadable, downscaled image)
+	// keeps generating until the context is full. Ollama then shifts the context, and for glm-ocr
+	// that crashes the runner with a GGML_ASSERT, so the request fails with HTTP 500 after minutes
+	// of CPU time. The context below is sized so that this limit is always reached first.
+	ollamaMaxOutputTokens = 3072
+
+	// ollamaMinContext is Ollama's default context size on CPU.
+	ollamaMinContext = 4096
+
+	// The vision encoder turns each 28x28 pixel block of the image into one token.
+	ollamaImageTokenBlock = 28
+
+	// ollamaPromptReserve covers the chat template and the instruction text.
+	ollamaPromptReserve = 128
+)
+
 type OllamaOCRService struct {
 	config     ccc.OCRConfig
 	logger     ccc.Logger
 	httpClient *http.Client
+	numCtx     int
 }
 
 func NewOllamaOCRService(config ccc.OCRConfig, logger ccc.Logger) *OllamaOCRService {
@@ -53,7 +78,22 @@ func NewOllamaOCRService(config ccc.OCRConfig, logger ccc.Logger) *OllamaOCRServ
 		config:     config,
 		logger:     logger,
 		httpClient: &http.Client{Timeout: time.Duration(config.OllamaTimeoutSeconds) * time.Second},
+		numCtx:     ollamaContextSize(config.ImageMaxDimension),
 	}
+}
+
+// ollamaContextSize returns a context size that fits the prompt, the largest image that can be sent
+// (a square one, which has the most blocks) and the maximum output. It depends only on the
+// configuration, so every request uses the same value and Ollama does not reload the model.
+func ollamaContextSize(maxImageDimension int) int {
+	blocksPerSide := (maxImageDimension + ollamaImageTokenBlock - 1) / ollamaImageTokenBlock
+	needed := blocksPerSide*blocksPerSide + ollamaPromptReserve + ollamaMaxOutputTokens
+
+	size := ollamaMinContext
+	for size < needed {
+		size += 1024
+	}
+	return size
 }
 
 func (s *OllamaOCRService) IsOcrEnabled() bool {
@@ -78,12 +118,19 @@ func (s *OllamaOCRService) ExtractText(ctx context.Context, imageData []byte) (s
 		KeepAlive: s.config.OllamaKeepAlive,
 		Options: map[string]any{
 			"temperature": 0,
+			"num_ctx":     s.numCtx,
+			"num_predict": ollamaMaxOutputTokens,
 		},
 	}
 
 	var response ollamaGenerateResponse
 	if err := s.postJSON(ctx, "/api/generate", request, &response); err != nil {
 		return "", 0, err
+	}
+
+	if response.DoneReason == "length" {
+		s.logger.Warn("Ollama OCR output hit the token limit and was truncated", "limit", ollamaMaxOutputTokens)
+		return strings.TrimSpace(response.Response), ollamaOCRTruncatedConfidence, nil
 	}
 
 	return strings.TrimSpace(response.Response), ollamaOCRConfidence, nil
@@ -161,5 +208,6 @@ type ollamaGenerateRequest struct {
 }
 
 type ollamaGenerateResponse struct {
-	Response string `json:"response"`
+	Response   string `json:"response"`
+	DoneReason string `json:"done_reason"`
 }
