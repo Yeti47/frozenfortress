@@ -50,7 +50,6 @@ require (
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.8.0 // indirect
 	golang.org/x/arch v0.29.0 // indirect
-	golang.org/x/image v0.32.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
@@ -63,4 +62,5 @@ require (
 	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/gomodule/redigo v1.9.2
 	github.com/pdfcpu/pdfcpu v0.11.1
+	golang.org/x/image v0.32.0
 )
