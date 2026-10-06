@@ -2,15 +2,17 @@
 
 This guide is for contributors. It measures how long the Ollama OCR service (`OllamaOCRService`, model `glm-ocr:q8_0`) needs per document on CPUs of different sizes, using realistic payloads.
 
+To compare other OCR engines (PP-OCR via RapidOCR or PaddleOCR) and metadata-extraction models (NuExtract) with GLM-OCR, use [`dev/benchmarks/ocr-eval`](../dev/benchmarks/ocr-eval/README.md).
+
 ## Run it
 
 Needs Docker and Go.
 
 ```bash
-./dev/ocr-bench.sh            # profiles 2, 4 and 8 cores
-./dev/ocr-bench.sh 4 16       # chosen core counts
-./dev/ocr-bench.sh small:0,2 big:0-7   # name:cpuset, Docker cpuset syntax
-./dev/ocr-bench.sh 4 4@sse42  # the same 4 cores with and without AVX2/FMA
+./dev/benchmarks/ocr-bench.sh            # profiles 2, 4 and 8 cores
+./dev/benchmarks/ocr-bench.sh 4 16       # chosen core counts
+./dev/benchmarks/ocr-bench.sh small:0,2 big:0-7   # name:cpuset, Docker cpuset syntax
+./dev/benchmarks/ocr-bench.sh 4 4@sse42  # the same 4 cores with and without AVX2/FMA
 ```
 
 Append `@isa` to a profile to restrict Ollama to the CPU backend of an older instruction set: `x64`, `sse42`, `sandybridge`, `haswell`, `skylakex`, `icelake` or `alderlake`. Ollama ships one backend per instruction set and normally picks the newest one the CPU supports. Many older NAS and mini-PC processors only have SSE4.2, which makes `4@sse42` a closer stand-in for them than `4`. The script hides the newer backends and checks the Ollama log to confirm which one was loaded.
@@ -23,7 +25,7 @@ The first run builds the CPU Ollama image from `docker/ollama` and downloads the
 | `FF_BENCH_RUNS` | `3` | Warm runs per payload and image dimension |
 | `FF_BENCH_MAX_DIMS` | `640` | Comma-separated `FF_OCR_IMAGE_MAX_DIMENSION` values to sweep, e.g. `640,1024,1536` |
 | `FF_BENCH_MODEL` | `glm-ocr:q8_0` | Model to test |
-| `FF_BENCH_OUT_DIR` | `dev/ocr-bench-results/<timestamp>` | Output directory (git-ignored) |
+| `FF_BENCH_OUT_DIR` | `dev/benchmarks/ocr-bench-results/<timestamp>` | Output directory (git-ignored) |
 
 The output directory holds one JSON file per profile and `report.md` with the comparison.
 

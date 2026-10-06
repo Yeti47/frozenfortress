@@ -1,0 +1,25 @@
+# PaddleOCR on the native PaddlePaddle runtime, for the OCR evaluation in dev/benchmarks/ocr-eval.
+# Build from dev/benchmarks/ocr-eval: docker build -f docker/Dockerfile.paddle -t ff-eval-paddle .
+#
+# PaddlePaddle is pinned to 3.2.2 on purpose: 3.3.1 and 3.4.0 crash on the oneDNN path with
+# "ConvertPirAttribute2RuntimeAttribute not support", and without oneDNN they are about 4.5x slower.
+
+# python:3.12-slim-bookworm
+FROM python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+
+# DejaVu fonts render the synthetic payloads; the other libraries are runtime dependencies of OpenCV and Paddle.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core libgomp1 libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY docker/requirements-paddle.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --require-hashes --no-deps -r /tmp/requirements.txt && rm /tmp/requirements.txt
+
+RUN useradd -m -u 10001 bench
+USER bench
+WORKDIR /home/bench
+ENV PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
+
+COPY --chown=bench payloads.py score.py bench_paddle.py prefetch_paddle.py rescore.py ./
+RUN python prefetch_paddle.py \
+    && chmod -R a+rwX /home/bench

@@ -2,7 +2,7 @@
 
 // OCR speed benchmark for the Ollama OCR service. It is excluded from normal
 // test runs by the ocrbench build tag and is meant to be driven by
-// dev/ocr-bench.sh, which starts Ollama on a limited set of CPU cores.
+// dev/benchmarks/ocr-bench.sh, which starts Ollama on a limited set of CPU cores.
 //
 // Environment:
 //
@@ -61,7 +61,7 @@ type benchReport struct {
 func TestOCRBenchmark(t *testing.T) {
 	url := os.Getenv("FF_BENCH_OLLAMA_URL")
 	if url == "" {
-		t.Skip("FF_BENCH_OLLAMA_URL not set; run dev/ocr-bench.sh")
+		t.Skip("FF_BENCH_OLLAMA_URL not set; run dev/benchmarks/ocr-bench.sh")
 	}
 	model := benchEnv("FF_BENCH_MODEL", "glm-ocr:q8_0")
 	runs := benchEnvInt(t, "FF_BENCH_RUNS", 3)

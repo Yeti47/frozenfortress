@@ -1,0 +1,5 @@
+rapidocr==3.9.2
+onnxruntime==1.30.0
+openvino==2026.4.1
+pypdfium2==5.14.0
+requests==2.32.5
