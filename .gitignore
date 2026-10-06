@@ -57,3 +57,6 @@ releases/
 # UI build tooling cache (Tailwind binary downloaded by webui/build-css.sh)
 webui/.tools/
 dev/ocr-bench-results/
+dev/ocr-eval/results/
+dev/ocr-eval/models/
+dev/ocr-eval/__pycache__/

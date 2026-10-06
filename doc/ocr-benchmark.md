@@ -2,6 +2,8 @@
 
 This guide is for contributors. It measures how long the Ollama OCR service (`OllamaOCRService`, model `glm-ocr:q8_0`) needs per document on CPUs of different sizes, using realistic payloads.
 
+To compare other OCR engines (PP-OCR via RapidOCR or PaddleOCR) and metadata-extraction models (NuExtract) with GLM-OCR, use [`dev/ocr-eval`](../dev/ocr-eval/README.md).
+
 ## Run it
 
 Needs Docker and Go.

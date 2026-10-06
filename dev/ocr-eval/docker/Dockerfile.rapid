@@ -1,0 +1,24 @@
+# PP-OCR models on ONNX Runtime / OpenVINO via RapidOCR, for the OCR evaluation in dev/ocr-eval.
+# Build from dev/ocr-eval: docker build -f docker/Dockerfile.rapid -t ff-eval-rapid .
+#
+# Also serves as the client image for bench_glm.py and bench_extract.py (it has requests and the payloads).
+
+# python:3.12-slim-bookworm
+FROM python@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
+
+# DejaVu fonts render the synthetic payloads; the other libraries are runtime dependencies of OpenCV.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY docker/requirements-rapid.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --require-hashes --no-deps -r /tmp/requirements.txt && rm /tmp/requirements.txt
+
+WORKDIR /home/bench
+COPY payloads.py score.py bench_rapid.py bench_glm.py bench_extract.py prefetch_rapid.py rescore.py ./
+
+# RapidOCR downloads models into its package directory, so this step runs as root.
+RUN python prefetch_rapid.py
+
+RUN useradd -u 10001 bench && chmod -R a+rwX /home/bench
+USER bench
