@@ -24,7 +24,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { createBuilder, EndpointProperty } from './.aspire/modules/aspire.mjs';
 
-const repoRoot = path.resolve(import.meta.dirname, '..');
+const repoRoot = path.resolve(import.meta.dirname, '../..');
 const dataDir = path.resolve(import.meta.dirname, '.data');
 
 const ocrMode = (process.env.FF_DEV_OCR ?? 'ollama').toLowerCase();

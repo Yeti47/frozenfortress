@@ -2,7 +2,7 @@
 
 This harness compares OCR engines and small extraction models on CPU-only hardware. It was built for the v2 OCR decision (YETI-109) and is the starting point for the follow-up spike YETI-112. It is a research tool: nothing here is part of the product, and CI never runs it.
 
-For the Go benchmark of the v1 Ollama OCR service, see [`doc/ocr-benchmark.md`](../../doc/ocr-benchmark.md).
+For the Go benchmark of the v1 Ollama OCR service, see [`doc/ocr-benchmark.md`](../../../doc/ocr-benchmark.md).
 
 ## What it compares
 
@@ -40,27 +40,27 @@ The text contains umlauts and ß on purpose. Each repetition uses a different se
 Needs Docker, Bash and Python 3 (only for `report`). Run it on an otherwise idle machine.
 
 ```bash
-dev/ocr-eval/eval.sh build                 # images: ff-eval-rapid, ff-eval-paddle, ff-eval-ollama
-dev/ocr-eval/eval.sh models                # NuExtract GGUFs (~5 GB), pinned revisions, SHA-256 checked
+dev/benchmarks/ocr-eval/eval.sh build                 # images: ff-eval-rapid, ff-eval-paddle, ff-eval-ollama
+dev/benchmarks/ocr-eval/eval.sh models                # NuExtract GGUFs (~5 GB), pinned revisions, SHA-256 checked
 
 # OCR, pinned to physical cores 0-3
-dev/ocr-eval/eval.sh rapid  r4-v6-tiny 0-3 --tier tiny
-dev/ocr-eval/eval.sh rapid  r4-ov-tiny 0-3 --tier tiny --engine openvino
-dev/ocr-eval/eval.sh paddle p4-v6-tiny 0-3 v6-tiny
-dev/ocr-eval/eval.sh glm    g4-glm     0-3
+dev/benchmarks/ocr-eval/eval.sh rapid  r4-v6-tiny 0-3 --tier tiny
+dev/benchmarks/ocr-eval/eval.sh rapid  r4-ov-tiny 0-3 --tier tiny --engine openvino
+dev/benchmarks/ocr-eval/eval.sh paddle p4-v6-tiny 0-3 v6-tiny
+dev/benchmarks/ocr-eval/eval.sh glm    g4-glm     0-3
 
 # Extraction on the text RapidOCR produced above
-dev/ocr-eval/eval.sh extract x4-2b-q4 0-3 NuExtract-2.0-2B.Q4_K_M.gguf --fmt v2 --source /out/text-r4-v6-tiny.json
-dev/ocr-eval/eval.sh extract x4-2b-gt 0-3 NuExtract-2.0-2B.Q4_K_M.gguf --fmt v2     # on ground truth
+dev/benchmarks/ocr-eval/eval.sh extract x4-2b-q4 0-3 NuExtract-2.0-2B.Q4_K_M.gguf --fmt v2 --source /out/text-r4-v6-tiny.json
+dev/benchmarks/ocr-eval/eval.sh extract x4-2b-gt 0-3 NuExtract-2.0-2B.Q4_K_M.gguf --fmt v2     # on ground truth
 
-dev/ocr-eval/eval.sh report                # Markdown tables
-dev/ocr-eval/eval.sh rescore               # re-score saved OCR texts
-dev/ocr-eval/eval.sh clean                 # remove containers, images, volume and network
+dev/benchmarks/ocr-eval/eval.sh report                # Markdown tables
+dev/benchmarks/ocr-eval/eval.sh rescore               # re-score saved OCR texts
+dev/benchmarks/ocr-eval/eval.sh clean                 # remove containers, images, volume and network
 ```
 
 `--fmt v1` is the NuExtract 1.5 prompt format (tiny, smol), `--fmt v2` the NuExtract 2.0 format with typed templates. `--en-keys` uses English template keys instead of German ones. The options of each runner are defined at the end of its `bench_*.py`.
 
-Results go to `dev/ocr-eval/results/` and models to `dev/ocr-eval/models/`; both are git-ignored. See the header of `eval.sh` for the environment variables (memory limit, run count, directories).
+Results go to `dev/benchmarks/ocr-eval/results/` and models to `dev/benchmarks/ocr-eval/models/`; both are git-ignored. See the header of `eval.sh` for the environment variables (memory limit, run count, directories).
 
 ### Pinning cores
 
@@ -95,7 +95,7 @@ The full numbers, including the variants that lost, are in YETI-109.
 The Python dependencies are pinned with hashes, as AGENTS.md requires. After editing `docker/requirements-*.in`:
 
 ```bash
-cd dev/ocr-eval/docker
+cd dev/benchmarks/ocr-eval/docker
 uv pip compile --generate-hashes --python-version 3.12 --python-platform x86_64-manylinux_2_28 \
     requirements-rapid.in -o requirements-rapid.txt
 ```

@@ -1,5 +1,5 @@
-# PaddleOCR on the native PaddlePaddle runtime, for the OCR evaluation in dev/ocr-eval.
-# Build from dev/ocr-eval: docker build -f docker/Dockerfile.paddle -t ff-eval-paddle .
+# PaddleOCR on the native PaddlePaddle runtime, for the OCR evaluation in dev/benchmarks/ocr-eval.
+# Build from dev/benchmarks/ocr-eval: docker build -f docker/Dockerfile.paddle -t ff-eval-paddle .
 #
 # PaddlePaddle is pinned to 3.2.2 on purpose: 3.3.1 and 3.4.0 crash on the oneDNN path with
 # "ConvertPirAttribute2RuntimeAttribute not support", and without oneDNN they are about 4.5x slower.

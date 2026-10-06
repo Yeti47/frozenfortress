@@ -1,5 +1,5 @@
-# PP-OCR models on ONNX Runtime / OpenVINO via RapidOCR, for the OCR evaluation in dev/ocr-eval.
-# Build from dev/ocr-eval: docker build -f docker/Dockerfile.rapid -t ff-eval-rapid .
+# PP-OCR models on ONNX Runtime / OpenVINO via RapidOCR, for the OCR evaluation in dev/benchmarks/ocr-eval.
+# Build from dev/benchmarks/ocr-eval: docker build -f docker/Dockerfile.rapid -t ff-eval-rapid .
 #
 # Also serves as the client image for bench_glm.py and bench_extract.py (it has requests and the payloads).
 

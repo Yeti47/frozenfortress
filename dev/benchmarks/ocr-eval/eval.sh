@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# OCR and metadata-extraction evaluation on limited CPU profiles. See dev/ocr-eval/README.md.
+# OCR and metadata-extraction evaluation on limited CPU profiles. See dev/benchmarks/ocr-eval/README.md.
 #
 # Every run starts a fresh container pinned to a cpuset, with a matching CPU quota and a memory limit,
 # and writes <label>.log, <label>.json and (for OCR runs) text-<label>.json to the output directory.
 #
-# Usage: dev/ocr-eval/eval.sh <command> [args...]
+# Usage: dev/benchmarks/ocr-eval/eval.sh <command> [args...]
 #   build                                   build the eval images (and the repo's CPU Ollama image for glm)
 #   models [file...]                        download the pinned NuExtract GGUF files (default: all) and verify their hashes
 #   paddle  <label> <cpuset> <config> [extra-json]
@@ -25,13 +25,13 @@
 # Environment:
 #   FF_EVAL_MEMORY      memory limit per container (default 6g)
 #   FF_EVAL_RUNS        warm runs per payload (default 3)
-#   FF_EVAL_OUT_DIR     output directory (default dev/ocr-eval/results)
-#   FF_EVAL_MODELS_DIR  GGUF directory (default dev/ocr-eval/models)
+#   FF_EVAL_OUT_DIR     output directory (default dev/benchmarks/ocr-eval/results)
+#   FF_EVAL_MODELS_DIR  GGUF directory (default dev/benchmarks/ocr-eval/models)
 #   FF_EVAL_CLIENT_CPUS cpuset for the client container of glm/extract runs (default: all CPUs)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$HERE/../.." && pwd)"
+REPO="$(cd "$HERE/../../.." && pwd)"
 
 MEMORY=${FF_EVAL_MEMORY:-6g}
 RUNS=${FF_EVAL_RUNS:-3}
