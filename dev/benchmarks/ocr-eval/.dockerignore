@@ -1,0 +1,5 @@
+# The images only need the Python sources and docker/requirements-*.txt.
+results/
+models/
+__pycache__/
+*.md

@@ -5,7 +5,7 @@
 # with pinned cores (cpuset plus a matching CPU quota) and a memory limit, runs the Go benchmark against it
 # (core/documents, build tag ocrbench) and finally writes a Markdown report.
 #
-# Usage: dev/ocr-bench.sh [profile...]
+# Usage: dev/benchmarks/ocr-bench.sh [profile...]
 #   A profile is a core count ("4", pins cores 0-3) or "name:cpuset" with a
 #   cpuset in Docker syntax ("big:0-7", "small:0,2"). Default: 2 4 8
 #   Append "@isa" to limit Ollama to the CPU backend of an older instruction
@@ -18,16 +18,16 @@
 #   FF_BENCH_RUNS      warm runs per payload (default 3)
 #   FF_BENCH_MAX_DIMS  comma-separated max image dimensions (default 640)
 #   FF_BENCH_MODEL     model (default glm-ocr:q8_0)
-#   FF_BENCH_OUT_DIR   output directory (default dev/ocr-bench-results/<timestamp>)
+#   FF_BENCH_OUT_DIR   output directory (default dev/benchmarks/ocr-bench-results/<timestamp>)
 set -euo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 IMAGE=frozenfortress-ollama-bench
 VOLUME=frozenfortress-ollama-bench-models
 MEMORY=${FF_BENCH_MEMORY:-6g}
 MODEL=${FF_BENCH_MODEL:-glm-ocr:q8_0}
-OUT_DIR=${FF_BENCH_OUT_DIR:-dev/ocr-bench-results/$(date +%Y%m%d-%H%M%S)}
+OUT_DIR=${FF_BENCH_OUT_DIR:-dev/benchmarks/ocr-bench-results/$(date +%Y%m%d-%H%M%S)}
 CONTAINER=
 PROFILES=("$@")
 [[ ${#PROFILES[@]} -gt 0 ]] || PROFILES=(2 4 8)

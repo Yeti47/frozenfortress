@@ -18,7 +18,7 @@ import (
 func TestOCRBenchmarkReport(t *testing.T) {
 	dir := os.Getenv("FF_BENCH_REPORT_DIR")
 	if dir == "" {
-		t.Skip("FF_BENCH_REPORT_DIR not set; run dev/ocr-bench.sh")
+		t.Skip("FF_BENCH_REPORT_DIR not set; run dev/benchmarks/ocr-bench.sh")
 	}
 
 	files, err := filepath.Glob(filepath.Join(dir, "*.json"))
